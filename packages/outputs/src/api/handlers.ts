@@ -8,6 +8,11 @@ const OutputsHandlersLive = OutputsRpcs.toLayer(
     const outputs = yield* Outputs;
     return {
       OutputsList: () => outputs.list,
+      OutputsCreate: (input) => outputs.create(input),
+      OutputsRename: ({ id, name }) => outputs.rename(id, name),
+      OutputsRemove: ({ id }) => outputs.remove(id),
+      OutputsSplitting: () => outputs.splitting,
+      OutputsUpdateSplitting: (settings) => outputs.updateSplitting(settings),
       OutputsRegenerateToken: ({ id }) => outputs.regenerateToken(id),
       OutputsIdentify: ({ id }) => outputs.identify(id),
     };

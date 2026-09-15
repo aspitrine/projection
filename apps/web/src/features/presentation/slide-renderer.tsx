@@ -100,6 +100,10 @@ export function SlideRenderer({
             style={{
               fontSize: `${theme.maxFontSize}cqh`,
               textShadow: theme.textShadow ? "0 0.06em 0.25em rgb(0 0 0 / 0.6)" : undefined,
+              ...(theme.textBackground !== null && {
+                background: theme.textBackground,
+                padding: "0.35em 0.7em",
+              }),
             }}
           >
             {slide.kind === "lines" ? (

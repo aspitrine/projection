@@ -3,7 +3,7 @@ import { PgClient } from "@effect/sql-pg";
 import { ActorMiddleware } from "@projection/identity/contract";
 import { runMigrations } from "@projection/platform";
 import { Actor, CurrentActor, OrganizationId, UserId } from "@projection/shared-kernel";
-import { Config, Effect, Layer, Queue } from "effect";
+import { Config, Effect, Exit, Layer, Queue } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 
 import { DisplayRpcs, OutputsRpcs } from "../src/api/contract";
@@ -17,7 +17,7 @@ const MigratedDatabase = Layer.effectDiscard(
   Effect.gen(function* () {
     yield* runMigrations([outputsMigrations]);
     const sql = yield* PgClient.PgClient;
-    yield* sql`TRUNCATE output`;
+    yield* sql`TRUNCATE output, output_splitting`;
   }),
 ).pipe(Layer.provideMerge(DatabaseLive));
 
@@ -79,6 +79,51 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
       const stale = yield* display.DisplayWatch({ token: output.token }, { asQueue: true });
       const error = yield* Queue.take(stale).pipe(Effect.flip);
       expect(error).toMatchObject({ _tag: "InvalidDisplayToken" });
+    }).pipe(Effect.provide(ApiLive)),
+  );
+
+  it.effect("gère les sorties et le découpage ; garde toujours une sortie", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(OutputsRpcs);
+      const organization = { headers: { "x-test-organization": "org-crud" } };
+      const [room] = yield* client.OutputsList(undefined, organization);
+      if (room === undefined) throw new Error("sortie manquante");
+
+      const stream = yield* client.OutputsCreate({ name: "Stream", type: "stream" }, organization);
+      const renamed = yield* client.OutputsRename(
+        { id: stream.id, name: "Stream YouTube" },
+        organization,
+      );
+      expect(renamed).toMatchObject({ name: "Stream YouTube", type: "stream" });
+
+      const invalidName = yield* client
+        .OutputsCreate({ name: "  ", type: "stage" }, organization)
+        .pipe(Effect.exit);
+      expect(Exit.isFailure(invalidName)).toBe(true);
+
+      yield* client.OutputsRemove({ id: stream.id }, organization);
+      const last = yield* client.OutputsRemove({ id: room.id }, organization).pipe(Effect.flip);
+      expect(last._tag).toBe("LastOutput");
+      expect(yield* client.OutputsList(undefined, organization)).toHaveLength(1);
+
+      const settings = {
+        room: { songMaxLines: 5, scriptureMaxCharacters: 280 },
+        stream: { songMaxLines: 2, scriptureMaxCharacters: 120 },
+      };
+      yield* client.OutputsUpdateSplitting(settings, organization);
+      yield* client.OutputsUpdateSplitting(
+        { ...settings, room: { songMaxLines: 3, scriptureMaxCharacters: 280 } },
+        organization,
+      );
+      expect((yield* client.OutputsSplitting(undefined, organization)).room.songMaxLines).toBe(3);
+
+      const outOfRange = yield* client
+        .OutputsUpdateSplitting(
+          { ...settings, stream: { songMaxLines: 0, scriptureMaxCharacters: 120 } },
+          organization,
+        )
+        .pipe(Effect.exit);
+      expect(Exit.isFailure(outOfRange)).toBe(true);
     }).pipe(Effect.provide(ApiLive)),
   );
 });

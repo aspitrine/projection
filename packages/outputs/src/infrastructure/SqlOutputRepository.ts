@@ -3,8 +3,8 @@ import { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Effect, Layer, Schema } from "effect";
 import { SqlSchema } from "effect/unstable/sql";
 
-import { OutputRepository } from "../application/ports";
-import { DisplayToken, Output } from "../domain/Output";
+import { OutputRepository, type RemoveResult } from "../application/ports";
+import { DisplayToken, Output, SplittingSettings } from "../domain/Output";
 
 export const SqlOutputRepository = Layer.effect(
   OutputRepository,
@@ -16,6 +16,10 @@ export const SqlOutputRepository = Layer.effect(
       (extract(epoch FROM created_at) * 1000)::float8 AS "createdAt",
       (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
     `;
+
+    /** Verrou par organisation : sérialise créations par défaut et suppressions. */
+    const lockOrganization = (organizationId: OrganizationId) =>
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`output:${organizationId}`}))`;
 
     const list = SqlSchema.findAll({
       Request: OrganizationId,
@@ -52,14 +56,35 @@ export const SqlOutputRepository = Layer.effect(
       `,
     });
 
+    const rename = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        organizationId: OrganizationId,
+        id: OutputId,
+        name: Schema.String,
+        now: Schema.Number,
+      }),
+      Result: Output,
+      execute: ({ organizationId, id, name, now }) => sql`
+        UPDATE output SET name = ${name}, updated_at = ${new Date(now)}
+        WHERE id = ${id}::uuid AND organization_id = ${organizationId}
+        RETURNING ${columns}
+      `,
+    });
+
+    const splitting = SqlSchema.findOneOption({
+      Request: OrganizationId,
+      Result: SplittingSettings,
+      execute: (organizationId) =>
+        sql`SELECT room, stream FROM output_splitting WHERE organization_id = ${organizationId}`,
+    });
+
     return OutputRepository.of({
       list: (organizationId) =>
         list(organizationId).pipe(Effect.orDie, Effect.withSpan("SqlOutputRepository.list")),
 
       insertIfNone: (output) =>
         Effect.gen(function* () {
-          // Verrou par organisation : deux listes simultanées ne créent qu'une sortie.
-          yield* sql`SELECT pg_advisory_xact_lock(hashtext(${`output:${output.organizationId}`}))`;
+          yield* lockOrganization(output.organizationId);
           yield* sql`
             INSERT INTO output (id, organization_id, name, type, token, created_at, updated_at)
             SELECT ${output.id}::uuid, ${output.organizationId}, ${output.name}, ${output.type},
@@ -71,6 +96,13 @@ export const SqlOutputRepository = Layer.effect(
           Effect.orDie,
           Effect.withSpan("SqlOutputRepository.insertIfNone"),
         ),
+
+      insert: (output) =>
+        sql`
+          INSERT INTO output (id, organization_id, name, type, token, created_at, updated_at)
+          VALUES (${output.id}::uuid, ${output.organizationId}, ${output.name}, ${output.type},
+                  ${output.token}, ${new Date(output.createdAt)}, ${new Date(output.updatedAt)})
+        `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlOutputRepository.insert")),
 
       findById: (organizationId, id) =>
         findById({ organizationId, id }).pipe(
@@ -86,6 +118,38 @@ export const SqlOutputRepository = Layer.effect(
           Effect.orDie,
           Effect.withSpan("SqlOutputRepository.updateToken"),
         ),
+
+      rename: (organizationId, id, name, now) =>
+        rename({ organizationId, id, name, now }).pipe(
+          Effect.orDie,
+          Effect.withSpan("SqlOutputRepository.rename"),
+        ),
+
+      remove: (organizationId, id) =>
+        Effect.gen(function* () {
+          yield* lockOrganization(organizationId);
+          const rows = yield* sql<{ readonly id: string }>`
+            SELECT id::text AS id FROM output WHERE organization_id = ${organizationId}
+          `;
+          if (!rows.some((row) => row.id === id)) return "NotFound" as RemoveResult;
+          if (rows.length <= 1) return "Last" as RemoveResult;
+          yield* sql`DELETE FROM output WHERE id = ${id}::uuid AND organization_id = ${organizationId}`;
+          return "Removed" as RemoveResult;
+        }).pipe(sql.withTransaction, Effect.orDie, Effect.withSpan("SqlOutputRepository.remove")),
+
+      splitting: (organizationId) =>
+        splitting(organizationId).pipe(
+          Effect.orDie,
+          Effect.withSpan("SqlOutputRepository.splitting"),
+        ),
+
+      saveSplitting: (organizationId, settings, now) =>
+        sql`
+          INSERT INTO output_splitting (organization_id, room, stream, updated_at)
+          VALUES (${organizationId}, ${sql.json(settings.room)}, ${sql.json(settings.stream)}, ${new Date(now)})
+          ON CONFLICT (organization_id) DO UPDATE SET
+            room = EXCLUDED.room, stream = EXCLUDED.stream, updated_at = EXCLUDED.updated_at
+        `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlOutputRepository.saveSplitting")),
     });
   }),
 );

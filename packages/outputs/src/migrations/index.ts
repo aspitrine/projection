@@ -20,5 +20,16 @@ export const outputsMigrations = {
       `;
       yield* sql`CREATE INDEX output_organization_idx ON output (organization_id)`;
     }),
+    "0002_create_output_splitting": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        CREATE TABLE output_splitting (
+          organization_id text PRIMARY KEY,
+          room jsonb NOT NULL,
+          stream jsonb NOT NULL,
+          updated_at timestamptz NOT NULL
+        )
+      `;
+    }),
   },
 };

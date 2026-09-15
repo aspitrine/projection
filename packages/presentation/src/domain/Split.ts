@@ -140,3 +140,17 @@ export const split = (
 
   return drafts.map((draft, index) => new Slide({ ...draft, index }));
 };
+
+/** Réglages de découpage d'une piste, modifiables par l'organisation. */
+export const Splitting = Schema.Struct({
+  /** Lignes de chant par diapo. */
+  songMaxLines: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 })),
+  /** Caractères de texte biblique par diapo. */
+  scriptureMaxCharacters: Schema.Int.check(Schema.isBetween({ minimum: 40, maximum: 1000 })),
+});
+export type Splitting = typeof Splitting.Type;
+
+/** Salle : strophe entière, passage généreux. */
+export const roomSplitting: Splitting = { songMaxLines: 4, scriptureMaxCharacters: 320 };
+/** Stream : lower third court. */
+export const streamSplitting: Splitting = { songMaxLines: 2, scriptureMaxCharacters: 140 };

@@ -1,7 +1,12 @@
 import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
 import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
-import { FrameGateway, OutputsLive, outputsMigrations } from "@projection/outputs/server";
+import {
+  FrameGateway,
+  OutputsLive,
+  OutputsServiceLive,
+  outputsMigrations,
+} from "@projection/outputs/server";
 import {
   DatabaseHealth,
   DatabaseLive,
@@ -44,7 +49,6 @@ const HandlersLive = Layer.mergeAll(
   OutputsLive,
 ).pipe(
   Layer.provide(DatabaseHealth.layer),
-  Layer.provide(FrameGatewayLive),
   // La régie résout les projets en diapos via les cas d'usage des autres contextes.
   Layer.provide(
     DeckSourceLive.pipe(
@@ -54,10 +58,12 @@ const HandlersLive = Layer.mergeAll(
           BibleServiceLive,
           TextSlidesServiceLive,
           ProjectsServiceLive,
+          OutputsServiceLive,
         ),
       ),
     ),
   ),
+  Layer.provide(FrameGatewayLive),
   Layer.provide(LiveFrames.layerMemory),
 );
 

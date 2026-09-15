@@ -154,12 +154,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 ## Phase v1
 
-### T2.1 Trois types de sortie [outputs, presentation]
+### T2.1 Trois types de sortie [outputs, presentation] ✅
 
 **Dépend de** : T1.8
 
-- [ ] Types `salle`, `retour`, `stream`, règles de découpage par sortie.
-- [ ] Sortie stream : fond transparent, lower third, testée dans OBS.
+- [x] Types `room` (salle), `stage` (retour), `stream` ; ajout, renommage, suppression de sorties (propriétaire/admin, dernière sortie conservée, suppression sérialisée par verrou consultatif).
+- [x] Découpage par piste (`Splitting` dans `presentation`) : Salle (salle + retour) et Stream, bornes validées, table `output_splitting` ; la régie résout les projets avec le découpage Salle et se relit à l'enregistrement. Le découpage Stream sera appliqué par la piste Stream (T2.2).
+- [x] Thèmes par type : salle plein écran, retour aligné en haut à gauche avec libellé, stream en lower third (`textBackground`) sur page transparente.
+- [x] Tests unitaires (gestion, découpage, bandeau du rendu, DeckSource) et fonctionnels API sur Postgres.
+- [ ] Vérification dans OBS (source navigateur 1920×1080) : à faire manuellement sur une machine avec OBS.
 
 ### T2.2 Pistes Salle / Stream [live]
 

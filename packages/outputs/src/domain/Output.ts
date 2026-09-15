@@ -1,10 +1,20 @@
-import { Frame } from "@projection/presentation/domain";
+import { Frame, Splitting, roomSplitting, streamSplitting } from "@projection/presentation/domain";
 import { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Effect, Schema } from "effect";
 
-/** Types de sortie. MVP : salle ; retour scène et stream arrivent en T2.1. */
-export const OutputType = Schema.Literals(["room"]);
+/** Types de sortie : projecteur, retour scène, stream (lower third transparent). */
+export const OutputType = Schema.Literals(["room", "stage", "stream"]);
 export type OutputType = typeof OutputType.Type;
+
+/** Piste qui alimente une sortie : la salle pilote salle et retour, le stream a sa piste. */
+export type Track = "room" | "stream";
+export const trackOf = (type: OutputType): Track => (type === "stream" ? "stream" : "room");
+
+export const OutputName = Schema.String.check(
+  Schema.isTrimmed(),
+  Schema.isMinLength(1),
+  Schema.isMaxLength(60),
+);
 
 /** Secret d'accès d'un écran (256 bits, base64url). */
 export const DisplayToken = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{43}$/)).pipe(
@@ -30,6 +40,15 @@ export class Output extends Schema.Class<Output>("Output")({
   updatedAt: Schema.Number,
 }) {}
 
+/** Découpage par piste pour une organisation. */
+export const SplittingSettings = Schema.Struct({ room: Splitting, stream: Splitting });
+export type SplittingSettings = typeof SplittingSettings.Type;
+
+export const defaultSplittingSettings: SplittingSettings = {
+  room: roomSplitting,
+  stream: streamSplitting,
+};
+
 /** Ce que reçoit un écran : l'image courante et l'identité de la sortie. */
 export class DisplayFrame extends Schema.Class<DisplayFrame>("DisplayFrame")({
   outputName: Schema.String,
@@ -38,6 +57,11 @@ export class DisplayFrame extends Schema.Class<DisplayFrame>("DisplayFrame")({
 }) {}
 
 export class OutputNotFound extends Schema.TaggedError<OutputNotFound>()("OutputNotFound", {
+  id: OutputId,
+}) {}
+
+/** Une organisation garde toujours au moins une sortie. */
+export class LastOutput extends Schema.TaggedError<LastOutput>()("LastOutput", {
   id: OutputId,
 }) {}
 

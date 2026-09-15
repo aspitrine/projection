@@ -21,6 +21,8 @@ export class SlideTheme extends Schema.Class<SlideTheme>("SlideTheme")({
   textShadow: Schema.Boolean,
   /** Affiche le libellé (section, référence) en bas de la diapo. */
   showCaption: Schema.Boolean,
+  /** Bandeau derrière le texte (lower third), ou `null`. */
+  textBackground: Schema.NullOr(Schema.String),
 }) {}
 
 export const defaultTheme = new SlideTheme({
@@ -36,4 +38,5 @@ export const defaultTheme = new SlideTheme({
   maxFontSize: 11,
   textShadow: true,
   showCaption: true,
+  textBackground: null,
 });

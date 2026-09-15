@@ -54,4 +54,18 @@ describe("SlideRenderer", () => {
       "rgb(18, 52, 86)",
     );
   });
+
+  it("dessine un bandeau derrière le texte (lower third)", () => {
+    const theme = new SlideTheme({
+      ...defaultTheme,
+      background: "transparent",
+      textBackground: "rgba(0, 0, 0, 0.5)",
+    });
+    const { container } = render(
+      <SlideRenderer theme={theme} slide={{ kind: "lines", lines: ["Texte"] }} />,
+    );
+    const content = container.querySelector<HTMLElement>('[data-slot="slide-content"]');
+    expect(content?.style.background).toBe("rgba(0, 0, 0, 0.5)");
+    expect(content?.style.padding).toBe("0.35em 0.7em");
+  });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Translation, Verse } from "@projection/bible/domain";
 import { Bible } from "@projection/bible/server";
+import { FrameGateway, OutputRepository, Outputs } from "@projection/outputs/server";
+import { initialFrame } from "@projection/presentation/domain";
 import { DeckSource } from "@projection/live/server";
 import { ProjectInput } from "@projection/projects/domain";
 import { Projects } from "@projection/projects/server";
@@ -16,7 +18,7 @@ import { TextSlideInput } from "@projection/slides/domain";
 import { TextSlides } from "@projection/slides/server";
 import { SongInput } from "@projection/songs/domain";
 import { Songs } from "@projection/songs/server";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Stream } from "effect";
 
 import { ScriptureRepository } from "../../../packages/bible/src/application/ScriptureRepository";
 import { ProjectRepository } from "../../../packages/projects/src/application/ProjectRepository";
@@ -32,7 +34,16 @@ const lsg = new Translation({
   license: "Domaine public",
 });
 
+const FrameGatewayStub = Layer.succeed(
+  FrameGateway,
+  FrameGateway.of({
+    watch: () => Stream.make(initialFrame),
+    show: () => Effect.succeed(initialFrame),
+  }),
+);
+
 const ServicesLive = Layer.mergeAll(
+  Outputs.layer.pipe(Layer.provide(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayStub))),
   Songs.layer.pipe(Layer.provide(SongRepository.layerMemory)),
   Projects.layer.pipe(Layer.provide(ProjectRepository.layerMemory)),
   TextSlides.layer.pipe(Layer.provide(TextSlideRepository.layerMemory)),
@@ -60,7 +71,7 @@ const asActor = Effect.provideService(
   new Actor({
     userId: UserId.make("u"),
     organizationId: OrganizationId.make("org"),
-    role: "operator",
+    role: "admin",
   }),
 );
 
@@ -123,6 +134,20 @@ describe("DeckSourceLive", () => {
       });
       expect(blank?.slides[0]?.content).toEqual({ _tag: "Blank" });
       expect(missing).toMatchObject({ kind: "Song", missing: true, slides: [] });
+
+      // Découpage de la piste Salle modifié : 2 lignes par diapo de chant.
+      const outputs = yield* Outputs;
+      yield* outputs.updateSplitting({
+        room: { songMaxLines: 2, scriptureMaxCharacters: 320 },
+        stream: { songMaxLines: 1, scriptureMaxCharacters: 100 },
+      });
+      const resplit = yield* decks.resolve(project.id);
+      expect(resplit.items[0]?.slides.map((slide) => slide.content)).toContainEqual({
+        _tag: "Lines",
+        lines: ["L1", "L2"],
+        caption: "Couplet 1",
+      });
+      expect(resplit.items[0]?.slides).toHaveLength(5);
 
       const unknown = yield* decks
         .resolve(ProjectId.make("11111111-1111-4111-8111-111111111111"))
