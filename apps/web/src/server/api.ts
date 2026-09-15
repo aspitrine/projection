@@ -23,6 +23,7 @@ import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
 import { ApiRpcs } from "../api/contract";
 import { auth, ensureAuthSchema } from "../services";
+import { BrandingSourceLive } from "./branding";
 import { DeckSourceLive } from "./deck-source";
 
 const AuthMigrationsLive = Layer.effectDiscard(
@@ -64,6 +65,7 @@ const HandlersLive = Layer.mergeAll(
     ),
   ),
   Layer.provide(FrameGatewayLive),
+  Layer.provide(BrandingSourceLive),
   Layer.provide(LiveFrames.layerMemory),
 );
 

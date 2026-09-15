@@ -56,17 +56,21 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
 
       yield* client.LiveStart({ projectId });
       yield* client.LiveNext();
-      yield* client.LiveSetBlackout({ blackout: true });
+      yield* client.LiveSetCover({ track: "room", cover: "black" });
       const snapshot = yield* client.LiveGoTo({ itemId: itemId(3), slideIndex: 0 });
-      expect(snapshot.session).toMatchObject({ blackout: true, version: 4 });
+      expect(snapshot.session).toMatchObject({
+        roomCover: "black",
+        streamCover: "none",
+        version: 4,
+      });
 
       const frame = yield* frames.current(organizationId, "room");
-      expect(frame).toMatchObject({ blackout: true, content: { _tag: "Lines", lines: ["C1"] } });
+      expect(frame).toMatchObject({ cover: "black", content: { _tag: "Lines", lines: ["C1"] } });
 
       const stored = yield* repository.load(organizationId);
       expect(Option.getOrNull(stored)).toMatchObject({
         projectId,
-        blackout: true,
+        roomCover: "black",
         version: 4,
         cursor: { itemId: itemId(3), slideIndex: 0 },
       });

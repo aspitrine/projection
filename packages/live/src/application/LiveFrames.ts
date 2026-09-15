@@ -1,4 +1,5 @@
 import {
+  type Cover,
   Frame,
   type FrameContent,
   type Track,
@@ -19,14 +20,14 @@ export class LiveFrames extends Context.Service<
     /** Image courante puis chaque changement. */
     watch(organizationId: OrganizationId, track: Track): Stream.Stream<Frame>;
     current(organizationId: OrganizationId, track: Track): Effect.Effect<Frame>;
-    /** Contenu et écran noir d'une piste en une seule image. */
+    /** Contenu et bouton d'urgence d'une piste en une seule image. */
     publish(
       organizationId: OrganizationId,
       track: Track,
       content: FrameContent,
-      blackout: boolean,
+      cover: Cover,
     ): Effect.Effect<Frame>;
-    /** Affiche un contenu sur toutes les pistes, écran noir inchangé (test d'affichage). */
+    /** Affiche un contenu sur toutes les pistes, bouton d'urgence inchangé (test d'affichage). */
     show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
   }
 >()("@projection/live/LiveFrames") {
@@ -52,7 +53,7 @@ export class LiveFrames extends Context.Service<
       const update = (
         organizationId: OrganizationId,
         track: Track,
-        transition: (frame: Frame) => Pick<Frame, "blackout" | "content">,
+        transition: (frame: Frame) => Pick<Frame, "cover" | "content">,
       ) =>
         Effect.gen(function* () {
           const ref = yield* refFor(organizationId, track);
@@ -69,15 +70,14 @@ export class LiveFrames extends Context.Service<
           Stream.unwrap(Effect.map(refFor(organizationId, track), SubscriptionRef.changes)),
         current: (organizationId, track) =>
           Effect.flatMap(refFor(organizationId, track), SubscriptionRef.get),
-        publish: (organizationId, track, content, blackout) =>
-          update(organizationId, track, () => ({ blackout, content })).pipe(
+        publish: (organizationId, track, content, cover) =>
+          update(organizationId, track, () => ({ cover, content })).pipe(
             Effect.withSpan("LiveFrames.publish"),
           ),
         show: (organizationId, content) =>
           Effect.forEach(
             tracks,
-            (track) =>
-              update(organizationId, track, (frame) => ({ blackout: frame.blackout, content })),
+            (track) => update(organizationId, track, (frame) => ({ cover: frame.cover, content })),
             { discard: true },
           ).pipe(Effect.withSpan("LiveFrames.show")),
       });

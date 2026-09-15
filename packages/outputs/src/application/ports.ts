@@ -2,7 +2,7 @@ import type { Frame, FrameContent, Track } from "@projection/presentation/domain
 import type { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref, type Stream } from "effect";
 
-import { type DisplayToken, Output, type SplittingSettings } from "../domain/Output";
+import { type Branding, type DisplayToken, Output, type SplittingSettings } from "../domain/Output";
 
 export type RemoveResult = "Removed" | "NotFound" | "Last";
 
@@ -112,3 +112,11 @@ export class FrameGateway extends Context.Service<
     show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
   }
 >()("@projection/outputs/FrameGateway") {}
+
+/** Port : nom et logo de l'organisation (implémenté dans la composition root, contexte identity). */
+export class BrandingSource extends Context.Service<
+  BrandingSource,
+  {
+    get(organizationId: OrganizationId): Effect.Effect<Branding>;
+  }
+>()("@projection/outputs/BrandingSource") {}

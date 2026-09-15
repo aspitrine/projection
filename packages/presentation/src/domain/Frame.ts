@@ -15,18 +15,25 @@ export const FrameContent = Schema.Union([
 ]);
 export type FrameContent = typeof FrameContent.Type;
 
+/**
+ * Boutons d'urgence d'une piste : contenu normal, écran noir, logo de l'organisation,
+ * ou texte masqué (fond conservé).
+ */
+export const Cover = Schema.Literals(["none", "black", "logo", "hideText"]);
+export type Cover = typeof Cover.Type;
+
 /** Image courante diffusée aux sorties d'une organisation. */
 export class Frame extends Schema.Class<Frame>("Frame")({
   version: Schema.Int,
-  /** Écran noir : le contenu est conservé mais masqué. */
-  blackout: Schema.Boolean,
+  /** Bouton d'urgence actif : le contenu est conservé mais masqué. */
+  cover: Cover,
   content: FrameContent,
   updatedAt: Schema.Number,
 }) {}
 
 export const initialFrame = new Frame({
   version: 0,
-  blackout: false,
+  cover: "none",
   content: { _tag: "Blank" },
   updatedAt: 0,
 });

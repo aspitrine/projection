@@ -10,25 +10,34 @@ import {
   nextCursor,
   streamFrameContent,
 } from "@projection/live/domain";
-import type { FrameContent } from "@projection/presentation/domain";
+import type { Cover, FrameContent, Track } from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
 import { Button } from "@projection/ui/components/button";
 import { cn } from "@projection/ui/lib/utils";
 import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
 import { Exit } from "effect";
-import { ChevronLeft, ChevronRight, MonitorOff, Radio, Square } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  EyeOff,
+  ImageIcon,
+  MonitorOff,
+  Radio,
+  Square,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
-import { contentToSlide, roomTheme, streamTheme } from "@/features/display/frame";
+import { contentToSlide, roomTheme } from "@/features/display/frame";
+import { FrameView } from "@/features/display/frame-view";
 import {
   liveAtom,
   liveGoToAtom,
   liveNextAtom,
   livePreviousAtom,
   liveRefreshAtom,
-  liveSetBlackoutAtom,
+  liveSetCoverAtom,
   liveStartAtom,
   liveStopAtom,
   liveStreamGoToAtom,
@@ -41,6 +50,7 @@ import {
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
 import { formatProjectDate } from "@/features/projects/format";
+import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/live")({
@@ -140,15 +150,15 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const goTo = useAtomSet(liveGoToAtom, { mode: "promiseExit" });
   const next = useAtomSet(liveNextAtom, { mode: "promiseExit" });
   const previous = useAtomSet(livePreviousAtom, { mode: "promiseExit" });
-  const setBlackout = useAtomSet(liveSetBlackoutAtom, { mode: "promiseExit" });
+  const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
   const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
   const stop = useAtomSet(liveStopAtom, { mode: "promiseExit" });
   const streamGoTo = useAtomSet(liveStreamGoToAtom, { mode: "promiseExit" });
   const streamNext = useAtomSet(liveStreamNextAtom, { mode: "promiseExit" });
   const streamPrevious = useAtomSet(liveStreamPreviousAtom, { mode: "promiseExit" });
 
-  const blackout = useRef(session.blackout);
-  blackout.current = session.blackout;
+  const covers = useRef({ room: session.roomCover, stream: session.streamCover });
+  covers.current = { room: session.roomCover, stream: session.streamCover };
 
   // Projet modifié (élément ajouté, réordonné…) : la régie relit le projet sans perdre sa position.
   const project = useAtomValue(projectAtom(deck.projectId));
@@ -177,7 +187,9 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
       } else if (backward) {
         void run(previous({ payload: undefined }));
       } else if (event.key === "b" || event.key === "B") {
-        void run(setBlackout({ payload: { blackout: !blackout.current } }));
+        const track: Track = event.shiftKey ? "stream" : "room";
+        const cover: Cover = covers.current[track] === "black" ? "none" : "black";
+        void run(setCover({ payload: { track, cover } }));
       } else {
         return;
       }
@@ -185,7 +197,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [next, previous, setBlackout, streamNext, streamPrevious, run]);
+  }, [next, previous, setCover, streamNext, streamPrevious, run]);
 
   const current = contentAt(deck, session.cursor);
   const upcomingCursor = session.cursor === null ? null : nextCursor(deck, session.cursor);
@@ -210,14 +222,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             {m.live_next()}
             <ChevronRight className="size-4" aria-hidden />
           </Button>
-          <Button
-            variant={session.blackout ? "destructive" : "outline"}
-            aria-pressed={session.blackout}
-            onClick={() => run(setBlackout({ payload: { blackout: !session.blackout } }))}
-          >
-            <MonitorOff className="size-4" aria-hidden />
-            {m.live_blackout()}
-          </Button>
+          <CoverButtons track="room" cover={session.roomCover} />
           <Button
             variant="ghost"
             onClick={() => {
@@ -245,20 +250,13 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
           <h2 className="text-muted-foreground text-xs font-medium uppercase">
             {m.live_room()} · {m.live_screen()}
           </h2>
-          <div
-            className={cn("relative ring-2", session.blackout ? "ring-red-500" : "ring-green-600")}
-            data-testid="live-screen"
-          >
-            <SlideRenderer
-              theme={roomTheme}
-              slide={session.blackout ? { kind: "blank" } : contentToSlide(current)}
-            />
-            {session.blackout && (
-              <span className="absolute top-2 left-2 bg-red-600 px-1.5 py-0.5 text-[0.65rem] font-medium text-white">
-                {m.live_blackout_active()}
-              </span>
-            )}
-          </div>
+          <CoverPreview
+            testId="live-screen"
+            track="room"
+            cover={session.roomCover}
+            content={current}
+            ringClassName="ring-green-600"
+          />
         </section>
         <section className="space-y-1">
           <h2 className="text-muted-foreground text-xs font-medium uppercase">
@@ -313,16 +311,13 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           {m.live_stream_linked()}
         </label>
       </div>
-      <div className="ring-2 ring-sky-500" style={transparencyBackground}>
-        <SlideRenderer
-          theme={streamTheme}
-          slide={
-            session.blackout
-              ? { kind: "blank" }
-              : contentToSlide(streamFrameContent(deck, streamCursor, session.streamOverride))
-          }
-        />
-      </div>
+      <CoverPreview
+        track="stream"
+        cover={session.streamCover}
+        content={streamFrameContent(deck, streamCursor, session.streamOverride)}
+        ringClassName="ring-sky-500"
+      />
+      <CoverButtons track="stream" cover={session.streamCover} size="sm" />
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -464,6 +459,93 @@ function LinePicker({
             {m.live_stream_send_lines()}
           </Button>
         </details>
+      )}
+    </div>
+  );
+}
+
+const coverLabels = {
+  black: m.live_cover_black,
+  logo: m.live_cover_logo,
+  hideText: m.live_cover_hide_text,
+} as const;
+
+const activeCoverLabels = {
+  black: m.live_cover_active_black,
+  logo: m.live_cover_active_logo,
+  hideText: m.live_cover_active_hide_text,
+} as const;
+
+const coverIcons = { black: MonitorOff, logo: ImageIcon, hideText: EyeOff } as const;
+
+/** Boutons d'urgence d'une piste : un clic active, un second revient au contenu. */
+function CoverButtons({
+  track,
+  cover,
+  size = "default",
+}: {
+  track: Track;
+  cover: Cover;
+  size?: "default" | "sm";
+}) {
+  const run = useRun();
+  const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
+
+  return (
+    <div
+      role="group"
+      aria-label={track === "room" ? m.live_room() : m.live_stream()}
+      className={cn("flex flex-wrap gap-2", size === "sm" && "w-full")}
+    >
+      {(["black", "logo", "hideText"] as const).map((option) => {
+        const Icon = coverIcons[option];
+        const active = cover === option;
+        return (
+          <Button
+            key={option}
+            size={size}
+            variant={active ? "destructive" : "outline"}
+            className={cn(size === "sm" && "flex-1")}
+            aria-pressed={active}
+            onClick={() => run(setCover({ payload: { track, cover: active ? "none" : option } }))}
+          >
+            <Icon className="size-4" aria-hidden />
+            {coverLabels[option]()}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Aperçu d'une piste tel que le voient ses écrans, bouton d'urgence compris. */
+function CoverPreview({
+  track,
+  cover,
+  content,
+  ringClassName,
+  testId,
+}: {
+  track: Track;
+  cover: Cover;
+  content: FrameContent;
+  ringClassName: string;
+  testId?: string;
+}) {
+  const { data: organization } = authClient.useActiveOrganization();
+  const branding = { name: organization?.name ?? "", logoUrl: organization?.logo ?? null };
+
+  return (
+    <div
+      className={cn("relative ring-2", cover === "none" ? ringClassName : "ring-red-500")}
+      style={track === "stream" ? transparencyBackground : undefined}
+      data-testid={testId}
+    >
+      <FrameView content={content} cover={cover} type={track} branding={branding} />
+      {cover !== "none" && (
+        <span className="absolute top-2 left-2 bg-red-600 px-1.5 py-0.5 text-[0.65rem] font-medium text-white">
+          {activeCoverLabels[cover]()}
+        </span>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { ActorMiddleware } from "@projection/identity/contract";
+import { Cover, Track } from "@projection/presentation/domain";
 import { ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
@@ -26,7 +27,8 @@ export const LiveRpcs = RpcGroup.make(
   }),
   Rpc.make("LiveNext", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LivePrevious", { success: LiveSnapshot, error: NoLiveProject }),
-  Rpc.make("LiveSetBlackout", { payload: { blackout: Schema.Boolean }, success: LiveSnapshot }),
+  /** Bouton d'urgence d'une piste (« none » revient au contenu). */
+  Rpc.make("LiveSetCover", { payload: { track: Track, cover: Cover }, success: LiveSnapshot }),
   Rpc.make("LiveStreamGoTo", {
     payload: { itemId: ProjectItemId, slideIndex: Schema.Int, part: Schema.Int },
     success: LiveSnapshot,

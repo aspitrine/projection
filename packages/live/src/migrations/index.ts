@@ -33,5 +33,15 @@ export const liveMigrations = {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`ALTER TABLE live_session ADD COLUMN stream_override jsonb`;
     }),
+    "0004_track_covers": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        ALTER TABLE live_session
+          ADD COLUMN room_cover text NOT NULL DEFAULT 'none',
+          ADD COLUMN stream_cover text NOT NULL DEFAULT 'none'
+      `;
+      yield* sql`UPDATE live_session SET room_cover = 'black', stream_cover = 'black' WHERE blackout`;
+      yield* sql`ALTER TABLE live_session DROP COLUMN blackout`;
+    }),
   },
 };

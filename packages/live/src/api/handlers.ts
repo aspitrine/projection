@@ -13,7 +13,7 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveGoTo: ({ itemId, slideIndex }) => sessions.goTo(itemId, slideIndex),
       LiveNext: () => sessions.next,
       LivePrevious: () => sessions.previous,
-      LiveSetBlackout: ({ blackout }) => sessions.setBlackout(blackout),
+      LiveSetCover: ({ track, cover }) => sessions.setCover(track, cover),
       LiveStreamGoTo: ({ itemId, slideIndex, part }) =>
         sessions.streamGoTo(itemId, slideIndex, part),
       LiveStreamNext: () => sessions.streamNext,

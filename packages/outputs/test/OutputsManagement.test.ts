@@ -4,10 +4,12 @@ import { Effect, Layer, Stream } from "effect";
 import { Outputs } from "../src/application/Outputs";
 import { OutputRepository } from "../src/application/ports";
 import { defaultSplittingSettings, trackOf } from "../src/domain/Output";
-import { FrameGatewayMemory, asActor } from "./support";
+import { BrandingSourceMemory, FrameGatewayMemory, asActor } from "./support";
 
 const TestLayer = Outputs.layer.pipe(
-  Layer.provideMerge(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayMemory)),
+  Layer.provideMerge(
+    Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayMemory, BrandingSourceMemory),
+  ),
 );
 
 describe("Types de sortie", () => {
@@ -59,6 +61,10 @@ describe("Gestion des sorties", () => {
       // L'écran stream connaît son type.
       const display = yield* outputs.watchDisplay(stream.token).pipe(Stream.runHead);
       expect(display._tag === "Some" && display.value.outputType).toBe("stream");
+      expect(display._tag === "Some" && display.value.branding).toEqual({
+        name: "Église org-a",
+        logoUrl: null,
+      });
 
       yield* outputs.remove(stream.id).pipe(asActor("org-a", "admin"));
       yield* outputs.remove(stage.id).pipe(asActor("org-a", "admin"));

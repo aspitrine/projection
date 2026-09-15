@@ -1,7 +1,12 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Translation, Verse } from "@projection/bible/domain";
 import { Bible } from "@projection/bible/server";
-import { FrameGateway, OutputRepository, Outputs } from "@projection/outputs/server";
+import {
+  BrandingSource,
+  FrameGateway,
+  OutputRepository,
+  Outputs,
+} from "@projection/outputs/server";
 import { initialFrame } from "@projection/presentation/domain";
 import { DeckSource } from "@projection/live/server";
 import { ProjectInput } from "@projection/projects/domain";
@@ -42,8 +47,15 @@ const FrameGatewayStub = Layer.succeed(
   }),
 );
 
+const BrandingStub = Layer.succeed(
+  BrandingSource,
+  BrandingSource.of({ get: () => Effect.succeed({ name: "Église", logoUrl: null }) }),
+);
+
 const ServicesLive = Layer.mergeAll(
-  Outputs.layer.pipe(Layer.provide(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayStub))),
+  Outputs.layer.pipe(
+    Layer.provide(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayStub, BrandingStub)),
+  ),
   Songs.layer.pipe(Layer.provide(SongRepository.layerMemory)),
   Projects.layer.pipe(Layer.provide(ProjectRepository.layerMemory)),
   TextSlides.layer.pipe(Layer.provide(TextSlideRepository.layerMemory)),

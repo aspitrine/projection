@@ -1,3 +1,4 @@
+import { Cover } from "@projection/presentation/domain";
 import { OrganizationId, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
@@ -33,7 +34,9 @@ export class LiveSession extends Schema.Class<LiveSession>("LiveSession")({
   organizationId: OrganizationId,
   projectId: Schema.NullOr(ProjectId),
   cursor: Schema.NullOr(LiveCursor),
-  blackout: Schema.Boolean,
+  /** Boutons d'urgence de chaque piste. */
+  roomCover: Cover,
+  streamCover: Cover,
   /** Lié : le stream suit la diapo de la salle et navigue dans ses parties. */
   streamLinked: Schema.Boolean,
   streamCursor: Schema.NullOr(StreamCursor),
@@ -47,7 +50,8 @@ export const idleSession = (organizationId: OrganizationId) =>
     organizationId,
     projectId: null,
     cursor: null,
-    blackout: false,
+    roomCover: "none",
+    streamCover: "none",
     streamLinked: true,
     streamCursor: null,
     streamOverride: null,

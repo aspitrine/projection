@@ -5,7 +5,7 @@ import { Outputs } from "./application/Outputs";
 import { SqlOutputRepository } from "./infrastructure/SqlOutputRepository";
 
 export { Outputs } from "./application/Outputs";
-export { FrameGateway, OutputRepository } from "./application/ports";
+export { BrandingSource, FrameGateway, OutputRepository } from "./application/ports";
 export { outputsMigrations } from "./migrations";
 
 /** Cas d'usage des sorties (requiert `PgClient` et `FrameGateway`). */

@@ -24,7 +24,7 @@ const layerWith = (source: ReturnType<typeof makeDeckSource>) =>
   );
 
 const screen = (frame: Frame) =>
-  `${frame.blackout ? "[noir] " : ""}${frame.content._tag === "Lines" ? frame.content.lines.join(" ") : frame.content._tag}`;
+  `${frame.cover === "none" ? "" : "[" + frame.cover + "] "}${frame.content._tag === "Lines" ? frame.content.lines.join(" ") : frame.content._tag}`;
 
 const baseDeck = deckOf([item(1, ["A1", "A2"]), item(2, []), item(3, ["C1"])]);
 
@@ -48,10 +48,10 @@ describe("LiveSessions", () => {
       yield* sessions.previous.pipe(asActor());
       expect(yield* onScreen).toBe("A2");
 
-      yield* sessions.setBlackout(true).pipe(asActor());
-      expect(yield* onScreen).toBe("[noir] A2");
+      yield* sessions.setCover("room", "black").pipe(asActor());
+      expect(yield* onScreen).toBe("[black] A2");
       const jumped = yield* sessions.goTo(itemId(3), 0).pipe(asActor());
-      expect(yield* onScreen).toBe("[noir] C1");
+      expect(yield* onScreen).toBe("[black] C1");
       expect(jumped.session.version).toBe(6);
 
       expect((yield* sessions.goTo(itemId(2), 0).pipe(asActor(), Effect.flip))._tag).toBe(
@@ -107,7 +107,8 @@ describe("LiveSessions", () => {
           organizationId,
           projectId,
           cursor: new LiveCursor({ itemId: itemId(3), slideIndex: 0 }),
-          blackout: true,
+          roomCover: "black",
+          streamCover: "none",
           streamLinked: true,
           streamCursor: null,
           streamOverride: null,
@@ -124,7 +125,7 @@ describe("LiveSessions", () => {
         expect(restored.value.session.version).toBe(7);
         expect(restored.value.deck?.items).toHaveLength(3);
       }
-      expect(screen(yield* frames.current(organizationId, "room"))).toBe("[noir] C1");
+      expect(screen(yield* frames.current(organizationId, "room"))).toBe("[black] C1");
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 
@@ -189,8 +190,8 @@ describe("LiveSessions", () => {
       expect(picked.session.streamLinked).toBe(false);
       expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["C1", "A1.2"]);
 
-      yield* sessions.setBlackout(true).pipe(asActor());
-      expect(yield* onTrack("stream")).toBe("[noir] A1.2");
+      yield* sessions.setCover("stream", "black").pipe(asActor());
+      expect(yield* onTrack("stream")).toBe("[black] A1.2");
 
       const stopped = yield* sessions.stop.pipe(asActor());
       expect(stopped.session).toMatchObject({ streamLinked: true, streamCursor: null });
@@ -228,9 +229,9 @@ describe("LiveSessions", () => {
 
         // Lié : la salle change de diapo, la sélection disparaît aussi.
         yield* sessions.streamShowLines({ lines: ["x"], caption: null }).pipe(asActor());
-        yield* sessions.setBlackout(true).pipe(asActor());
-        expect(yield* onTrack("stream")).toBe("[noir] x");
-        yield* sessions.setBlackout(false).pipe(asActor());
+        yield* sessions.setCover("stream", "black").pipe(asActor());
+        expect(yield* onTrack("stream")).toBe("[black] x");
+        yield* sessions.setCover("stream", "none").pipe(asActor());
         yield* sessions.next.pipe(asActor());
         expect(yield* onTrack("stream")).toBe("A2.1");
 
@@ -247,5 +248,32 @@ describe("LiveSessions", () => {
           layerWith(makeDeckSource(deckOf([item(1, ["A1", "A2"], 2), item(3, ["C1"])]))),
         ),
       ),
+  );
+
+  it.effect("boutons d'urgence indépendants par piste", () =>
+    Effect.gen(function* () {
+      const sessions = yield* LiveSessions;
+      const frames = yield* LiveFrames;
+      const onTrack = (track: "room" | "stream") =>
+        Effect.map(frames.current(organizationId, track), screen);
+
+      yield* sessions.start(projectId).pipe(asActor());
+      yield* sessions.setCover("room", "logo").pipe(asActor());
+      const covered = yield* sessions.setCover("stream", "hideText").pipe(asActor());
+      expect(covered.session).toMatchObject({ roomCover: "logo", streamCover: "hideText" });
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual([
+        "[logo] A1",
+        "[hideText] A1",
+      ]);
+
+      // Le contenu continue d'avancer sous le bouton d'urgence.
+      yield* sessions.next.pipe(asActor());
+      expect(yield* onTrack("room")).toBe("[logo] A2");
+      yield* sessions.setCover("room", "none").pipe(asActor());
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A2", "[hideText] A2"]);
+
+      const stopped = yield* sessions.stop.pipe(asActor());
+      expect(stopped.session).toMatchObject({ roomCover: "none", streamCover: "none" });
+    }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 });

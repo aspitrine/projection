@@ -183,11 +183,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] La sélection disparaît à la navigation stream, et aux changements de diapo de la salle en mode lié ; « Reprendre le découpage » y revient à la main.
 - [x] Tests unitaires (sessions, validation) et fonctionnels sur Postgres.
 
-### T2.4 Boutons d'urgence complets [live]
+### T2.4 Boutons d'urgence complets [live] ✅
 
 **Dépend de** : T2.2
 
-- [ ] Noir, logo, masquer le texte (fond conservé), par piste.
+- [x] `Cover` (domaine `presentation`) : aucun, noir, logo, texte masqué (fond du thème conservé), par piste (`roomCover`, `streamCover`) ; remplace l'écran noir global (migration reprenant l'ancien état).
+- [x] Logo : nom et logo de l'organisation (port `BrandingSource` implémenté dans la composition root sur la table `organization`) ; centré en salle, en incrustation en bas à droite sur le stream ; seules les URL http(s) ou relatives sont chargées.
+- [x] Régie : boutons par piste avec état actif, aperçus fidèles ; `B` / Maj + `B` pour le noir salle / stream.
+- [x] Tests unitaires (sessions, images par piste, rendu des boutons d'urgence) et fonctionnels sur Postgres.
+- [ ] Logo téléversé depuis la médiathèque : avec T2.8 (aujourd'hui, champ `logo` de l'organisation).
 
 ### T2.5 Thèmes personnalisables [presentation, outputs]
 

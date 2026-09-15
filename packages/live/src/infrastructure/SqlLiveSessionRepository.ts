@@ -1,3 +1,4 @@
+import { Cover } from "@projection/presentation/domain";
 import { OrganizationId, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
@@ -10,7 +11,8 @@ const Row = Schema.Struct({
   projectId: Schema.NullOr(ProjectId),
   itemId: Schema.NullOr(ProjectItemId),
   slideIndex: Schema.Int,
-  blackout: Schema.Boolean,
+  roomCover: Cover,
+  streamCover: Cover,
   streamLinked: Schema.Boolean,
   streamItemId: Schema.NullOr(ProjectItemId),
   streamSlideIndex: Schema.Int,
@@ -30,7 +32,8 @@ export const SqlLiveSessionRepository = Layer.effect(
       Result: Row,
       execute: (organizationId) => sql`
         SELECT organization_id AS "organizationId", project_id::text AS "projectId",
-          item_id::text AS "itemId", slide_index AS "slideIndex", blackout,
+          item_id::text AS "itemId", slide_index AS "slideIndex",
+          room_cover AS "roomCover", stream_cover AS "streamCover",
           stream_linked AS "streamLinked", stream_item_id::text AS "streamItemId",
           stream_slide_index AS "streamSlideIndex", stream_part AS "streamPart",
           stream_override AS "streamOverride", version,
@@ -52,7 +55,8 @@ export const SqlLiveSessionRepository = Layer.effect(
                     row.itemId === null
                       ? null
                       : new LiveCursor({ itemId: row.itemId, slideIndex: row.slideIndex }),
-                  blackout: row.blackout,
+                  roomCover: row.roomCover,
+                  streamCover: row.streamCover,
                   streamLinked: row.streamLinked,
                   streamCursor:
                     row.streamItemId === null
@@ -76,19 +80,20 @@ export const SqlLiveSessionRepository = Layer.effect(
         const override =
           session.streamOverride === null ? null : JSON.stringify(session.streamOverride);
         return sql`
-          INSERT INTO live_session (organization_id, project_id, item_id, slide_index, blackout,
-            stream_linked, stream_item_id, stream_slide_index, stream_part, stream_override,
-            version, updated_at)
+          INSERT INTO live_session (organization_id, project_id, item_id, slide_index,
+            room_cover, stream_cover, stream_linked, stream_item_id, stream_slide_index,
+            stream_part, stream_override, version, updated_at)
           VALUES (${session.organizationId}, ${session.projectId}::uuid, ${session.cursor?.itemId ?? null}::uuid,
-                  ${session.cursor?.slideIndex ?? 0}, ${session.blackout}, ${session.streamLinked},
-                  ${session.streamCursor?.itemId ?? null}::uuid, ${session.streamCursor?.slideIndex ?? 0},
-                  ${session.streamCursor?.part ?? 0}, ${override}::jsonb,
-                  ${session.version}, ${new Date(session.updatedAt)})
+                  ${session.cursor?.slideIndex ?? 0}, ${session.roomCover}, ${session.streamCover},
+                  ${session.streamLinked}, ${session.streamCursor?.itemId ?? null}::uuid,
+                  ${session.streamCursor?.slideIndex ?? 0}, ${session.streamCursor?.part ?? 0},
+                  ${override}::jsonb, ${session.version}, ${new Date(session.updatedAt)})
           ON CONFLICT (organization_id) DO UPDATE SET
             project_id = EXCLUDED.project_id,
             item_id = EXCLUDED.item_id,
             slide_index = EXCLUDED.slide_index,
-            blackout = EXCLUDED.blackout,
+            room_cover = EXCLUDED.room_cover,
+            stream_cover = EXCLUDED.stream_cover,
             stream_linked = EXCLUDED.stream_linked,
             stream_item_id = EXCLUDED.stream_item_id,
             stream_slide_index = EXCLUDED.stream_slide_index,

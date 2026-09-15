@@ -1,10 +1,5 @@
 import type { OutputType } from "@projection/outputs/domain";
-import {
-  type Frame,
-  type FrameContent,
-  SlideTheme,
-  defaultTheme,
-} from "@projection/presentation/domain";
+import { type FrameContent, SlideTheme, defaultTheme } from "@projection/presentation/domain";
 import { parseRichText } from "@projection/slides/domain";
 
 import type { RenderableSlide } from "../presentation/slide-renderer";
@@ -49,6 +44,3 @@ export const contentToSlide = (content: FrameContent): RenderableSlide => {
       return { kind: "blank" };
   }
 };
-
-export const frameToSlide = (frame: Frame): RenderableSlide =>
-  frame.blackout ? { kind: "blank" } : contentToSlide(frame.content);

@@ -54,10 +54,18 @@ export const defaultSplittingSettings: SplittingSettings = {
   stream: streamSplitting,
 };
 
+/** Identité visuelle de l'organisation, affichée par le bouton « logo ». */
+export const Branding = Schema.Struct({
+  name: Schema.String,
+  logoUrl: Schema.NullOr(Schema.String),
+});
+export type Branding = typeof Branding.Type;
+
 /** Ce que reçoit un écran : l'image courante et l'identité de la sortie. */
 export class DisplayFrame extends Schema.Class<DisplayFrame>("DisplayFrame")({
   outputName: Schema.String,
   outputType: OutputType,
+  branding: Branding,
   frame: Frame,
 }) {}
 

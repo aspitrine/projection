@@ -245,8 +245,6 @@
   "live_start": "Diffuser",
   "live_previous": "Précédente",
   "live_next": "Suivante",
-  "live_blackout": "Écran noir",
-  "live_blackout_active": "Écran noir actif",
   "live_stop": "Arrêter",
   "live_stop_confirm": "Arrêter la diffusion ? Les écrans deviendront vides.",
   "live_screen": "À l'écran",
@@ -255,7 +253,7 @@
   "live_missing": "Élément introuvable dans la bibliothèque",
   "live_blank_item": "Écran vide",
   "live_slide_label": "Diapo {number}",
-  "live_shortcuts": "Raccourcis : → ↓ Espace Page suiv. pour avancer, ← ↑ Page préc. pour reculer, B pour l'écran noir. Maj + flèches : piste Stream. Maj + clic sur une diapo : l'envoyer au stream (délie les pistes).",
+  "live_shortcuts": "Raccourcis : → ↓ Espace Page suiv. pour avancer, ← ↑ Page préc. pour reculer, B pour l'écran noir de la salle. Maj + flèches et Maj + B : piste Stream. Maj + clic sur une diapo : l'envoyer au stream (délie les pistes).",
   "live_load_error": "Impossible de joindre la régie.",
   "live_action_error": "Action impossible",
   "live_outputs_link": "Ouvrir la page Sorties (lien de l'écran de salle)",
@@ -299,5 +297,11 @@
   "live_stream_resume": "Reprendre le découpage",
   "live_stream_pick_lines": "Choisir les lignes",
   "live_stream_lines_hint": "Cochez les lignes de la diapo à afficher sur le stream (12 au plus).",
-  "live_stream_send_lines": "Envoyer au stream"
+  "live_stream_send_lines": "Envoyer au stream",
+  "live_cover_black": "Noir",
+  "live_cover_logo": "Logo",
+  "live_cover_hide_text": "Masquer le texte",
+  "live_cover_active_black": "Écran noir",
+  "live_cover_active_logo": "Logo à l'écran",
+  "live_cover_active_hide_text": "Texte masqué"
 }

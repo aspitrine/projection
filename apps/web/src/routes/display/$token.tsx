@@ -3,8 +3,7 @@ import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { displayAtom } from "@/features/display/atoms";
-import { frameToSlide, themeFor } from "@/features/display/frame";
-import { SlideRenderer } from "@/features/presentation/slide-renderer";
+import { FrameView } from "@/features/display/frame-view";
 import { m } from "@/paraglide/messages";
 
 /** Écran de sortie public : aucune session, accès par token. */
@@ -60,7 +59,7 @@ function DisplayScreen() {
     return <StatusMessage>{m.display_invalid_token()}</StatusMessage>;
   }
 
-  const { frame, outputType: type } = result.value.display;
+  const { frame, outputType: type, branding } = result.value.display;
 
   return (
     <div
@@ -69,8 +68,9 @@ function DisplayScreen() {
       data-testid="display-screen"
       data-version={frame.version}
       data-output-type={type}
+      data-cover={frame.cover}
     >
-      <SlideRenderer slide={frameToSlide(frame)} theme={themeFor(type)} />
+      <FrameView content={frame.content} cover={frame.cover} type={type} branding={branding} />
       {hintVisible && type !== "stream" && (
         <p className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/40">
           {m.display_fullscreen_hint()}

@@ -4,6 +4,7 @@ import {
   type ProjectId,
   type ProjectItemId,
 } from "@projection/shared-kernel";
+import type { Cover, Track } from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Semaphore, Stream, SubscriptionRef } from "effect";
 
 import type { Deck } from "../domain/Deck";
@@ -40,7 +41,8 @@ interface Draft {
   readonly deck: Deck | null;
   readonly projectId: ProjectId | null;
   readonly cursor: LiveCursor | null;
-  readonly blackout: boolean;
+  readonly roomCover: Cover;
+  readonly streamCover: Cover;
   readonly streamLinked: boolean;
   readonly streamCursor: StreamCursor | null;
   readonly streamOverride: StreamOverride | null;
@@ -53,11 +55,12 @@ interface OrganizationState {
 
 type Command<E = never> = Effect.Effect<LiveSnapshot, E, CurrentActor>;
 
-const idleDraft = (streamLinked: boolean, blackout: boolean): Draft => ({
+const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover): Draft => ({
   deck: null,
   projectId: null,
   cursor: null,
-  blackout,
+  roomCover,
+  streamCover,
   streamLinked,
   streamCursor: null,
   streamOverride: null,
@@ -76,7 +79,8 @@ export class LiveSessions extends Context.Service<
     goTo(itemId: ProjectItemId, slideIndex: number): Command<NoLiveProject | LiveItemNotFound>;
     readonly next: Command<NoLiveProject>;
     readonly previous: Command<NoLiveProject>;
-    setBlackout(blackout: boolean): Command;
+    /** Boutons d'urgence d'une piste : noir, logo, texte masqué (fond conservé). */
+    setCover(track: Track, cover: Cover): Command;
     /** Stream : partie précise ; une autre diapo que celle de la salle délie les pistes. */
     streamGoTo(
       itemId: ProjectItemId,
@@ -106,15 +110,16 @@ export class LiveSessions extends Context.Service<
       const initLock = yield* Semaphore.make(1);
 
       const publish = (snapshot: LiveSnapshot) => {
-        const { organizationId, cursor, streamCursor, streamOverride, blackout } = snapshot.session;
+        const { organizationId, cursor, streamCursor, streamOverride, roomCover, streamCover } =
+          snapshot.session;
         return Effect.all(
           [
-            frames.publish(organizationId, "room", contentAt(snapshot.deck, cursor), blackout),
+            frames.publish(organizationId, "room", contentAt(snapshot.deck, cursor), roomCover),
             frames.publish(
               organizationId,
               "stream",
               streamFrameContent(snapshot.deck, streamCursor, streamOverride),
-              blackout,
+              streamCover,
             ),
           ],
           { discard: true },
@@ -133,18 +138,24 @@ export class LiveSessions extends Context.Service<
         projectId: ProjectId | null,
         from: Pick<
           Draft,
-          "cursor" | "streamCursor" | "streamLinked" | "streamOverride" | "blackout"
+          | "cursor"
+          | "streamCursor"
+          | "streamLinked"
+          | "streamOverride"
+          | "roomCover"
+          | "streamCover"
         >,
       ): Draft =>
         Option.match(deck, {
-          onNone: () => idleDraft(from.streamLinked, from.blackout),
+          onNone: () => idleDraft(from.streamLinked, from.roomCover, from.streamCover),
           onSome: (resolved) => {
             const cursor = normalizeCursor(resolved, from.cursor);
             return {
               deck: resolved,
               projectId,
               cursor,
-              blackout: from.blackout,
+              roomCover: from.roomCover,
+              streamCover: from.streamCover,
               streamLinked: from.streamLinked,
               streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
               streamOverride: from.streamOverride,
@@ -164,7 +175,8 @@ export class LiveSessions extends Context.Service<
             organizationId,
             projectId: draft.projectId,
             cursor: draft.cursor,
-            blackout: draft.blackout,
+            roomCover: draft.roomCover,
+            streamCover: draft.streamCover,
             streamLinked: draft.streamLinked,
             streamCursor: draft.streamCursor,
             streamOverride: draft.streamOverride,
@@ -241,7 +253,8 @@ export class LiveSessions extends Context.Service<
         deck: current.deck,
         projectId: current.session.projectId,
         cursor: current.session.cursor,
-        blackout: current.session.blackout,
+        roomCover: current.session.roomCover,
+        streamCover: current.session.streamCover,
         streamLinked: current.session.streamLinked,
         streamCursor: current.session.streamCursor,
         streamOverride: current.session.streamOverride,
@@ -281,13 +294,14 @@ export class LiveSessions extends Context.Service<
           command((current) =>
             decks.resolve(projectId).pipe(
               Effect.map((deck): Draft => {
-                const { streamLinked, blackout } = current.session;
+                const { streamLinked, roomCover, streamCover } = current.session;
                 const cursor = firstCursor(deck);
                 return {
                   deck,
                   projectId,
                   cursor,
-                  blackout,
+                  roomCover,
+                  streamCover,
                   streamLinked,
                   streamCursor: streamLinked
                     ? followRoom(cursor)
@@ -318,10 +332,14 @@ export class LiveSessions extends Context.Service<
           ),
         ).pipe(Effect.withSpan("LiveSessions.previous")),
 
-        setBlackout: (blackout) =>
-          command((current) => Effect.succeed({ ...keep(current), blackout })).pipe(
-            Effect.withSpan("LiveSessions.setBlackout"),
-          ),
+        setCover: (track, cover) =>
+          command((current) =>
+            Effect.succeed(
+              track === "room"
+                ? { ...keep(current), roomCover: cover }
+                : { ...keep(current), streamCover: cover },
+            ),
+          ).pipe(Effect.withSpan("LiveSessions.setCover")),
 
         streamGoTo: (itemId, slideIndex, part) =>
           command((current) =>
@@ -381,7 +399,7 @@ export class LiveSessions extends Context.Service<
           );
         }).pipe(Effect.withSpan("LiveSessions.refresh")),
 
-        stop: command(() => Effect.succeed(idleDraft(true, false))).pipe(
+        stop: command(() => Effect.succeed(idleDraft(true, "none", "none"))).pipe(
           Effect.withSpan("LiveSessions.stop"),
         ),
       });

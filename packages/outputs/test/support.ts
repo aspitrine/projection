@@ -2,7 +2,7 @@ import { Frame, type Track, initialFrame } from "@projection/presentation/domain
 import { Actor, CurrentActor, OrganizationId, type Role, UserId } from "@projection/shared-kernel";
 import { Effect, Layer, Stream, SubscriptionRef } from "effect";
 
-import { FrameGateway } from "../src/application/ports";
+import { BrandingSource, FrameGateway } from "../src/application/ports";
 
 export const asActor = (organizationId: string, role: Role = "operator") =>
   Effect.provideService(
@@ -44,5 +44,12 @@ export const FrameGatewayMemory = Layer.effect(
           { discard: true },
         ),
     });
+  }),
+);
+
+export const BrandingSourceMemory = Layer.succeed(
+  BrandingSource,
+  BrandingSource.of({
+    get: (organizationId) => Effect.succeed({ name: `Église ${organizationId}`, logoUrl: null }),
   }),
 );

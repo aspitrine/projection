@@ -14,7 +14,7 @@ import {
   isDisplayToken,
   trackOf,
 } from "../domain/Output";
-import { FrameGateway, OutputRepository } from "./ports";
+import { BrandingSource, FrameGateway, OutputRepository } from "./ports";
 
 /** Nom de la sortie créée par défaut pour chaque organisation. */
 export const DEFAULT_OUTPUT_NAME = "Salle";
@@ -52,6 +52,7 @@ export class Outputs extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* OutputRepository;
       const gateway = yield* FrameGateway;
+      const brandingSource = yield* BrandingSource;
 
       const orNotFound = (id: OutputId) =>
         Effect.flatMap(
@@ -146,11 +147,13 @@ export class Outputs extends Context.Service<
                 return yield* new InvalidDisplayToken();
               }
               const { name, type, organizationId } = output.value;
+              const branding = yield* brandingSource.get(organizationId);
               return gateway
                 .watch(organizationId, trackOf(type))
                 .pipe(
                   Stream.map(
-                    (frame) => new DisplayFrame({ outputName: name, outputType: type, frame }),
+                    (frame) =>
+                      new DisplayFrame({ outputName: name, outputType: type, branding, frame }),
                   ),
                 );
             }),

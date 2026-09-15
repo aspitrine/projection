@@ -8,7 +8,7 @@ import { RpcTest } from "effect/unstable/rpc";
 
 import { DisplayRpcs, OutputsRpcs } from "../src/api/contract";
 import { OutputsLive, outputsMigrations } from "../src/server";
-import { FrameGatewayMemory } from "./support";
+import { BrandingSourceMemory, FrameGatewayMemory } from "./support";
 
 /** Tests fonctionnels de l'API outputs sur Postgres (TEST_DATABASE_URL). */
 const DatabaseLive = PgClient.layerConfig({ url: Config.Redacted("TEST_DATABASE_URL") });
@@ -38,7 +38,7 @@ const FakeActorMiddleware = Layer.succeed(
 );
 
 const ApiLive = Layer.mergeAll(OutputsLive, FakeActorMiddleware).pipe(
-  Layer.provide(FrameGatewayMemory),
+  Layer.provide(Layer.mergeAll(FrameGatewayMemory, BrandingSourceMemory)),
   Layer.provideMerge(MigratedDatabase),
 );
 
