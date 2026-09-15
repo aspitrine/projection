@@ -135,15 +135,18 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Tests unitaires (LiveFrames, tokens, cas d'usage, flux d'écran) et fonctionnels API sur Postgres (création concurrente, token régénéré).
 - [ ] Limite connue : régénérer le token n'interrompt pas un écran déjà connecté (effet à sa prochaine reconnexion).
 
-### T1.8 Régie live [live]
+### T1.8 Régie live [live] ✅
 
 **Dépend de** : T1.5, T1.7
 
-- [ ] Domaine : `LiveSession` (projet actif, élément, index diapo, noir) + commandes (`GoTo`, `Next`, `Previous`, `Blackout`).
-- [ ] Port `SlideSource` implémenté dans la composition root (songs, bible, slides → presentation).
-- [ ] État en `SubscriptionRef`, persistance Postgres, `LiveRpc` (commandes + stream d'état).
-- [ ] UI régie : éléments, grille des diapos, aperçu sortie ; raccourcis (flèches, espace, PageUp/PageDown, `B`).
-- [ ] Deux régies synchronisées ; ajout d'un élément pendant le direct sans casser l'affichage.
+- [x] Domaine : `Deck` (projet résolu en diapos), `LiveSession` (projet, curseur élément + diapo, noir, version) ; navigation pure (suivante, précédente, saut, recalage après modification) testée avec propriétés.
+- [x] Port `DeckSource` implémenté dans la composition root (songs, bible, slides, projects → presentation) ; contenu supprimé de la bibliothèque = élément « introuvable » sans diapo.
+- [x] `LiveSessions` : `SubscriptionRef` par organisation, commandes sérialisées (sémaphore), persistance Postgres (`live_session`), session restaurée et republiée aux sorties au redémarrage.
+- [x] `LiveRpcs` : `LiveWatch` (flux d'état) + start, goTo, next, previous, setBlackout, refresh, stop. Spike T0.2 (`/spike/live`, scripts) retiré.
+- [x] UI régie `/live` : choix du projet, éléments et grille des diapos, écran courant et diapo suivante, écran noir, arrêt ; raccourcis (flèches, Espace, Page préc./suiv., `B`) ; bouton « Diffuser » sur la page projet.
+- [x] Régies synchronisées ; projet modifié pendant le direct : relecture automatique en gardant la position.
+- [x] Tests unitaires (navigation, sessions, DeckSource) et fonctionnels API sur Postgres.
+- [ ] Limite connue : état en mémoire par instance (multi-instance en T3.3) ; pas de battement de cœur applicatif sur les flux.
 
 **🎯 Jalon MVP** : un culte complet projeté depuis le navigateur, piloté par deux opérateurs.
 

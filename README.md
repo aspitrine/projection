@@ -110,7 +110,7 @@ projection/
 │   ├── shared-kernel/    # IDs brandés, CurrentActor
 │   ├── platform/         # Postgres, migrations, logs, RPC système
 │   ├── identity/         # Organisations, membres, rôles, Better-Auth, middleware CurrentActor
-│   ├── live/             # Session live temps réel (spike T0.2)
+│   ├── live/             # Régie : session live, navigation, diffusion des images
 │   ├── ui/               # Composants shadcn/ui partagés
 │   └── config/           # tsconfig partagé
 ```

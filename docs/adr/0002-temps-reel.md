@@ -2,7 +2,7 @@
 
 - **Statut** : accepté
 - **Date** : 2026-09-15
-- **Spike** : T0.2 — `packages/live`, page `/spike/live`, scripts `apps/web/scripts/live-latency.ts` et `live-watch.ts`
+- **Spike** : T0.2 — `packages/live`, page `/spike/live`, scripts `apps/web/scripts/live-latency.ts` et `live-watch.ts` (retirés en T1.8, remplacés par la régie)
 
 ## Contexte
 

@@ -106,13 +106,16 @@
       "name": "@projection/live",
       "version": "0.0.0",
       "dependencies": {
+        "@projection/identity": "workspace:*",
         "@projection/presentation": "workspace:*",
         "@projection/shared-kernel": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
+        "@effect/sql-pg": "catalog:",
         "@effect/vitest": "catalog:",
         "@projection/config": "workspace:*",
+        "@projection/platform": "workspace:*",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },

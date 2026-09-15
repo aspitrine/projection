@@ -7,6 +7,7 @@ import {
   MonitorPlay,
   Music,
   Presentation,
+  Radio,
   Users,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ export interface NavigationItem {
     | "/library/bible"
     | "/library/slides"
     | "/library/media"
+    | "/live"
     | "/outputs"
     | "/settings/members";
   readonly label: () => string;
@@ -52,7 +54,10 @@ export const navigation: ReadonlyArray<NavigationGroup> = [
   },
   {
     id: "broadcast",
-    items: [{ to: "/outputs", label: m.nav_outputs, icon: MonitorPlay }],
+    items: [
+      { to: "/live", label: m.nav_live, icon: Radio },
+      { to: "/outputs", label: m.nav_outputs, icon: MonitorPlay },
+    ],
   },
   {
     id: "settings",

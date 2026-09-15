@@ -1,11 +1,31 @@
+import { ActorMiddleware } from "@projection/identity/contract";
+import { ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
 
-import { LiveState } from "../domain/LiveState";
+import {
+  LiveItemNotFound,
+  LiveProjectNotFound,
+  LiveSnapshot,
+  NoLiveProject,
+} from "../domain/LiveSession";
 
 export const LiveRpcs = RpcGroup.make(
-  /** Émet l'état courant puis chaque changement. Se réabonner resynchronise l'état complet. */
-  Rpc.make("LiveWatch", { success: LiveState, stream: true }),
-  Rpc.make("LiveGoTo", { payload: { slideIndex: Schema.Int }, success: LiveState }),
-  Rpc.make("LiveToggleBlackout", { success: LiveState }),
-);
+  /** État complet puis chaque changement ; se réabonner resynchronise la régie. */
+  Rpc.make("LiveWatch", { success: LiveSnapshot, stream: true }),
+  Rpc.make("LiveStart", {
+    payload: { projectId: ProjectId },
+    success: LiveSnapshot,
+    error: LiveProjectNotFound,
+  }),
+  Rpc.make("LiveGoTo", {
+    payload: { itemId: ProjectItemId, slideIndex: Schema.Int },
+    success: LiveSnapshot,
+    error: Schema.Union([NoLiveProject, LiveItemNotFound]),
+  }),
+  Rpc.make("LiveNext", { success: LiveSnapshot, error: NoLiveProject }),
+  Rpc.make("LivePrevious", { success: LiveSnapshot, error: NoLiveProject }),
+  Rpc.make("LiveSetBlackout", { payload: { blackout: Schema.Boolean }, success: LiveSnapshot }),
+  Rpc.make("LiveRefresh", { success: LiveSnapshot }),
+  Rpc.make("LiveStop", { success: LiveSnapshot }),
+).middleware(ActorMiddleware);

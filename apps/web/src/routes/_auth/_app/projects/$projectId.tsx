@@ -6,7 +6,7 @@ import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
 import { ClientOnly, Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Exit, Option, Schema } from "effect";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Radio, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ import {
   projectsReactivity,
   updateProjectAtom,
 } from "@/features/projects/atoms";
+import { liveStartAtom } from "@/features/live/atoms";
 import { ProjectItems } from "@/features/projects/project-items";
 import { m } from "@/paraglide/messages";
 
@@ -79,6 +80,7 @@ function ProjectHeader({ project }: { project: Project }) {
   const navigate = useNavigate();
   const update = useAtomSet(updateProjectAtom, { mode: "promiseExit" });
   const remove = useAtomSet(deleteProjectAtom, { mode: "promiseExit" });
+  const startLive = useAtomSet(liveStartAtom, { mode: "promiseExit" });
   const [name, setName] = useState(project.name);
   const [date, setDate] = useState(project.date ?? "");
   const dirty = name.trim() !== project.name || (date === "" ? null : date) !== project.date;
@@ -122,6 +124,19 @@ function ProjectHeader({ project }: { project: Project }) {
       </div>
       <Button type="submit" size="lg" disabled={!dirty || name.trim() === ""}>
         {m.project_save()}
+      </Button>
+      <Button
+        type="button"
+        size="lg"
+        variant="outline"
+        onClick={async () => {
+          const exit = await startLive({ payload: { projectId: project.id } });
+          if (Exit.isSuccess(exit)) navigate({ to: "/live" });
+          else toast.error(m.project_action_error());
+        }}
+      >
+        <Radio className="size-4" aria-hidden />
+        {m.project_broadcast()}
       </Button>
       <Button
         type="button"

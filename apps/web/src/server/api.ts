@@ -1,6 +1,6 @@
-import { BibleLive, bibleMigrations } from "@projection/bible/server";
+import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
-import { LiveFrames, LiveLive } from "@projection/live/server";
+import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
 import { FrameGateway, OutputsLive, outputsMigrations } from "@projection/outputs/server";
 import {
   DatabaseHealth,
@@ -9,15 +9,16 @@ import {
   SystemHandlersLive,
   layerMigrations,
 } from "@projection/platform";
-import { ProjectsLive, projectsMigrations } from "@projection/projects/server";
-import { SlidesLive, slidesMigrations } from "@projection/slides/server";
-import { SongsLive, songsMigrations } from "@projection/songs/server";
+import { ProjectsLive, ProjectsServiceLive, projectsMigrations } from "@projection/projects/server";
+import { SlidesLive, TextSlidesServiceLive, slidesMigrations } from "@projection/slides/server";
+import { SongsLive, SongsServiceLive, songsMigrations } from "@projection/songs/server";
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
 import { ApiRpcs } from "../api/contract";
 import { auth, ensureAuthSchema } from "../services";
+import { DeckSourceLive } from "./deck-source";
 
 const AuthMigrationsLive = Layer.effectDiscard(
   Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
@@ -44,6 +45,19 @@ const HandlersLive = Layer.mergeAll(
 ).pipe(
   Layer.provide(DatabaseHealth.layer),
   Layer.provide(FrameGatewayLive),
+  // La régie résout les projets en diapos via les cas d'usage des autres contextes.
+  Layer.provide(
+    DeckSourceLive.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          SongsServiceLive,
+          BibleServiceLive,
+          TextSlidesServiceLive,
+          ProjectsServiceLive,
+        ),
+      ),
+    ),
+  ),
   Layer.provide(LiveFrames.layerMemory),
 );
 
@@ -64,6 +78,7 @@ const ApiLive = RpcServer.layerHttp({
         slidesMigrations,
         projectsMigrations,
         outputsMigrations,
+        liveMigrations,
       ]),
     ),
   ),
