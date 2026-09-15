@@ -1,26 +1,46 @@
 import type { Slide } from "@projection/presentation/domain";
+import { useState } from "react";
 
-/** Aperçu miniature des diapos (en attendant le rendu thématisé de T1.6). */
+import { m } from "@/paraglide/messages";
+
+import { FullscreenSlide } from "./fullscreen-slide";
+import { type RenderableSlide, SlideRenderer } from "./slide-renderer";
+
+const toRenderable = (slide: Slide): RenderableSlide => ({
+  kind: "lines",
+  lines: slide.lines,
+  caption: slide.parts > 1 ? `${slide.label ?? ""} · ${slide.part}/${slide.parts}` : slide.label,
+});
+
+/** Miniatures cliquables ; ouverture en plein écran avec navigation au clavier. */
 export function SlidePreviewGrid({ slides }: { slides: ReadonlyArray<Slide> }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const current = open === null ? undefined : slides[open];
+
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {slides.map((slide) => (
-        <figure
-          key={slide.index}
-          data-testid="slide-preview"
-          className="flex aspect-video flex-col bg-black p-3 text-white ring-1 ring-foreground/10"
-        >
-          <figcaption className="text-[0.65rem] text-white/50">
-            {slide.label}
-            {slide.parts > 1 ? ` · ${slide.part}/${slide.parts}` : ""}
-          </figcaption>
-          <div className="flex flex-1 flex-col items-center justify-center overflow-hidden text-center text-xs leading-snug">
-            {slide.lines.map((line, index) => (
-              <p key={index}>{line}</p>
-            ))}
-          </div>
-        </figure>
-      ))}
-    </div>
+    <>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {slides.map((slide) => (
+          <button
+            key={slide.index}
+            type="button"
+            data-testid="slide-preview"
+            aria-label={`${m.slide_open_fullscreen()} : ${slide.label ?? slide.index + 1}`}
+            className="focus-visible:ring-ring block w-full ring-1 ring-foreground/10 transition hover:ring-foreground/40 focus-visible:ring-2 focus-visible:outline-none"
+            onClick={() => setOpen(slide.index)}
+          >
+            <SlideRenderer slide={toRenderable(slide)} />
+          </button>
+        ))}
+      </div>
+      {current !== undefined && open !== null && (
+        <FullscreenSlide
+          slide={toRenderable(current)}
+          onClose={() => setOpen(null)}
+          onPrevious={() => setOpen(Math.max(0, open - 1))}
+          onNext={() => setOpen(Math.min(slides.length - 1, open + 1))}
+        />
+      )}
+    </>
   );
 }

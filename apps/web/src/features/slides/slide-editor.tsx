@@ -7,10 +7,10 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Bold, Heading, Italic, List } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 
+import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { m } from "@/paraglide/messages";
 
 import { type MarkupEdit, togglePrefix, toggleWrap } from "./markup";
-import { RichTextView } from "./rich-text-view";
 
 export interface SlideFormValues {
   readonly title: string;
@@ -154,12 +154,11 @@ export function SlideEditor({
         <section className="space-y-3" aria-label={m.slide_preview()}>
           <h2 className="font-medium">{m.slide_preview()}</h2>
           {hasContent ? (
-            <figure
+            <SlideRenderer
               data-testid="text-slide-preview"
-              className="flex aspect-video items-center justify-center overflow-hidden bg-black p-[6%] text-center text-sm text-white ring-1 ring-foreground/10 sm:text-base"
-            >
-              <RichTextView blocks={blocks} />
-            </figure>
+              className="ring-1 ring-foreground/10"
+              slide={{ kind: "rich", blocks }}
+            />
           ) : (
             <p className="text-muted-foreground text-sm">{m.slide_content_hint()}</p>
           )}

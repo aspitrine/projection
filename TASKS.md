@@ -112,11 +112,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] UI : liste et création de projets, page projet (nom, date, suppression), ordre de passage réordonnable (glisser-déposer + boutons monter/descendre), panneau d'ajout par onglets (chant, passage avec aperçu de la référence, diapo texte, écran vide).
 - [x] Tests unitaires (opérations + propriété de déplacement, cas d'usage) et fonctionnels API sur Postgres (dont 10 ajouts concurrents sans perte).
 
-### T1.6 Rendu de diapo [presentation, web]
+### T1.6 Rendu de diapo [presentation, web] ✅
 
 **Dépend de** : T1.2
 
-- [ ] Composant unique `SlideRenderer` (thème par défaut, auto-fit, 16:9), utilisé en miniature et en plein écran.
+- [x] `SlideTheme` + thème par défaut dans le domaine `presentation` (couleurs, police, alignements, marges, bornes de taille, ombre, libellé).
+- [x] `fitFontSize` : ajustement automatique par dichotomie (pur, testé avec propriétés).
+- [x] Composant unique `SlideRenderer` 16:9 (lignes, texte enrichi, écran vide), tailles en `cqh` : rendu identique en miniature et en plein écran, réajusté au redimensionnement.
+- [x] Utilisé par les aperçus chants, Bible et diapos texte ; plein écran au clic avec navigation clavier (flèches, Page préc./suiv., Espace, Échap).
+- [x] Tests : `fitFontSize` (unitaires + propriété), rendu du composant sous jsdom.
 
 ### T1.7 Sortie salle + page d'affichage [outputs]
 

@@ -218,5 +218,8 @@
   "item_kind_blank": "Écran vide",
   "item_blank": "Écran vide",
   "item_missing_song": "Chant introuvable",
-  "item_missing_slide": "Diapo introuvable"
+  "item_missing_slide": "Diapo introuvable",
+  "slide_fullscreen": "Diapo en plein écran",
+  "slide_open_fullscreen": "Afficher en plein écran",
+  "slide_close_fullscreen": "Fermer le plein écran"
 }
