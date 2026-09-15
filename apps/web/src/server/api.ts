@@ -1,6 +1,7 @@
 import { BibleLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
-import { LiveLive } from "@projection/live/server";
+import { LiveFrames, LiveLive } from "@projection/live/server";
+import { FrameGateway, OutputsLive, outputsMigrations } from "@projection/outputs/server";
 import {
   DatabaseHealth,
   DatabaseLive,
@@ -22,6 +23,15 @@ const AuthMigrationsLive = Layer.effectDiscard(
   Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
 );
 
+/** Les sorties lisent et publient les images via le contexte live. */
+const FrameGatewayLive = Layer.effect(
+  FrameGateway,
+  Effect.gen(function* () {
+    const frames = yield* LiveFrames;
+    return FrameGateway.of({ watch: frames.watch, show: frames.show });
+  }),
+);
+
 const HandlersLive = Layer.mergeAll(
   SystemHandlersLive,
   LiveLive,
@@ -30,7 +40,12 @@ const HandlersLive = Layer.mergeAll(
   BibleLive,
   SlidesLive,
   ProjectsLive,
-).pipe(Layer.provide(DatabaseHealth.layer));
+  OutputsLive,
+).pipe(
+  Layer.provide(DatabaseHealth.layer),
+  Layer.provide(FrameGatewayLive),
+  Layer.provide(LiveFrames.layerMemory),
+);
 
 const ApiLive = RpcServer.layerHttp({
   group: ApiRpcs,
@@ -43,7 +58,13 @@ const ApiLive = RpcServer.layerHttp({
   Layer.provide(
     Layer.mergeAll(
       AuthMigrationsLive,
-      layerMigrations([songsMigrations, bibleMigrations, slidesMigrations, projectsMigrations]),
+      layerMigrations([
+        songsMigrations,
+        bibleMigrations,
+        slidesMigrations,
+        projectsMigrations,
+        outputsMigrations,
+      ]),
     ),
   ),
   Layer.provide(DatabaseLive),

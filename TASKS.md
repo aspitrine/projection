@@ -122,13 +122,18 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Utilisé par les aperçus chants, Bible et diapos texte ; plein écran au clic avec navigation clavier (flèches, Page préc./suiv., Espace, Échap).
 - [x] Tests : `fitFontSize` (unitaires + propriété), rendu du composant sous jsdom.
 
-### T1.7 Sortie salle + page d'affichage [outputs]
+### T1.7 Sortie salle + page d'affichage [outputs] ✅
 
 **Dépend de** : T0.2, T1.6
 
-- [ ] Domaine : `Output` (type, nom, token, thème), régénération de token.
-- [ ] Sortie salle créée à la création d'une organisation.
-- [ ] Route publique `/display/$token` plein écran, sans auth, abonnée au stream live.
+- [x] `Frame` (domaine `presentation`) : image prête à afficher (lignes, texte enrichi, écran vide) + écran noir.
+- [x] `LiveFrames` (contexte `live`) : image courante par organisation diffusée en streaming (mémoire, une instance ; pilotage par la régie en T1.8).
+- [x] Contexte `outputs` : `Output` (nom, type, token 256 bits), sortie « Salle » créée à la volée une seule fois (verrou consultatif), régénération du token réservée propriétaire/admin, test d'affichage ; port `FrameGateway` branché sur `LiveFrames` dans la composition root.
+- [x] `DisplayRpcs` public (token) : flux `DisplayWatch` ; `OutputsRpcs` : list, regenerateToken, identify.
+- [x] Route publique `/display/$token` : plein écran noir, rendu `SlideRenderer` sans libellés, reconnexion automatique, message si lien invalide, double-clic pour le plein écran.
+- [x] Page Sorties : lien d'affichage (copier, ouvrir), tester l'affichage, régénérer le lien.
+- [x] Tests unitaires (LiveFrames, tokens, cas d'usage, flux d'écran) et fonctionnels API sur Postgres (création concurrente, token régénéré).
+- [ ] Limite connue : régénérer le token n'interrompt pas un écran déjà connecté (effet à sa prochaine reconnexion).
 
 ### T1.8 Régie live [live]
 

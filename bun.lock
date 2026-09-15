@@ -22,6 +22,7 @@
         "@projection/bible": "workspace:*",
         "@projection/identity": "workspace:*",
         "@projection/live": "workspace:*",
+        "@projection/outputs": "workspace:*",
         "@projection/platform": "workspace:*",
         "@projection/presentation": "workspace:*",
         "@projection/projects": "workspace:*",
@@ -105,11 +106,31 @@
       "name": "@projection/live",
       "version": "0.0.0",
       "dependencies": {
+        "@projection/presentation": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
         "@effect/vitest": "catalog:",
         "@projection/config": "workspace:*",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
+    "packages/outputs": {
+      "name": "@projection/outputs",
+      "version": "0.0.0",
+      "dependencies": {
+        "@effect/sql-pg": "catalog:",
+        "@projection/identity": "workspace:*",
+        "@projection/presentation": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@projection/platform": "workspace:*",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -533,6 +554,8 @@
     "@projection/identity": ["@projection/identity@workspace:packages/identity"],
 
     "@projection/live": ["@projection/live@workspace:packages/live"],
+
+    "@projection/outputs": ["@projection/outputs@workspace:packages/outputs"],
 
     "@projection/platform": ["@projection/platform@workspace:packages/platform"],
 

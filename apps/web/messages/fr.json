@@ -221,5 +221,21 @@
   "item_missing_slide": "Diapo introuvable",
   "slide_fullscreen": "Diapo en plein écran",
   "slide_open_fullscreen": "Afficher en plein écran",
-  "slide_close_fullscreen": "Fermer le plein écran"
+  "slide_close_fullscreen": "Fermer le plein écran",
+  "outputs_intro": "Chaque sortie a un lien secret à ouvrir sur l'ordinateur relié au projecteur (ou dans OBS). Aucun compte n'est nécessaire sur cet écran.",
+  "outputs_load_error": "Impossible de charger les sorties.",
+  "output_type_room": "Salle (projecteur)",
+  "outputs_link_label": "Lien d'affichage",
+  "outputs_copy_link": "Copier le lien",
+  "outputs_link_copied": "Lien copié",
+  "outputs_open": "Ouvrir",
+  "outputs_identify": "Tester l'affichage",
+  "outputs_identified": "« {name} » est affiché sur les écrans.",
+  "outputs_regenerate": "Régénérer le lien",
+  "outputs_regenerate_confirm": "L'ancien lien cessera de fonctionner : les écrans devront ouvrir le nouveau. Continuer ?",
+  "outputs_regenerated": "Nouveau lien généré",
+  "outputs_action_error": "Action impossible",
+  "display_connecting": "Connexion à la régie…",
+  "display_invalid_token": "Ce lien d'affichage n'est plus valide. Demandez le lien à jour dans Projection › Sorties.",
+  "display_fullscreen_hint": "Double-cliquez pour passer en plein écran"
 }

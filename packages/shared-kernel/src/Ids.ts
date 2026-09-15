@@ -27,3 +27,8 @@ export const ProjectItemId = Schema.String.check(Schema.isPattern(uuidPattern)).
   Schema.brand("ProjectItemId"),
 );
 export type ProjectItemId = typeof ProjectItemId.Type;
+
+export const OutputId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
+  Schema.brand("OutputId"),
+);
+export type OutputId = typeof OutputId.Type;

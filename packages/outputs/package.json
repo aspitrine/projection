@@ -1,5 +1,5 @@
 {
-  "name": "@projection/live",
+  "name": "@projection/outputs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,6 +12,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@effect/sql-pg": "catalog:",
+    "@projection/identity": "workspace:*",
     "@projection/presentation": "workspace:*",
     "@projection/shared-kernel": "workspace:*",
     "effect": "catalog:"
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@effect/vitest": "catalog:",
     "@projection/config": "workspace:*",
+    "@projection/platform": "workspace:*",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
