@@ -20,6 +20,7 @@
     "@projection/platform": "workspace:*",
     "@projection/presentation": "workspace:*",
     "@projection/shared-kernel": "workspace:*",
+    "@projection/slides": "workspace:*",
     "@projection/songs": "workspace:*",
     "@projection/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",

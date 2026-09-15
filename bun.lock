@@ -25,6 +25,7 @@
         "@projection/platform": "workspace:*",
         "@projection/presentation": "workspace:*",
         "@projection/shared-kernel": "workspace:*",
+        "@projection/slides": "workspace:*",
         "@projection/songs": "workspace:*",
         "@projection/ui": "workspace:*",
         "@tailwindcss/vite": "^4.3.3",
@@ -149,6 +150,23 @@
       "devDependencies": {
         "@effect/vitest": "catalog:",
         "@projection/config": "workspace:*",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
+    "packages/slides": {
+      "name": "@projection/slides",
+      "version": "0.0.0",
+      "dependencies": {
+        "@effect/sql-pg": "catalog:",
+        "@projection/identity": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@projection/platform": "workspace:*",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -503,6 +521,8 @@
     "@projection/presentation": ["@projection/presentation@workspace:packages/presentation"],
 
     "@projection/shared-kernel": ["@projection/shared-kernel@workspace:packages/shared-kernel"],
+
+    "@projection/slides": ["@projection/slides@workspace:packages/slides"],
 
     "@projection/songs": ["@projection/songs@workspace:packages/songs"],
 

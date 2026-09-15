@@ -12,3 +12,8 @@ export const SongId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
   Schema.brand("SongId"),
 );
 export type SongId = typeof SongId.Type;
+
+export const TextSlideId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
+  Schema.brand("TextSlideId"),
+);
+export type TextSlideId = typeof TextSlideId.Type;

@@ -93,11 +93,14 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] UI : choix de traduction, saisie rapide avec exemples, passage et aperçu en diapos (grille d'aperçu partagée avec les chants).
 - [x] Tests unitaires (livres, références, USFM, cas d'usage) et fonctionnels API sur Postgres (import → SQL → RPC).
 
-### T1.4 Diapo texte simple [slides]
+### T1.4 Diapo texte simple [slides] ✅
 
 **Dépend de** : T0.3
 
-- [ ] Domaine, migrations, `SlidesRpc`, éditeur texte riche minimal.
+- [x] Domaine : `TextSlide`, texte enrichi léger (`# Titre`, `## Sous-titre`, `**gras**`, `*italique*`, `- liste`), parseur sans échec, détection de contenu vide.
+- [x] Migration `slides`, repository SQL, `SlidesRpcs` (list, get, create, update, delete ; erreurs `EmptyTextSlide`, `TextSlideNotFound`).
+- [x] UI : bibliothèque « Diapos texte » (recherche), éditeur avec barre d'outils (gras, italique, titre, liste) et aperçu 16:9 en direct.
+- [x] Tests unitaires (parseur + propriétés, cas d'usage, barre d'outils) et fonctionnels API sur Postgres.
 
 ### T1.5 Projets [projects]
 

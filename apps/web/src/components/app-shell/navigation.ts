@@ -6,6 +6,7 @@ import {
   type LucideIcon,
   MonitorPlay,
   Music,
+  Presentation,
   Users,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ export interface NavigationItem {
     | "/projects"
     | "/library/songs"
     | "/library/bible"
+    | "/library/slides"
     | "/library/media"
     | "/outputs"
     | "/settings/members";
@@ -44,6 +46,7 @@ export const navigation: ReadonlyArray<NavigationGroup> = [
     items: [
       { to: "/library/songs", label: m.nav_songs, icon: Music },
       { to: "/library/bible", label: m.nav_bible, icon: BookOpen },
+      { to: "/library/slides", label: m.nav_slides, icon: Presentation },
       { to: "/library/media", label: m.nav_media, icon: ImageIcon },
     ],
   },
