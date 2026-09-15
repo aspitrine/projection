@@ -175,11 +175,13 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Panneau stream dans la régie : aperçu sur damier, case « Lié à la salle », parties, marqueur sur les miniatures ; Maj + flèches et Maj + clic.
 - [x] Tests unitaires (sous-découpage, navigation stream avec propriétés, sessions liées/déliées) et fonctionnels sur Postgres.
 
-### T2.3 Ajustement manuel du stream [live]
+### T2.3 Ajustement manuel du stream [live] ✅
 
 **Dépend de** : T2.2
 
-- [ ] Sélection libre de lignes envoyée sur la piste stream.
+- [x] Sélection libre de lignes (1 à 12) de la diapo du stream, envoyée sur la piste Stream (`LiveStreamShowLines`), persistée (`stream_override`).
+- [x] La sélection disparaît à la navigation stream, et aux changements de diapo de la salle en mode lié ; « Reprendre le découpage » y revient à la main.
+- [x] Tests unitaires (sessions, validation) et fonctionnels sur Postgres.
 
 ### T2.4 Boutons d'urgence complets [live]
 

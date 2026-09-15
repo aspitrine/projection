@@ -23,3 +23,5 @@ export const liveStreamGoToAtom = ApiClient.mutation("LiveStreamGoTo");
 export const liveStreamNextAtom = ApiClient.mutation("LiveStreamNext");
 export const liveStreamPreviousAtom = ApiClient.mutation("LiveStreamPrevious");
 export const liveStreamSetLinkedAtom = ApiClient.mutation("LiveStreamSetLinked");
+export const liveStreamShowLinesAtom = ApiClient.mutation("LiveStreamShowLines");
+export const liveStreamResumeAtom = ApiClient.mutation("LiveStreamResume");

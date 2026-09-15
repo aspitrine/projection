@@ -3,7 +3,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { LiveSessionRepository } from "../application/ports";
-import { LiveCursor, LiveSession, StreamCursor } from "../domain/LiveSession";
+import { LiveCursor, LiveSession, StreamCursor, StreamOverride } from "../domain/LiveSession";
 
 const Row = Schema.Struct({
   organizationId: OrganizationId,
@@ -15,6 +15,7 @@ const Row = Schema.Struct({
   streamItemId: Schema.NullOr(ProjectItemId),
   streamSlideIndex: Schema.Int,
   streamPart: Schema.Int,
+  streamOverride: Schema.NullOr(StreamOverride),
   version: Schema.Int,
   updatedAt: Schema.Number,
 });
@@ -31,7 +32,8 @@ export const SqlLiveSessionRepository = Layer.effect(
         SELECT organization_id AS "organizationId", project_id::text AS "projectId",
           item_id::text AS "itemId", slide_index AS "slideIndex", blackout,
           stream_linked AS "streamLinked", stream_item_id::text AS "streamItemId",
-          stream_slide_index AS "streamSlideIndex", stream_part AS "streamPart", version,
+          stream_slide_index AS "streamSlideIndex", stream_part AS "streamPart",
+          stream_override AS "streamOverride", version,
           (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
         FROM live_session WHERE organization_id = ${organizationId}
       `,
@@ -60,6 +62,7 @@ export const SqlLiveSessionRepository = Layer.effect(
                           slideIndex: row.streamSlideIndex,
                           part: row.streamPart,
                         }),
+                  streamOverride: row.streamOverride,
                   version: row.version,
                   updatedAt: row.updatedAt,
                 }),
@@ -69,14 +72,18 @@ export const SqlLiveSessionRepository = Layer.effect(
           Effect.withSpan("SqlLiveSessionRepository.load"),
         ),
 
-      save: (session) =>
-        sql`
+      save: (session) => {
+        const override =
+          session.streamOverride === null ? null : JSON.stringify(session.streamOverride);
+        return sql`
           INSERT INTO live_session (organization_id, project_id, item_id, slide_index, blackout,
-            stream_linked, stream_item_id, stream_slide_index, stream_part, version, updated_at)
+            stream_linked, stream_item_id, stream_slide_index, stream_part, stream_override,
+            version, updated_at)
           VALUES (${session.organizationId}, ${session.projectId}::uuid, ${session.cursor?.itemId ?? null}::uuid,
                   ${session.cursor?.slideIndex ?? 0}, ${session.blackout}, ${session.streamLinked},
                   ${session.streamCursor?.itemId ?? null}::uuid, ${session.streamCursor?.slideIndex ?? 0},
-                  ${session.streamCursor?.part ?? 0}, ${session.version}, ${new Date(session.updatedAt)})
+                  ${session.streamCursor?.part ?? 0}, ${override}::jsonb,
+                  ${session.version}, ${new Date(session.updatedAt)})
           ON CONFLICT (organization_id) DO UPDATE SET
             project_id = EXCLUDED.project_id,
             item_id = EXCLUDED.item_id,
@@ -86,9 +93,11 @@ export const SqlLiveSessionRepository = Layer.effect(
             stream_item_id = EXCLUDED.stream_item_id,
             stream_slide_index = EXCLUDED.stream_slide_index,
             stream_part = EXCLUDED.stream_part,
+            stream_override = EXCLUDED.stream_override,
             version = EXCLUDED.version,
             updated_at = EXCLUDED.updated_at
-        `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlLiveSessionRepository.save")),
+        `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlLiveSessionRepository.save"));
+      },
     });
   }),
 );

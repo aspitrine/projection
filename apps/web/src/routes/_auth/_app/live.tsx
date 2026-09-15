@@ -5,9 +5,10 @@ import {
   type LiveCursor,
   type LiveSnapshot,
   type StreamCursor,
+  type StreamOverride,
   contentAt,
   nextCursor,
-  streamContentAt,
+  streamFrameContent,
 } from "@projection/live/domain";
 import type { FrameContent } from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
@@ -16,7 +17,7 @@ import { cn } from "@projection/ui/lib/utils";
 import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
 import { Exit } from "effect";
 import { ChevronLeft, ChevronRight, MonitorOff, Radio, Square } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
@@ -33,7 +34,9 @@ import {
   liveStreamGoToAtom,
   liveStreamNextAtom,
   liveStreamPreviousAtom,
+  liveStreamResumeAtom,
   liveStreamSetLinkedAtom,
+  liveStreamShowLinesAtom,
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
@@ -157,6 +160,12 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditable(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
+      // Espace sur un bouton ou une case : comportement natif (activer, cocher).
+      if (
+        event.key === " " &&
+        (event.target instanceof HTMLButtonElement || event.target instanceof HTMLInputElement)
+      )
+        return;
       const forward = ["ArrowRight", "ArrowDown", "PageDown", " "].includes(event.key);
       const backward = ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key);
       if (event.shiftKey && forward) {
@@ -310,7 +319,7 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           slide={
             session.blackout
               ? { kind: "blank" }
-              : contentToSlide(streamContentAt(deck, streamCursor))
+              : contentToSlide(streamFrameContent(deck, streamCursor, session.streamOverride))
           }
         />
       </div>
@@ -366,7 +375,97 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           ))}
         </ol>
       )}
+      {streamCursor !== null && (
+        <LinePicker
+          key={`${streamCursor.itemId}:${streamCursor.slideIndex}`}
+          deck={deck}
+          cursor={streamCursor}
+          override={session.streamOverride}
+        />
+      )}
     </section>
+  );
+}
+
+/** Ajustement manuel : choix libre des lignes de la diapo envoyées au stream. */
+function LinePicker({
+  deck,
+  cursor,
+  override,
+}: {
+  deck: Deck;
+  cursor: StreamCursor;
+  override: StreamOverride | null;
+}) {
+  const run = useRun();
+  const showLines = useAtomSet(liveStreamShowLinesAtom, { mode: "promiseExit" });
+  const resume = useAtomSet(liveStreamResumeAtom, { mode: "promiseExit" });
+  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+
+  const content = deck.items.find((item) => item.itemId === cursor.itemId)?.slides[
+    cursor.slideIndex
+  ]?.content;
+  const lines = content?._tag === "Lines" ? content.lines : [];
+
+  return (
+    <div className="space-y-2">
+      {override !== null && (
+        <div className="flex items-center justify-between gap-2 border border-amber-500/60 bg-amber-500/10 px-2 py-1 text-xs">
+          <span>{m.live_stream_manual()}</span>
+          <Button size="sm" variant="outline" onClick={() => run(resume({ payload: undefined }))}>
+            {m.live_stream_resume()}
+          </Button>
+        </div>
+      )}
+      {lines.length > 0 && (
+        <details className="border px-2 py-1 text-xs" data-testid="line-picker">
+          <summary className="cursor-pointer select-none">{m.live_stream_pick_lines()}</summary>
+          <p className="text-muted-foreground my-1">{m.live_stream_lines_hint()}</p>
+          <ul className="space-y-1">
+            {lines.map((line, index) => (
+              <li key={index}>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={selected.has(index)}
+                    disabled={!selected.has(index) && selected.size >= 12}
+                    onChange={(event) =>
+                      setSelected((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(index);
+                        else next.delete(index);
+                        return next;
+                      })
+                    }
+                  />
+                  <span>{line}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <Button
+            size="sm"
+            className="mt-2 w-full"
+            disabled={selected.size === 0}
+            onClick={() =>
+              run(
+                showLines({
+                  payload: {
+                    lines: [...selected]
+                      .sort((a, b) => a - b)
+                      .flatMap((index) => lines[index] ?? []),
+                    caption: content?._tag === "Lines" ? content.caption : null,
+                  },
+                }),
+              )
+            }
+          >
+            {m.live_stream_send_lines()}
+          </Button>
+        </details>
+      )}
+    </div>
   );
 }
 

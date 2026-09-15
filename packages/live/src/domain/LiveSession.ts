@@ -16,6 +16,19 @@ export class StreamCursor extends Schema.Class<StreamCursor>("StreamCursor")({
   part: Schema.Int,
 }) {}
 
+/** Lignes choisies à la main pour le stream (1 à 12 lignes). */
+export const StreamLines = Schema.Array(Schema.String.check(Schema.isMaxLength(500))).check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(12),
+);
+
+/** Ajustement manuel : remplace la partie en cours sur le stream jusqu'à la prochaine navigation. */
+export const StreamOverride = Schema.Struct({
+  lines: StreamLines,
+  caption: Schema.NullOr(Schema.String),
+});
+export type StreamOverride = typeof StreamOverride.Type;
+
 export class LiveSession extends Schema.Class<LiveSession>("LiveSession")({
   organizationId: OrganizationId,
   projectId: Schema.NullOr(ProjectId),
@@ -24,6 +37,7 @@ export class LiveSession extends Schema.Class<LiveSession>("LiveSession")({
   /** Lié : le stream suit la diapo de la salle et navigue dans ses parties. */
   streamLinked: Schema.Boolean,
   streamCursor: Schema.NullOr(StreamCursor),
+  streamOverride: Schema.NullOr(StreamOverride),
   version: Schema.Int,
   updatedAt: Schema.Number,
 }) {}
@@ -36,6 +50,7 @@ export const idleSession = (organizationId: OrganizationId) =>
     blackout: false,
     streamLinked: true,
     streamCursor: null,
+    streamOverride: null,
     version: 0,
     updatedAt: 0,
   });

@@ -8,6 +8,7 @@ import {
   LiveProjectNotFound,
   LiveSnapshot,
   NoLiveProject,
+  StreamLines,
 } from "../domain/LiveSession";
 
 export const LiveRpcs = RpcGroup.make(
@@ -34,6 +35,12 @@ export const LiveRpcs = RpcGroup.make(
   Rpc.make("LiveStreamNext", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LiveStreamPrevious", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LiveStreamSetLinked", { payload: { linked: Schema.Boolean }, success: LiveSnapshot }),
+  Rpc.make("LiveStreamShowLines", {
+    payload: { lines: StreamLines, caption: Schema.NullOr(Schema.String) },
+    success: LiveSnapshot,
+    error: NoLiveProject,
+  }),
+  Rpc.make("LiveStreamResume", { success: LiveSnapshot }),
   Rpc.make("LiveRefresh", { success: LiveSnapshot }),
   Rpc.make("LiveStop", { success: LiveSnapshot }),
 ).middleware(ActorMiddleware);

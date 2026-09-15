@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
-import { LiveCursor, StreamCursor } from "../src/domain/LiveSession";
+import { LiveCursor, StreamCursor, StreamOverride } from "../src/domain/LiveSession";
 import {
   followRoom,
   goToStreamCursor,
@@ -10,6 +10,7 @@ import {
   previousStreamCursor,
   reconcileStream,
   streamContentAt,
+  streamFrameContent,
   streamPositions,
 } from "../src/domain/Navigation";
 import { deckOf, item, itemId } from "./support";
@@ -86,4 +87,25 @@ describe("Navigation du stream", () => {
       });
     },
   );
+});
+
+describe("Sélection manuelle du stream", () => {
+  it("remplace la partie en cours tant qu'elle est présente", () => {
+    const cursor = at(1, 0, 1);
+    expect(streamFrameContent(deck, cursor, null)).toEqual(streamContentAt(deck, cursor));
+    expect(streamFrameContent(deck, cursor, { lines: ["Ligne"], caption: "Refrain" })).toEqual({
+      _tag: "Lines",
+      lines: ["Ligne"],
+      caption: "Refrain",
+    });
+  });
+
+  it("accepte de 1 à 12 lignes", () => {
+    const decode = Schema.decodeUnknownOption(StreamOverride);
+    expect(decode({ lines: ["a"], caption: null })._tag).toBe("Some");
+    expect(decode({ lines: [], caption: null })._tag).toBe("None");
+    expect(decode({ lines: Array.from({ length: 13 }, () => "a"), caption: null })._tag).toBe(
+      "None",
+    );
+  });
 });

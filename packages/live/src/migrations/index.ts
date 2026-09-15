@@ -29,5 +29,9 @@ export const liveMigrations = {
           ADD COLUMN stream_part integer NOT NULL DEFAULT 0
       `;
     }),
+    "0003_add_stream_override": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE live_session ADD COLUMN stream_override jsonb`;
+    }),
   },
 };

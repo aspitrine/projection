@@ -3,7 +3,7 @@ import { PgClient } from "@effect/sql-pg";
 import { ActorMiddleware } from "@projection/identity/contract";
 import { runMigrations } from "@projection/platform";
 import { Actor, CurrentActor, UserId } from "@projection/shared-kernel";
-import { Config, Effect, Layer, Option } from "effect";
+import { Config, Effect, Exit, Layer, Option } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 
 import { LiveRpcs } from "../src/api/contract";
@@ -86,12 +86,26 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
         caption: null,
       });
 
+      yield* client.LiveStreamShowLines({ lines: ["Ligne choisie"], caption: null });
+      expect(Option.getOrNull(yield* repository.load(organizationId))?.streamOverride).toEqual({
+        lines: ["Ligne choisie"],
+        caption: null,
+      });
+      expect((yield* frames.current(organizationId, "stream")).content).toMatchObject({
+        lines: ["Ligne choisie"],
+      });
+      const tooMany = yield* client
+        .LiveStreamShowLines({ lines: Array.from({ length: 13 }, () => "x"), caption: null })
+        .pipe(Effect.exit);
+      expect(Exit.isFailure(tooMany)).toBe(true);
+
       yield* client.LiveStop();
       expect(Option.getOrNull(yield* repository.load(organizationId))).toMatchObject({
         projectId: null,
         cursor: null,
         streamLinked: true,
-        version: 7,
+        streamOverride: null,
+        version: 8,
       });
     }).pipe(Effect.provide(ApiLive)),
   );

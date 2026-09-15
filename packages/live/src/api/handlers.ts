@@ -19,6 +19,8 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveStreamNext: () => sessions.streamNext,
       LiveStreamPrevious: () => sessions.streamPrevious,
       LiveStreamSetLinked: ({ linked }) => sessions.setStreamLinked(linked),
+      LiveStreamShowLines: ({ lines, caption }) => sessions.streamShowLines({ lines, caption }),
+      LiveStreamResume: () => sessions.streamResume,
       LiveRefresh: () => sessions.refresh,
       LiveStop: () => sessions.stop,
     };

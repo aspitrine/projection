@@ -294,5 +294,10 @@
   "live_stream_next": "Partie suivante",
   "live_stream_parts": "Parties de la diapo",
   "live_stream_part": "Partie {number}",
-  "live_stream_marker": "Au stream"
+  "live_stream_marker": "Au stream",
+  "live_stream_manual": "Sélection manuelle à l'antenne",
+  "live_stream_resume": "Reprendre le découpage",
+  "live_stream_pick_lines": "Choisir les lignes",
+  "live_stream_lines_hint": "Cochez les lignes de la diapo à afficher sur le stream (12 au plus).",
+  "live_stream_send_lines": "Envoyer au stream"
 }

@@ -3,7 +3,7 @@ import type { ProjectItemId } from "@projection/shared-kernel";
 import { Effect } from "effect";
 
 import type { Deck } from "./Deck";
-import { LiveCursor, LiveItemNotFound, StreamCursor } from "./LiveSession";
+import { LiveCursor, LiveItemNotFound, StreamCursor, type StreamOverride } from "./LiveSession";
 
 const blank: FrameContent = { _tag: "Blank" };
 
@@ -171,3 +171,13 @@ export const streamContentAt = (deck: Deck | null, cursor: StreamCursor | null):
   if (deck === null || cursor === null) return blank;
   return partsOf(deck, cursor.itemId, cursor.slideIndex)[cursor.part] ?? blank;
 };
+
+/** Image de la piste Stream : sélection manuelle si présente, sinon la partie en cours. */
+export const streamFrameContent = (
+  deck: Deck | null,
+  cursor: StreamCursor | null,
+  override: StreamOverride | null,
+): FrameContent =>
+  override !== null
+    ? { _tag: "Lines", lines: override.lines, caption: override.caption }
+    : streamContentAt(deck, cursor);

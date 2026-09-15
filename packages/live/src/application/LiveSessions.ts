@@ -15,6 +15,7 @@ import {
   LiveSnapshot,
   NoLiveProject,
   type StreamCursor,
+  type StreamOverride,
   idleSession,
 } from "../domain/LiveSession";
 import {
@@ -29,7 +30,7 @@ import {
   previousCursor,
   previousStreamCursor,
   reconcileStream,
-  streamContentAt,
+  streamFrameContent,
   streamPositions,
 } from "../domain/Navigation";
 import { LiveFrames } from "./LiveFrames";
@@ -42,6 +43,7 @@ interface Draft {
   readonly blackout: boolean;
   readonly streamLinked: boolean;
   readonly streamCursor: StreamCursor | null;
+  readonly streamOverride: StreamOverride | null;
 }
 
 interface OrganizationState {
@@ -58,6 +60,7 @@ const idleDraft = (streamLinked: boolean, blackout: boolean): Draft => ({
   blackout,
   streamLinked,
   streamCursor: null,
+  streamOverride: null,
 });
 
 /**
@@ -82,6 +85,10 @@ export class LiveSessions extends Context.Service<
     ): Command<NoLiveProject | LiveItemNotFound>;
     readonly streamNext: Command<NoLiveProject>;
     readonly streamPrevious: Command<NoLiveProject>;
+    /** Ajustement manuel : lignes choisies affichées sur le stream jusqu'à la prochaine navigation stream. */
+    streamShowLines(override: StreamOverride): Command<NoLiveProject>;
+    /** Abandonne la sélection manuelle et revient à la partie en cours. */
+    readonly streamResume: Command;
     /** Lier recale le stream sur la diapo de la salle. */
     setStreamLinked(linked: boolean): Command;
     /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant les positions. */
@@ -99,14 +106,14 @@ export class LiveSessions extends Context.Service<
       const initLock = yield* Semaphore.make(1);
 
       const publish = (snapshot: LiveSnapshot) => {
-        const { organizationId, cursor, streamCursor, blackout } = snapshot.session;
+        const { organizationId, cursor, streamCursor, streamOverride, blackout } = snapshot.session;
         return Effect.all(
           [
             frames.publish(organizationId, "room", contentAt(snapshot.deck, cursor), blackout),
             frames.publish(
               organizationId,
               "stream",
-              streamContentAt(snapshot.deck, streamCursor),
+              streamFrameContent(snapshot.deck, streamCursor, streamOverride),
               blackout,
             ),
           ],
@@ -124,7 +131,10 @@ export class LiveSessions extends Context.Service<
       const reconcile = (
         deck: Option.Option<Deck>,
         projectId: ProjectId | null,
-        from: Pick<Draft, "cursor" | "streamCursor" | "streamLinked" | "blackout">,
+        from: Pick<
+          Draft,
+          "cursor" | "streamCursor" | "streamLinked" | "streamOverride" | "blackout"
+        >,
       ): Draft =>
         Option.match(deck, {
           onNone: () => idleDraft(from.streamLinked, from.blackout),
@@ -137,6 +147,7 @@ export class LiveSessions extends Context.Service<
               blackout: from.blackout,
               streamLinked: from.streamLinked,
               streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
+              streamOverride: from.streamOverride,
             };
           },
         });
@@ -156,6 +167,7 @@ export class LiveSessions extends Context.Service<
             blackout: draft.blackout,
             streamLinked: draft.streamLinked,
             streamCursor: draft.streamCursor,
+            streamOverride: draft.streamOverride,
             version,
             updatedAt,
           }),
@@ -232,6 +244,7 @@ export class LiveSessions extends Context.Service<
         blackout: current.session.blackout,
         streamLinked: current.session.streamLinked,
         streamCursor: current.session.streamCursor,
+        streamOverride: current.session.streamOverride,
       });
 
       /** Nouvelle position de la salle ; en mode lié, le stream suit. */
@@ -241,6 +254,8 @@ export class LiveSessions extends Context.Service<
         streamCursor: current.session.streamLinked
           ? reconcileStream(deck, cursor, current.session.streamCursor, true)
           : current.session.streamCursor,
+        // Lié : la sélection manuelle suit la salle et disparaît quand elle change de diapo.
+        streamOverride: current.session.streamLinked ? null : current.session.streamOverride,
       });
 
       const requireDeck = (current: LiveSnapshot) =>
@@ -251,7 +266,11 @@ export class LiveSessions extends Context.Service<
           Effect.map(requireDeck(current), (deck) => {
             const { streamLinked, streamCursor, cursor } = current.session;
             const from = streamCursor ?? (streamLinked ? followRoom(cursor) : null);
-            return { ...keep(current), streamCursor: move(deck, from, streamLinked) };
+            return {
+              ...keep(current),
+              streamCursor: move(deck, from, streamLinked),
+              streamOverride: null,
+            };
           }),
         );
 
@@ -273,6 +292,7 @@ export class LiveSessions extends Context.Service<
                   streamCursor: streamLinked
                     ? followRoom(cursor)
                     : (streamPositions(deck)[0] ?? null),
+                  streamOverride: null,
                 };
               }),
             ),
@@ -315,6 +335,7 @@ export class LiveSessions extends Context.Service<
                 ...keep(current),
                 streamCursor,
                 streamLinked: streamLinked && onRoomSlide,
+                streamOverride: null,
               };
             }),
           ).pipe(Effect.withSpan("LiveSessions.streamGoTo")),
@@ -332,8 +353,25 @@ export class LiveSessions extends Context.Service<
               linked && deck !== null
                 ? reconcileStream(deck, current.session.cursor, current.session.streamCursor, true)
                 : current.session.streamCursor;
-            return Effect.succeed({ ...keep(current), streamLinked: linked, streamCursor });
+            return Effect.succeed({
+              ...keep(current),
+              streamLinked: linked,
+              streamCursor,
+              streamOverride: linked ? null : current.session.streamOverride,
+            });
           }).pipe(Effect.withSpan("LiveSessions.setStreamLinked")),
+
+        streamShowLines: (override) =>
+          command((current) =>
+            Effect.map(requireDeck(current), () => ({
+              ...keep(current),
+              streamOverride: override,
+            })),
+          ).pipe(Effect.withSpan("LiveSessions.streamShowLines")),
+
+        streamResume: command((current) =>
+          Effect.succeed({ ...keep(current), streamOverride: null }),
+        ).pipe(Effect.withSpan("LiveSessions.streamResume")),
 
         refresh: command((current) => {
           const { projectId } = current.session;
