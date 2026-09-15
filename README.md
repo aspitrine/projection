@@ -15,19 +15,22 @@ Logiciel de vidéo-projection web et auto-hébergeable (chants, versets biblique
 
 ## Démarrage
 
+Base de développement : **Postgres de l'hôte** (ex. Postgres.app), un rôle et une base dédiés.
+
+```bash
+psql -d postgres -c "CREATE ROLE projection LOGIN PASSWORD '<mot-de-passe>'" -c "CREATE DATABASE projection OWNER projection"
+```
+
+Renseigner `DATABASE_URL=postgresql://projection:<mot-de-passe>@localhost:5432/projection` dans `apps/web/.env`, puis :
+
 ```bash
 bun install
-bun run db:start
 bun run dev
 ```
 
 Les migrations (better-auth et contextes) s'appliquent au premier appel de l'API. Ouvrir [http://localhost:3001](http://localhost:3001).
 
-Si un Postgres local occupe déjà le port 5432, lancer le conteneur sur un autre port et ajuster `DATABASE_URL` dans `apps/web/.env` :
-
-```bash
-POSTGRES_PORT=5433 bun run db:start
-```
+Le service `postgres` de `docker-compose.yml` sert au déploiement auto-hébergé (`bun run docker:up`). En local il reste utilisable via `bun run db:start` (`POSTGRES_PORT` pour changer le port hôte).
 
 ## Tests
 
@@ -35,7 +38,11 @@ POSTGRES_PORT=5433 bun run db:start
 bun run test
 ```
 
-Les tests d'intégration Postgres (`*.integration.test.ts`) ne tournent que si `DATABASE_URL` est défini.
+Les tests d'intégration Postgres (`*.integration.test.ts`) ne tournent que si `DATABASE_URL` est défini :
+
+```bash
+bun run test:integration
+```
 
 ## UI Customization
 

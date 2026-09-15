@@ -50,7 +50,8 @@
     "docker:logs": "docker compose logs -f",
     "env:generate": "varlock codegen --path ./apps/web/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "varlock run --path ./apps/web/ -- vitest run"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",
