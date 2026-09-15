@@ -114,3 +114,44 @@ describe("Songs", () => {
     }).pipe(Effect.provide(TestLayer)),
   );
 });
+
+describe("Import de fichiers ChordPro", () => {
+  it.effect("crée les chants, ignore les doublons de titre et signale les fichiers en erreur", () =>
+    Effect.gen(function* () {
+      const songs = yield* Songs;
+      yield* songs.create(input()).pipe(inOrganization("org-a"));
+
+      const report = yield* songs
+        .importFiles("chordpro", [
+          { fileName: "grace.cho", content: "{title: Grâce infinie}\n{soc}\n[G]Alléluia\n{eoc}" },
+          { fileName: "doublon.cho", content: "{title: IL EST  bôn}\nLigne" },
+          { fileName: "vide.cho", content: "{title: Vide}\n[G] [C]" },
+          { fileName: "Sans titre.chordpro", content: "Première ligne\n\nSeconde strophe" },
+          { fileName: "grace-bis.cho", content: "{t: Grace infinie}\nAutre version" },
+          { fileName: "rejeu.cho", content: "{title: Rejeu}\n[Refrain]" },
+        ])
+        .pipe(inOrganization("org-a"));
+
+      expect(report.imported.map((entry) => [entry.fileName, entry.title])).toEqual([
+        ["grace.cho", "Grâce infinie"],
+        ["Sans titre.chordpro", "Sans titre"],
+      ]);
+      expect(report.duplicates).toEqual([
+        { fileName: "doublon.cho", title: "IL EST  bôn" },
+        { fileName: "grace-bis.cho", title: "Grace infinie" },
+      ]);
+      expect(report.errors.map((entry) => entry.fileName)).toEqual(["vide.cho", "rejeu.cho"]);
+
+      const imported = yield* songs.get(report.imported[0]!.id).pipe(inOrganization("org-a"));
+      expect(imported.arrangement).toEqual(["chorus"]);
+
+      // Une autre organisation n'a pas ces chants : pas de doublon chez elle.
+      const other = yield* songs
+        .importFiles("chordpro", [
+          { fileName: "doublon.cho", content: "{title: Il est bon}\nLigne" },
+        ])
+        .pipe(inOrganization("org-b"));
+      expect(other.imported).toHaveLength(1);
+    }).pipe(Effect.provide(TestLayer)),
+  );
+});

@@ -4,6 +4,7 @@ import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
 
 import { InvalidLyrics, SongNotFound } from "../domain/errors";
+import { ImportFiles, ImportFormat, ImportReport } from "../domain/Import";
 import { Song, SongInput, SongSummary } from "../domain/Song";
 
 export const SongsRpcs = RpcGroup.make(
@@ -19,4 +20,8 @@ export const SongsRpcs = RpcGroup.make(
     error: Schema.Union([SongNotFound, InvalidLyrics]),
   }),
   Rpc.make("SongsDelete", { payload: { id: SongId }, error: SongNotFound }),
+  Rpc.make("SongsImport", {
+    payload: { format: ImportFormat, files: ImportFiles },
+    success: ImportReport,
+  }),
 ).middleware(ActorMiddleware);

@@ -3,7 +3,7 @@ import { PgClient } from "@effect/sql-pg";
 import { ActorMiddleware } from "@projection/identity/contract";
 import { runMigrations } from "@projection/platform";
 import { Actor, CurrentActor, OrganizationId, UserId } from "@projection/shared-kernel";
-import { Config, Effect, Layer } from "effect";
+import { Config, Effect, Exit, Layer } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 import { SqlClient } from "effect/unstable/sql";
 
@@ -157,6 +157,43 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API songs (Postgres)", () => {
       expect(notDeleted._tag).toBe("SongNotFound");
 
       expect((yield* client.SongsGet({ id: created.id })).title).toBe("Privé");
+    }).pipe(Effect.provide(ApiLive)),
+  );
+
+  it.effect("importe des fichiers ChordPro et refuse un lot trop gros", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(SongsRpcs);
+      const organization = { headers: { "x-test-organization": "org-import" } };
+
+      const report = yield* client.SongsImport(
+        {
+          format: "chordpro",
+          files: [
+            { fileName: "a.cho", content: "{title: Chant importé}\n{sov}\n[D]Ligne un\n{eov}" },
+            { fileName: "b.cho", content: "{title: Chant importé}\nCopie" },
+          ],
+        },
+        organization,
+      );
+      expect(report.imported.map((entry) => entry.title)).toEqual(["Chant importé"]);
+      expect(report.duplicates).toHaveLength(1);
+
+      const found = yield* client.SongsList({ search: "importé" }, organization);
+      expect(found.map((song) => song.title)).toEqual(["Chant importé"]);
+
+      const tooMany = yield* client
+        .SongsImport(
+          {
+            format: "chordpro",
+            files: Array.from({ length: 51 }, (_, index) => ({
+              fileName: `${index}.cho`,
+              content: "x",
+            })),
+          },
+          organization,
+        )
+        .pipe(Effect.exit);
+      expect(Exit.isFailure(tooMany)).toBe(true);
     }).pipe(Effect.provide(ApiLive)),
   );
 });

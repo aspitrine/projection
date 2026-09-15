@@ -13,6 +13,7 @@ export const SongsHandlersLive = SongsRpcs.toLayer(
       SongsCreate: (input) => songs.create(input),
       SongsUpdate: ({ id, input }) => songs.update(id, input),
       SongsDelete: ({ id }) => songs.remove(id),
+      SongsImport: ({ format, files }) => songs.importFiles(format, files),
     };
   }),
 );

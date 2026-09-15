@@ -21,3 +21,4 @@ export const songAtom = Atom.family((id: SongId) =>
 export const createSongAtom = ApiClient.mutation("SongsCreate");
 export const updateSongAtom = ApiClient.mutation("SongsUpdate");
 export const deleteSongAtom = ApiClient.mutation("SongsDelete");
+export const importSongsAtom = ApiClient.mutation("SongsImport");

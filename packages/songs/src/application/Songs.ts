@@ -1,10 +1,27 @@
 import { CurrentActor, SongId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Option } from "effect";
 
+import { parseChordPro } from "../domain/ChordPro";
+
 import { InvalidLyrics, SongNotFound } from "../domain/errors";
+import { type ImportFile, type ImportFormat, ImportReport } from "../domain/Import";
 import { parseLyrics } from "../domain/Lyrics";
-import { Song, type SongInput, type SongSummary, optionalText } from "../domain/Song";
+import { Song, SongInput, type SongSummary, optionalText } from "../domain/Song";
 import { SongRepository } from "./SongRepository";
+
+/** Titre comparé sans casse, accents ni espaces multiples (détection des doublons à l'import). */
+const normalizeTitle = (title: string) =>
+  title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+type ImportOutcome =
+  | { readonly _tag: "Imported"; readonly song: Song }
+  | { readonly _tag: "Duplicate"; readonly title: string }
+  | { readonly _tag: "Failed"; readonly reason: ImportReport["errors"][number]["reason"] };
 
 /** Cas d'usage de la bibliothèque de chants, dans l'organisation de l'acteur courant. */
 export class Songs extends Context.Service<
@@ -18,6 +35,11 @@ export class Songs extends Context.Service<
       input: SongInput,
     ): Effect.Effect<Song, SongNotFound | InvalidLyrics, CurrentActor>;
     remove(id: SongId): Effect.Effect<void, SongNotFound, CurrentActor>;
+    /** Import de fichiers : un chant par fichier, doublons (même titre) ignorés. */
+    importFiles(
+      format: ImportFormat,
+      files: ReadonlyArray<ImportFile>,
+    ): Effect.Effect<ImportReport, never, CurrentActor>;
   }
 >()("@projection/songs/Songs") {
   static readonly layer = Layer.effect(
@@ -85,7 +107,55 @@ export class Songs extends Context.Service<
         return yield* repository.list(actor.organizationId, optionalText(search));
       });
 
-      return Songs.of({ list, get, create, update, remove });
+      const importFiles = Effect.fn("Songs.importFiles")(function* (
+        _format: ImportFormat,
+        files: ReadonlyArray<ImportFile>,
+      ) {
+        const actor = yield* CurrentActor;
+        const existing = yield* repository.list(actor.organizationId, null);
+        const titles = new Set(existing.map((song) => normalizeTitle(song.title)));
+        const report = {
+          imported: [] as Array<ImportReport["imported"][number]>,
+          duplicates: [] as Array<ImportReport["duplicates"][number]>,
+          errors: [] as Array<ImportReport["errors"][number]>,
+        };
+
+        for (const { fileName, content } of files) {
+          const fallbackTitle = fileName.replace(/\.[^.]+$/, "").trim() || "Sans titre";
+          const outcome = yield* parseChordPro(content, fallbackTitle).pipe(
+            Effect.flatMap(
+              (imported): Effect.Effect<ImportOutcome, InvalidLyrics, CurrentActor> => {
+                const title = imported.title.trim() || fallbackTitle;
+                if (titles.has(normalizeTitle(title))) {
+                  return Effect.succeed({ _tag: "Duplicate", title });
+                }
+                return create(new SongInput({ ...imported, title })).pipe(
+                  Effect.map((song): ImportOutcome => ({ _tag: "Imported", song })),
+                );
+              },
+            ),
+            Effect.catch((error) =>
+              Effect.succeed<ImportOutcome>({ _tag: "Failed", reason: error.reason }),
+            ),
+          );
+
+          switch (outcome._tag) {
+            case "Imported":
+              titles.add(normalizeTitle(outcome.song.title));
+              report.imported.push({ fileName, id: outcome.song.id, title: outcome.song.title });
+              break;
+            case "Duplicate":
+              report.duplicates.push({ fileName, title: outcome.title });
+              break;
+            case "Failed":
+              report.errors.push({ fileName, reason: outcome.reason });
+              break;
+          }
+        }
+        return new ImportReport(report);
+      });
+
+      return Songs.of({ list, get, create, update, remove, importFiles });
     }),
   );
 }

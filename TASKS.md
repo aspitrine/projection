@@ -239,7 +239,10 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 **Dépend de** : T1.1
 
-- [ ] Parsers + tests ; UI d'import multi-fichiers avec rapport (importés / doublons / erreurs), partagée avec T2.9.
+- [x] ChordPro : parser (métadonnées, sections, `{chorus}`, commentaires comme libellés, accords retirés, tablatures ignorées) + tests.
+- [x] RPC `SongsImport` (format, 50 fichiers / 200 Ko au plus) : un chant par fichier, doublons de titre ignorés (sans casse ni accents), rapport importés / doublons / erreurs.
+- [x] UI d'import multi-fichiers avec rapport sur la page Chants (réutilisable pour T2.9).
+- [ ] OpenLyrics : parser + branchement sur `SongsImport`.
 
 ### T2.11 Recherche full-text [songs, bible]
 

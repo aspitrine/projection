@@ -309,5 +309,20 @@
   "editor_undo": "Annuler",
   "editor_redo": "Rétablir",
   "song_lyrics_placeholder": "Tapez ou collez les paroles…",
-  "song_sections_toolbar": "Insérer une section"
+  "song_sections_toolbar": "Insérer une section",
+  "songs_import": "Importer",
+  "songs_import_title": "Importer des fichiers ChordPro",
+  "songs_import_hint": "Fichiers .cho, .chordpro, .chopro, .crd ou .pro, {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré.",
+  "songs_import_choose": "Choisir des fichiers",
+  "songs_import_running": "Import en cours…",
+  "songs_import_imported": "Importés : {count}",
+  "songs_import_duplicates": "Doublons ignorés : {count}",
+  "songs_import_errors": "Erreurs : {count}",
+  "songs_import_duplicate_of": "« {title} » existe déjà",
+  "songs_import_reason_no_lyrics": "aucune parole trouvée",
+  "songs_import_reason_duplicate_section": "une section apparaît deux fois avec des paroles différentes",
+  "songs_import_reason_undefined_repeat": "une section est rejouée sans avoir été écrite",
+  "songs_import_reason_too_large": "fichier trop volumineux (200 Ko au plus)",
+  "songs_import_too_many": "{max} fichiers au plus par import.",
+  "songs_import_failed": "Import impossible."
 }
