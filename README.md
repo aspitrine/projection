@@ -108,7 +108,8 @@ projection/
 ├── packages/
 │   ├── shared-kernel/    # IDs brandés, CurrentActor
 │   ├── platform/         # Postgres, migrations, logs, RPC système
-│   ├── auth/             # Better-Auth
+│   ├── identity/         # Organisations, membres, rôles, Better-Auth, middleware CurrentActor
+│   ├── live/             # Session live temps réel (spike T0.2)
 │   ├── ui/               # Composants shadcn/ui partagés
 │   └── config/           # tsconfig partagé
 ```

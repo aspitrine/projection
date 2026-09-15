@@ -2,7 +2,6 @@ import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { toast } from "sonner";
 
@@ -24,10 +23,13 @@ const SignUpValues = Schema.toStandardSchemaV1(
   }),
 );
 
-export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
-  const navigate = useNavigate({
-    from: "/",
-  });
+export default function SignUpForm({
+  onSwitchToSignIn,
+  redirectTo,
+}: {
+  onSwitchToSignIn: () => void;
+  redirectTo?: string | undefined;
+}) {
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -45,9 +47,8 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
         },
         {
           onSuccess: () => {
-            navigate({
-              to: "/dashboard",
-            });
+            // Nouveau compte : rejoindre via l'invitation, sinon créer son organisation.
+            window.location.assign(redirectTo ?? "/onboarding");
             toast.success("Sign up successful");
           },
           onError: (error) => {

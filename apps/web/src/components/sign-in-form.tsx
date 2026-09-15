@@ -2,7 +2,6 @@ import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { toast } from "sonner";
 
@@ -21,10 +20,13 @@ const SignInValues = Schema.toStandardSchemaV1(
   }),
 );
 
-export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
-  const navigate = useNavigate({
-    from: "/",
-  });
+export default function SignInForm({
+  onSwitchToSignUp,
+  redirectTo,
+}: {
+  onSwitchToSignUp: () => void;
+  redirectTo?: string | undefined;
+}) {
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -40,9 +42,8 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
         },
         {
           onSuccess: () => {
-            navigate({
-              to: "/dashboard",
-            });
+            // Rechargement complet : session, organisations et atoms repartent de zéro.
+            window.location.assign(redirectTo ?? "/dashboard");
             toast.success("Sign in successful");
           },
           onError: (error) => {

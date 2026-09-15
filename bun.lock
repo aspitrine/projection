@@ -19,7 +19,7 @@
       "name": "web",
       "dependencies": {
         "@effect/atom-react": "catalog:",
-        "@projection/auth": "workspace:*",
+        "@projection/identity": "workspace:*",
         "@projection/live": "workspace:*",
         "@projection/platform": "workspace:*",
         "@projection/shared-kernel": "workspace:*",
@@ -55,21 +55,26 @@
         "web-vitals": "^6.2.1",
       },
     },
-    "packages/auth": {
-      "name": "@projection/auth",
-      "dependencies": {
-        "better-auth": "catalog:",
-        "pg": "catalog:",
-      },
-      "devDependencies": {
-        "@projection/config": "workspace:*",
-        "@types/pg": "catalog:",
-        "typescript": "catalog:",
-      },
-    },
     "packages/config": {
       "name": "@projection/config",
       "version": "0.0.0",
+    },
+    "packages/identity": {
+      "name": "@projection/identity",
+      "version": "0.0.0",
+      "dependencies": {
+        "@projection/shared-kernel": "workspace:*",
+        "better-auth": "catalog:",
+        "effect": "catalog:",
+        "pg": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@types/pg": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
     },
     "packages/live": {
       "name": "@projection/live",
@@ -414,9 +419,9 @@
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
-    "@projection/auth": ["@projection/auth@workspace:packages/auth"],
-
     "@projection/config": ["@projection/config@workspace:packages/config"],
+
+    "@projection/identity": ["@projection/identity@workspace:packages/identity"],
 
     "@projection/live": ["@projection/live@workspace:packages/live"],
 

@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
 
+import OrganizationSwitcher from "./organization-switcher";
 import UserMenu from "./user-menu";
 
 export default function Header() {
   const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
+    { to: "/", label: "Accueil" },
+    { to: "/dashboard", label: "Tableau de bord" },
+    { to: "/organization/members", label: "Membres" },
   ] as const;
 
   return (
@@ -21,6 +23,7 @@ export default function Header() {
           })}
         </nav>
         <div className="flex items-center gap-2">
+          <OrganizationSwitcher />
           <UserMenu />
         </div>
       </div>

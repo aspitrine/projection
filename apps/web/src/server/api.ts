@@ -1,4 +1,4 @@
-import { migrateAuthSchema } from "@projection/auth";
+import { layerIdentity } from "@projection/identity/server";
 import { LiveLive } from "@projection/live/server";
 import {
   DatabaseHealth,
@@ -12,13 +12,13 @@ import { HttpRouter } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
 import { ApiRpcs } from "../api/contract";
-import { auth } from "../services";
+import { auth, ensureAuthSchema } from "../services";
 
 const AuthMigrationsLive = Layer.effectDiscard(
-  Effect.tryPromise(() => migrateAuthSchema(auth)).pipe(Effect.withSpan("auth.migrations")),
+  Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
 );
 
-const HandlersLive = Layer.mergeAll(SystemHandlersLive, LiveLive).pipe(
+const HandlersLive = Layer.mergeAll(SystemHandlersLive, LiveLive, layerIdentity(auth)).pipe(
   Layer.provide(DatabaseHealth.layer),
 );
 

@@ -37,15 +37,17 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Vérifié en build Docker. Repli WebSocket inutile.
 - **Livrable** : [docs/adr/0002-temps-reel.md](docs/adr/0002-temps-reel.md).
 
-### T0.3 Identité et organisations [identity]
+### T0.3 Identité et organisations [identity] ✅
 
 **Dépend de** : T0.1
 
-- [ ] better-auth sur pool `pg` natif + plugin `organization` (rôles `owner`, `admin`, `operator`) ; migrations des tables auth.
-- [ ] Port `Authentication` dans `identity`, adapter better-auth en infrastructure.
-- [ ] `RpcMiddleware` fournissant `CurrentActor` ; erreurs `Unauthorized` / `Forbidden` typées.
-- [ ] Création d'organisation à l'inscription, sélecteur d'organisation active.
-- [ ] Invitation de membres, gestion des rôles.
+- [x] better-auth sur pool `pg` natif + plugin `organization` (rôles `owner`, `admin`, `operator` via access control) ; tables migrées au démarrage (`ensureAuthSchema`).
+- [x] `packages/identity` (remplace `packages/auth`) : port `Authentication`, adapter better-auth, contrat `IdentityRpcs` (`IdentityWhoAmI`).
+- [x] `ActorMiddleware` (RpcMiddleware) fournissant `CurrentActor` ; erreurs typées `Unauthenticated` / `NoActiveOrganization` ; `Forbidden` + `requireRole` dans le shared kernel.
+- [x] Inscription → création d'organisation (`/onboarding`) ; nouvelle session → première organisation de l'utilisateur ; sélecteur d'organisation dans l'en-tête.
+- [x] Page Membres : invitation par lien (pas encore d'envoi d'e-mail, lien affiché et journalisé), changement de rôle, retrait, annulation d'invitation ; page `/invitations/$id` (accepter / refuser).
+- [x] Vérifié dans le navigateur : inscription → organisation → invitation → inscription de l'invité → rôle opérateur ; refus serveur (403) d'une invitation par un opérateur ; RPC sans session → `Unauthenticated`.
+- [ ] Envoi réel des e-mails d'invitation (SMTP configurable) — à planifier.
 
 ### T0.4 i18n
 
