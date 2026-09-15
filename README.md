@@ -1,47 +1,41 @@
-# projection
+# Projection
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Start, Self, ORPC, and more.
+Logiciel de vidéo-projection web et auto-hébergeable (chants, versets bibliques, diapos, sorties salle / retour / stream).
 
-## Features
+- Produit : [docs/PRD.md](docs/PRD.md) · Tâches : [TASKS.md](TASKS.md)
+- Architecture : [ADR 0001 — DDD par feature + Effect 4](docs/adr/0001-architecture-ddd-effect.md) · [Gabarit de contexte](docs/architecture/gabarit-contexte.md)
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Start** - SSR framework with TanStack Router
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Vite+** - Unified Vite toolchain, workspace task runner, linting, and formatting
+## Stack
 
-## Getting Started
+- **TanStack Start** — SSR et routing
+- **Effect 4** — RPC (`effect/unstable/rpc`), SQL (`@effect/sql-pg`), Schema, Atom (`@effect/atom-react`)
+- **PostgreSQL** — base de données, migrations Effect par bounded context
+- **Better-Auth** — authentification
+- **Vite+** — toolchain, lint, format ; **Vitest 5** + `@effect/vitest` pour les tests
 
-First, install the dependencies:
+## Démarrage
 
 ```bash
 bun install
-```
-
-## Database Setup
-
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/web/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
-
-```bash
-bun run db:push
-```
-
-Then, run the development server:
-
-```bash
+bun run db:start
 bun run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the fullstack application.
+Les migrations (better-auth et contextes) s'appliquent au premier appel de l'API. Ouvrir [http://localhost:3001](http://localhost:3001).
+
+Si un Postgres local occupe déjà le port 5432, lancer le conteneur sur un autre port et ajuster `DATABASE_URL` dans `apps/web/.env` :
+
+```bash
+POSTGRES_PORT=5433 bun run db:start
+```
+
+## Tests
+
+```bash
+bun run test
+```
+
+Les tests d'intégration Postgres (`*.integration.test.ts`) ne tournent que si `DATABASE_URL` est défini.
 
 ## UI Customization
 
@@ -81,7 +75,7 @@ Bun's automatic env loading is disabled in `bunfig.toml`; the framework integrat
 
 ### Docker Compose
 
-- Target: web + server
+- Target: web + postgres
 - Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
 - Build images: bun run docker:build
 - Start: bun run docker:up
@@ -103,12 +97,13 @@ For more details, see the guide on [Deploying with Docker Compose](https://www.b
 ```
 projection/
 ├── apps/
-│   └── web/         # Fullstack application (React + TanStack Start)
+│   └── web/              # TanStack Start : routes, features UI, composition root (src/server)
 ├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   ├── shared-kernel/    # IDs brandés, CurrentActor
+│   ├── platform/         # Postgres, migrations, logs, RPC système
+│   ├── auth/             # Better-Auth
+│   ├── ui/               # Composants shadcn/ui partagés
+│   └── config/           # tsconfig partagé
 ```
 
 ## Available Scripts
@@ -117,11 +112,8 @@ projection/
 - `bun run build`: Build all applications
 - `bun run dev:web`: Start only the web application
 - `bun run check-types`: Check TypeScript types across all apps
-- `bun run dev:types`: Watch API and dependency declarations when running an app individually. The root `dev` command already starts this watcher; installation and builds generate declarations automatically.
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
+- `bun run test`: Run Vitest (unit + integration when `DATABASE_URL` is set)
+- `bun run db:start` / `db:stop` / `db:down`: Manage the Postgres container (`POSTGRES_PORT` to change the host port)
 - `bun run check`: Run Vite+ format/lint checks and workspace TypeScript checks
 - `bun run lint`: Run Vite+ lint checks
 - `bun run format`: Run Vite+ formatting

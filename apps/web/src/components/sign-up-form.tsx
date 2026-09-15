@@ -3,12 +3,26 @@ import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
+import { Schema } from "effect";
 import { toast } from "sonner";
-import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
+
+const SignUpValues = Schema.toStandardSchemaV1(
+  Schema.Struct({
+    name: Schema.String.check(
+      Schema.isMinLength(2, { message: "Name must be at least 2 characters" }),
+    ),
+    email: Schema.String.check(
+      Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email address" }),
+    ),
+    password: Schema.String.check(
+      Schema.isMinLength(8, { message: "Password must be at least 8 characters" }),
+    ),
+  }),
+);
 
 export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const navigate = useNavigate({
@@ -43,11 +57,7 @@ export default function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () 
       );
     },
     validators: {
-      onSubmit: z.object({
-        name: z.string().min(2, "Name must be at least 2 characters"),
-        email: z.email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
+      onSubmit: SignUpValues,
     },
   });
 

@@ -1,0 +1,24 @@
+{
+  "name": "@projection/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contract": "./src/contract.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/sql-pg": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@projection/config": "workspace:*",
+    "@types/node": "^26.4.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

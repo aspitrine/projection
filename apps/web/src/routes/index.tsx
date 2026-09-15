@@ -1,51 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useAtomValue } from "@effect/atom-react";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 
-import { orpc } from "@/utils/orpc";
+import { ApiClient } from "@/api/client";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
 });
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
-
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
+const healthAtom = ApiClient.query("SystemHealth", undefined);
 
 function HomeComponent() {
-  const healthCheck = useQuery(orpc.healthCheck.queryOptions());
-
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-2">
-      <pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-      <div className="grid gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">API Status</h2>
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
-            />
-            <span className="text-muted-foreground text-sm">
-              {healthCheck.isLoading
-                ? "Checking..."
-                : healthCheck.data
-                  ? "Connected"
-                  : "Disconnected"}
-            </span>
-          </div>
-        </section>
-      </div>
+    <div className="container mx-auto max-w-3xl px-4 py-6">
+      <h1 className="mb-6 text-3xl font-semibold">Projection</h1>
+      <section className="rounded-lg border p-4">
+        <h2 className="mb-2 font-medium">État de l'API</h2>
+        <ClientOnly fallback={<ApiStatusView tone="pending" label="Vérification…" />}>
+          <ApiStatus />
+        </ClientOnly>
+      </section>
+    </div>
+  );
+}
+
+function ApiStatus() {
+  const result = useAtomValue(healthAtom);
+
+  switch (result._tag) {
+    case "Initial":
+      return <ApiStatusView tone="pending" label="Vérification…" />;
+    case "Failure":
+      return <ApiStatusView tone="down" label="API injoignable" />;
+    case "Success":
+      return result.value.database === "up" ? (
+        <ApiStatusView tone="up" label="Connecté" />
+      ) : (
+        <ApiStatusView tone="down" label="Base de données injoignable" />
+      );
+  }
+}
+
+const toneClass = {
+  pending: "bg-yellow-500",
+  up: "bg-green-500",
+  down: "bg-red-500",
+} as const;
+
+function ApiStatusView({ tone, label }: { tone: keyof typeof toneClass; label: string }) {
+  return (
+    <div className="flex items-center gap-2" data-testid="api-status">
+      <div className={`h-2 w-2 rounded-full ${toneClass[tone]}`} />
+      <span className="text-muted-foreground text-sm">{label}</span>
     </div>
   );
 }

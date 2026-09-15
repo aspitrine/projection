@@ -22,28 +22,30 @@ Les logiciels de projection existants sont des applications desktop (Windows sur
 
 ## 4. Glossaire
 
-| Terme | Définition |
-|---|---|
-| Organisation | Tenant (une église). Possède membres, bibliothèque, sorties, thèmes, projets. |
-| Bibliothèque | Contenus réutilisables : chants, bibles, médias, diapos texte. |
-| Chant | Titre, auteurs, copyright, sections (couplet, refrain, pont…) et un ou plusieurs ordres de passage. |
-| Ordre de passage | Suite ordonnée de références de sections (C1, R, C2, R, R) sans dupliquer le texte. |
-| Projet | Un culte/événement : liste ordonnée d'éléments. |
-| Élément | Référence vers un contenu de bibliothèque (chant + ordre, passage biblique, diapo texte, média, écran vide). |
-| Sortie | Écran de destination avec type, thème et token d'accès. Persistante au niveau de l'organisation (l'URL OBS ne change pas d'un culte à l'autre). |
-| Type de sortie | `salle` (projecteur), `retour` (écran retour scène), `stream` (lower third, fond transparent). |
-| Découpage | Façon de couper un contenu en diapos pour une sortie (ex. salle = strophe entière, stream = 2 lignes). |
-| Piste | Curseur de navigation en direct. Piste **Salle** (sorties salle + retour) et piste **Stream**, liables ou indépendantes. |
-| Session live | État temps réel d'une organisation : projet actif, élément et diapo courants par piste, états d'urgence. |
+| Terme            | Définition                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organisation     | Tenant (une église). Possède membres, bibliothèque, sorties, thèmes, projets.                                                                   |
+| Bibliothèque     | Contenus réutilisables : chants, bibles, médias, diapos texte.                                                                                  |
+| Chant            | Titre, auteurs, copyright, sections (couplet, refrain, pont…) et un ou plusieurs ordres de passage.                                             |
+| Ordre de passage | Suite ordonnée de références de sections (C1, R, C2, R, R) sans dupliquer le texte.                                                             |
+| Projet           | Un culte/événement : liste ordonnée d'éléments.                                                                                                 |
+| Élément          | Référence vers un contenu de bibliothèque (chant + ordre, passage biblique, diapo texte, média, écran vide).                                    |
+| Sortie           | Écran de destination avec type, thème et token d'accès. Persistante au niveau de l'organisation (l'URL OBS ne change pas d'un culte à l'autre). |
+| Type de sortie   | `salle` (projecteur), `retour` (écran retour scène), `stream` (lower third, fond transparent).                                                  |
+| Découpage        | Façon de couper un contenu en diapos pour une sortie (ex. salle = strophe entière, stream = 2 lignes).                                          |
+| Piste            | Curseur de navigation en direct. Piste **Salle** (sorties salle + retour) et piste **Stream**, liables ou indépendantes.                        |
+| Session live     | État temps réel d'une organisation : projet actif, élément et diapo courants par piste, états d'urgence.                                        |
 
 ## 5. Fonctionnalités
 
 ### 5.1 Organisations et comptes
+
 - Multi-organisation, plusieurs utilisateurs par organisation (plugin `organization` de better-auth).
 - Rôles : `owner`, `admin`, `operator`. Invitation par e-mail/lien.
 - Changement d'organisation active.
 
 ### 5.2 Bibliothèque — Chants
+
 - CRUD chant : titre, auteurs, copyright, CCLI, mots-clés, sections typées avec label.
 - Plusieurs ordres de passage par chant, un par défaut.
 - Import : **OpenLyrics** (XML), **ChordPro**, **VideoPsalm** (agenda `.vpagd` et recueils — voir [format](formats/videopsalm.md)). Accords conservés dans la source brute (future grille d'accords), retirés à l'affichage.
@@ -51,6 +53,7 @@ Les logiciels de projection existants sont des applications desktop (Windows sur
 - **Édition en live** : correction des paroles pendant la projection, sauvegardée dans la bibliothèque et diffusée immédiatement aux sorties.
 
 ### 5.3 Bibliothèque — Bible
+
 - Traductions libres de droits importées en base (seed) : Louis Segond 1910, Darby 1885, Martin 1744, Ostervald 1877, Crampon 1923, Lausanne 1872… (licence à vérifier traduction par traduction avant import).
 - Import de fichiers supplémentaires (OSIS / USFM / Zefania) pour les traductions dont l'organisation détient les droits.
 - Saisie rapide par référence : `Jean 3.16-18`, `jn 3:16`, `1 Co 13`, abréviations françaises.
@@ -58,20 +61,24 @@ Les logiciels de projection existants sont des applications desktop (Windows sur
 - Affichage d'un passage multi-versets, découpé automatiquement par sortie.
 
 ### 5.4 Bibliothèque — Médias
+
 - Upload images et vidéos vers stockage S3-compatible (Garage), URLs pré-signées.
 - Utilisation comme élément de projet ou comme fond de thème.
 
 ### 5.5 Diapos texte
+
 - Éditeur de texte riche simple (gras, italique, listes, titres) + mises en page prédéfinies (titre seul, titre + corps, citation…).
 - Pas d'éditeur à positionnement libre.
 
 ### 5.6 Projets
+
 - CRUD projet (nom, date), liste ordonnée d'éléments (drag & drop).
 - Les éléments référencent la bibliothèque (pas de copie).
 - Ajout / modification pendant le direct sans interrompre la projection.
 - (v2) Modèles de culte réutilisables.
 
 ### 5.7 Sorties et thèmes
+
 - Trois types de sortie, chacune avec son propre thème et découpage.
 - URL publique `/{locale}/display/{token}`, token régénérable.
 - Thème : police, taille (auto-fit pour que le texte tienne), couleur, contour/ombre, alignement, position, marges, fond (couleur, image, vidéo, transparent), référence/copyright affichés ou non.
@@ -81,6 +88,7 @@ Les logiciels de projection existants sont des applications desktop (Windows sur
 - Transition : fondu.
 
 ### 5.8 Régie (contrôle live)
+
 - Vue projet : liste des éléments, aperçu des diapos, aperçu de chaque sortie.
 - Navigation : clic sur une diapo, raccourcis clavier (flèches, espace, PageUp/PageDown — compatible télécommandes de présentation).
 - Pistes **Salle** et **Stream** : liées par défaut (le stream suit la salle en sous-découpage), déliables pour qu'un opérateur stream navigue indépendamment.
@@ -102,12 +110,15 @@ Les logiciels de projection existants sont des applications desktop (Windows sur
 ## 7. Périmètre par phase
 
 ### MVP
+
 Organisations, chants (saisie manuelle + ordre de passage), Bible (Segond 1910 + saisie par référence), diapo texte simple, projets, **une sortie salle** avec thème par défaut, régie temps réel multi-opérateurs, raccourcis clavier, écran noir.
 
 ### v1
+
 Trois types de sortie + pistes Salle/Stream + ajustement manuel, thèmes personnalisables avec reset, imports (OpenLyrics, ChordPro, VideoPsalm), autres traductions libres + import de fichiers, recherche full-text, médias Garage, logo / masquer texte, fondu, édition de paroles en live, sortie retour (suivante, horloge, minuteur, notes), mises en page de diapos texte.
 
 ### v2
+
 Modèles de culte, autres langues d'interface, multi-instance.
 
 ## 8. Hors périmètre
@@ -117,10 +128,12 @@ Mode hors ligne, éditeur de diapos à positionnement libre, application desktop
 ## 9. Décisions
 
 ### Prises
+
 - **Licence MIT** pour le code. Seules les traductions bibliques du domaine public sont distribuées ; les autres sont importées par chaque instance sous sa responsabilité.
 - **Pistes Salle/Stream** adoptées telles que décrites, sans maquette préalable.
 - **Architecture DDD par feature + Effect 4** : [ADR 0001](adr/0001-architecture-ddd-effect.md).
 - **Aucun contenu sous droits dans le repo** (fixtures réelles non versionnées).
 
 ### Ouvertes
+
 - Échantillons VideoPsalm supplémentaires (recueil seul, agenda avec Bible/médias) — voir [format](formats/videopsalm.md).

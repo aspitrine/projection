@@ -16,36 +16,36 @@ Effect 4 est en release candidate (`4.0.0-rc.115`). `platform`, `rpc`, `sql`, `r
 
 ### Stack
 
-| Besoin | Avant | Après |
-|---|---|---|
-| Runtime applicatif | — | `effect@4` (rc, version épinglée) |
-| API client/serveur | oRPC | `effect/unstable/rpc` (`RpcGroup`, `RpcServer`, `RpcClient`), sérialisation NDJSON sur HTTP |
-| Temps réel | — | RPC `stream: true` + `PubSub` / `SubscriptionRef` côté serveur |
-| Base de données | Drizzle | `@effect/sql-pg` (`PgClient`) + `effect/unstable/sql` (`SqlSchema`, `Migrator`) |
-| Validation / modèles | Zod | `effect/Schema` |
-| État client / fetching | TanStack Query | `effect/unstable/reactivity` (`AtomRpc`) + `@effect/atom-react` |
-| Tests | Vitest | Vitest + `@effect/vitest` |
-| Auth | better-auth (adapter Drizzle) | better-auth (pool `pg` natif + plugin `organization`), encapsulé dans le contexte `identity` |
-| Routing / SSR | TanStack Start | inchangé ; l'API Effect est montée via `HttpRouter.toWebHandler` sur `/api/rpc` |
-| Env | varlock | varlock (génération `.env`) + `effect/Config` à la lecture |
+| Besoin                 | Avant                         | Après                                                                                        |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------- |
+| Runtime applicatif     | —                             | `effect@4` (rc, version épinglée)                                                            |
+| API client/serveur     | oRPC                          | `effect/unstable/rpc` (`RpcGroup`, `RpcServer`, `RpcClient`), sérialisation NDJSON sur HTTP  |
+| Temps réel             | —                             | RPC `stream: true` + `PubSub` / `SubscriptionRef` côté serveur                               |
+| Base de données        | Drizzle                       | `@effect/sql-pg` (`PgClient`) + `effect/unstable/sql` (`SqlSchema`, `Migrator`)              |
+| Validation / modèles   | Zod                           | `effect/Schema`                                                                              |
+| État client / fetching | TanStack Query                | `effect/unstable/reactivity` (`AtomRpc`) + `@effect/atom-react`                              |
+| Tests                  | Vitest                        | Vitest + `@effect/vitest`                                                                    |
+| Auth                   | better-auth (adapter Drizzle) | better-auth (pool `pg` natif + plugin `organization`), encapsulé dans le contexte `identity` |
+| Routing / SSR          | TanStack Start                | inchangé ; l'API Effect est montée via `HttpRouter.toWebHandler` sur `/api/rpc`              |
+| Env                    | varlock                       | varlock (génération `.env`) + `effect/Config` à la lecture                                   |
 
 Toutes les versions `effect` / `@effect/*` sont épinglées sur la même rc via le catalog Bun.
 
 ### Bounded contexts
 
-| Contexte | Package | Responsabilité |
-|---|---|---|
-| Shared kernel | `@projection/shared-kernel` | IDs brandés, `CurrentActor`, erreurs transverses |
-| Platform | `@projection/platform` | Layers d'infra : `PgClient`, migrations, S3 (Garage), config, observabilité |
-| Identity | `@projection/identity` | Organisations, membres, rôles, adaptation better-auth, middleware RPC d'auth |
-| Songs | `@projection/songs` | Chants, sections, ordres de passage, imports (VideoPsalm, OpenLyrics, ChordPro) |
-| Bible | `@projection/bible` | Traductions, versets, parsing de références, recherche |
-| Media | `@projection/media` | Images, vidéos, stockage S3 |
-| Slides | `@projection/slides` | Diapos texte et mises en page |
-| Presentation | `@projection/presentation` | Modèle `Slide`, moteur de découpage, thèmes — **pur**, partagé client/serveur |
-| Projects | `@projection/projects` | Projets et éléments |
-| Outputs | `@projection/outputs` | Sorties, tokens d'accès, thème par sortie |
-| Live | `@projection/live` | Session live, pistes Salle/Stream, diffusion temps réel |
+| Contexte      | Package                     | Responsabilité                                                                  |
+| ------------- | --------------------------- | ------------------------------------------------------------------------------- |
+| Shared kernel | `@projection/shared-kernel` | IDs brandés, `CurrentActor`, erreurs transverses                                |
+| Platform      | `@projection/platform`      | Layers d'infra : `PgClient`, migrations, S3 (Garage), config, observabilité     |
+| Identity      | `@projection/identity`      | Organisations, membres, rôles, adaptation better-auth, middleware RPC d'auth    |
+| Songs         | `@projection/songs`         | Chants, sections, ordres de passage, imports (VideoPsalm, OpenLyrics, ChordPro) |
+| Bible         | `@projection/bible`         | Traductions, versets, parsing de références, recherche                          |
+| Media         | `@projection/media`         | Images, vidéos, stockage S3                                                     |
+| Slides        | `@projection/slides`        | Diapos texte et mises en page                                                   |
+| Presentation  | `@projection/presentation`  | Modèle `Slide`, moteur de découpage, thèmes — **pur**, partagé client/serveur   |
+| Projects      | `@projection/projects`      | Projets et éléments                                                             |
+| Outputs       | `@projection/outputs`       | Sorties, tokens d'accès, thème par sortie                                       |
+| Live          | `@projection/live`          | Session live, pistes Salle/Stream, diffusion temps réel                         |
 
 ### Structure d'un contexte
 
