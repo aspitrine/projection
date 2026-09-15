@@ -1,0 +1,20 @@
+import { ActorMiddleware } from "@projection/identity/contract";
+import { Schema } from "effect";
+import { Rpc, RpcGroup } from "effect/unstable/rpc";
+
+import {
+  InvalidReference,
+  Passage,
+  PassageNotFound,
+  Translation,
+  UnknownTranslation,
+} from "../domain/Scripture";
+
+export const BibleRpcs = RpcGroup.make(
+  Rpc.make("BibleTranslations", { success: Schema.Array(Translation) }),
+  Rpc.make("BibleLookup", {
+    payload: { translationId: Schema.String, reference: Schema.String },
+    success: Passage,
+    error: Schema.Union([InvalidReference, PassageNotFound, UnknownTranslation]),
+  }),
+).middleware(ActorMiddleware);

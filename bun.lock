@@ -19,6 +19,7 @@
       "name": "web",
       "dependencies": {
         "@effect/atom-react": "catalog:",
+        "@projection/bible": "workspace:*",
         "@projection/identity": "workspace:*",
         "@projection/live": "workspace:*",
         "@projection/platform": "workspace:*",
@@ -57,6 +58,24 @@
         "typescript": "catalog:",
         "vite": "^8.2.2",
         "web-vitals": "^6.2.1",
+      },
+    },
+    "packages/bible": {
+      "name": "@projection/bible",
+      "version": "0.0.0",
+      "dependencies": {
+        "@effect/sql-pg": "catalog:",
+        "@projection/identity": "workspace:*",
+        "@projection/platform": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
+        "@types/node": "^26.4.1",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
     "packages/config": {
@@ -470,6 +489,8 @@
     "@playwright/test": ["@playwright/test@1.63.0", "", { "dependencies": { "playwright": "1.63.0" }, "bin": { "playwright": "cli.js" } }, "sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ=="],
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
+
+    "@projection/bible": ["@projection/bible@workspace:packages/bible"],
 
     "@projection/config": ["@projection/config@workspace:packages/config"],
 

@@ -83,14 +83,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Domaine pur : `ContentBlock`, `SplitRules` (max lignes, max caractères, regroupement de blocs, équilibrage), `split`.
 - [x] Tests unitaires + propriétés (conservation des lignes, limites respectées, équilibrage).
 
-### T1.3 Bible — Segond 1910 et références [bible]
+### T1.3 Bible — Segond 1910 et références [bible] ✅
 
 **Dépend de** : T0.3
 
-- [ ] Domaine : `Translation`, `Verse`, `VerseRange` ; parser de références FR (`Jean 3.16-18`, `jn 3:16`, `1 Co 13`) en pur + tests.
-- [ ] Migrations + seed Segond 1910 (source et licence notées dans `docs/bibles.md`).
-- [ ] `BibleRpc` : résoudre une référence.
-- [ ] UI : saisie rapide avec aperçu du passage.
+- [x] Domaine : 66 livres (noms FR, abréviations, livres à chapitre unique), `ScriptureReference`, parser de références FR (`Jean 3.16-18`, `jn 3:16`, `1 Co 13`, `Jean 3.16-4.2`, `Jude 3`) et formatage canonique, parser USFM.
+- [x] Migration `bible`, repository SQL, import USFM idempotent (`bun run bible:import -- <dossier> [--test]`) ; Louis Segond 1910 importée (66 livres, 31 170 versets). Source et licence : [docs/bibles.md](docs/bibles.md).
+- [x] `BibleRpcs` : traductions, résolution d'une référence ; erreurs typées `InvalidReference`, `PassageNotFound`, `UnknownTranslation`.
+- [x] UI : choix de traduction, saisie rapide avec exemples, passage et aperçu en diapos (grille d'aperçu partagée avec les chants).
+- [x] Tests unitaires (livres, références, USFM, cas d'usage) et fonctionnels API sur Postgres (import → SQL → RPC).
 
 ### T1.4 Diapo texte simple [slides]
 

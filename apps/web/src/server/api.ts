@@ -1,3 +1,4 @@
+import { BibleLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
 import { LiveLive } from "@projection/live/server";
 import {
@@ -24,6 +25,7 @@ const HandlersLive = Layer.mergeAll(
   LiveLive,
   layerIdentity(auth),
   SongsLive,
+  BibleLive,
 ).pipe(Layer.provide(DatabaseHealth.layer));
 
 const ApiLive = RpcServer.layerHttp({
@@ -34,7 +36,9 @@ const ApiLive = RpcServer.layerHttp({
   Layer.provide(HandlersLive),
   Layer.provide(RpcSerialization.layerNdjson),
   // Les migrations sont construites avant le serveur RPC.
-  Layer.provide(Layer.mergeAll(AuthMigrationsLive, layerMigrations([songsMigrations]))),
+  Layer.provide(
+    Layer.mergeAll(AuthMigrationsLive, layerMigrations([songsMigrations, bibleMigrations])),
+  ),
   Layer.provide(DatabaseLive),
   Layer.provide(LoggerLive),
 );

@@ -1,0 +1,28 @@
+{
+  "name": "@projection/bible",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./contract": "./src/api/contract.ts",
+    "./domain": "./src/domain/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/sql-pg": "catalog:",
+    "@projection/identity": "workspace:*",
+    "@projection/platform": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@projection/config": "workspace:*",
+    "@projection/shared-kernel": "workspace:*",
+    "@types/node": "^26.4.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

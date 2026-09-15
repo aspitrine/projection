@@ -9,6 +9,7 @@ import { Effect, Exit, Option } from "effect";
 import { ArrowLeft } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { SlidePreviewGrid } from "@/features/presentation/slide-preview-grid";
 import { m } from "@/paraglide/messages";
 
 import { lyricsErrorMessage } from "./errors";
@@ -168,25 +169,7 @@ export function SongEditor({
                 <h3 className="text-muted-foreground text-xs font-medium uppercase">
                   {m.song_slides({ count: slides.length })}
                 </h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {slides.map((slide) => (
-                    <figure
-                      key={slide.index}
-                      data-testid="slide-preview"
-                      className="flex aspect-video flex-col bg-black p-3 text-white ring-1 ring-foreground/10"
-                    >
-                      <figcaption className="text-[0.65rem] text-white/50">
-                        {slide.label}
-                        {slide.parts > 1 ? ` · ${slide.part}/${slide.parts}` : ""}
-                      </figcaption>
-                      <div className="flex flex-1 flex-col items-center justify-center text-center text-xs leading-snug">
-                        {slide.lines.map((line, index) => (
-                          <p key={index}>{line}</p>
-                        ))}
-                      </div>
-                    </figure>
-                  ))}
-                </div>
+                <SlidePreviewGrid slides={slides} />
               </div>
             </>
           )}

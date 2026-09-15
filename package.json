@@ -52,7 +52,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "varlock run --path ./apps/web/ -- vitest run",
-    "test:e2e": "bun run --cwd apps/web test:e2e"
+    "test:e2e": "bun run --cwd apps/web test:e2e",
+    "bible:import": "varlock run --path ./apps/web/ -- bun packages/bible/scripts/import-usfm.ts"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",
