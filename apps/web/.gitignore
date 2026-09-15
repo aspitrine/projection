@@ -65,3 +65,7 @@ dev-dist
 # Paraglide (généré)
 src/paraglide
 project.inlang/cache
+
+# Playwright
+test-results
+playwright-report

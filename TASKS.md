@@ -68,19 +68,20 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 ## Phase MVP
 
-### T1.1 Chants — CRUD manuel [songs]
+### T1.1 Chants — CRUD manuel [songs] ✅
 
 **Dépend de** : T0.3
 
-- [ ] Domaine : `Song`, `SongSection` (type, label, lignes, source brute), `Arrangement` ; règles pures (numérotation des couplets, dédoublonnage de sections).
-- [ ] Migrations + `SqlSongRepository` (filtré par organisation).
-- [ ] `SongsRpc` : create, update, get, list, search par titre.
-- [ ] UI : éditeur texte brut avec balises `[Couplet 1]`, `[Refrain]` → sections ; ordre de passage par défaut modifiable.
+- [x] Domaine : `Song`, `SongSection` (type, numéro, libellé libre), ordre de passage ; parser/formateur de paroles (`[Couplet 1]`, `[Refrain]`, répétitions par balise vide, strophes sans balise, alias FR/EN).
+- [x] Migration `songs` + `SqlSongRepository` (PgClient, filtré par organisation).
+- [x] `SongsRpcs` (derrière `ActorMiddleware`) : list (recherche par titre), get, create, update, delete ; erreurs typées `InvalidLyrics`, `SongNotFound`.
+- [x] UI : liste avec recherche, éditeur avec aperçu en direct (ordre de passage + diapos), création, modification, suppression.
+- [x] Tests unitaires (parser, formateur, propriété aller-retour, cas d'usage avec repository en mémoire) et fonctionnels API sur Postgres (`TEST_DATABASE_URL`, isolation des organisations).
 
-### T1.2 Moteur de découpage [presentation]
+### T1.2 Moteur de découpage [presentation] ✅
 
-- [ ] Domaine pur : `Slide`, `SplitRules` (max lignes, respect des sections), `split(content, rules)`.
-- [ ] Tests unitaires (chants, passages bibliques, cas limites).
+- [x] Domaine pur : `ContentBlock`, `SplitRules` (max lignes, max caractères, regroupement de blocs, équilibrage), `split`.
+- [x] Tests unitaires + propriétés (conservation des lignes, limites respectées, équilibrage).
 
 ### T1.3 Bible — Segond 1910 et références [bible]
 
@@ -230,6 +231,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [ ] Vue tablette/mobile utilisable pour le pilotage.
 
 ---
+
+## Tests E2E (en fin de projet)
+
+- [ ] Playwright est configuré (`apps/web/playwright.config.ts`, build de prod sur le port 3101, base `TEST_DATABASE_URL`) avec des specs identity, navigation et chants : à finaliser et exécuter en fin de projet.
+- [ ] Problème connu : sur le build de production, la réponse RPC de `SongsCreate` n'arrive pas au navigateur (le chant est pourtant enregistré) ; fonctionne en dev. À diagnostiquer.
 
 ## Phase v2
 

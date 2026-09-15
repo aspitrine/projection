@@ -1,0 +1,27 @@
+{
+  "name": "@projection/songs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./contract": "./src/api/contract.ts",
+    "./domain": "./src/domain/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/sql-pg": "catalog:",
+    "@projection/identity": "workspace:*",
+    "@projection/shared-kernel": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@projection/config": "workspace:*",
+    "@projection/platform": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

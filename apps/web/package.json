@@ -8,14 +8,18 @@
     "dev": "vp dev",
     "check-types": "bun run i18n:compile && tsc --noEmit",
     "env:generate": "varlock codegen",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --output-structure locale-modules --emit-ts-declarations --silent"
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --output-structure locale-modules --emit-ts-declarations --silent",
+    "test:e2e": "playwright test",
+    "e2e:serve": "vp build && varlock run -- sh -c 'DATABASE_URL=\"$TEST_DATABASE_URL\" BETTER_AUTH_URL=http://localhost:3101 PORT=3101 node .output/server/index.mjs'"
   },
   "dependencies": {
     "@effect/atom-react": "catalog:",
     "@projection/identity": "workspace:*",
     "@projection/live": "workspace:*",
     "@projection/platform": "workspace:*",
+    "@projection/presentation": "workspace:*",
     "@projection/shared-kernel": "workspace:*",
+    "@projection/songs": "workspace:*",
     "@projection/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-form": "^1.33.5",
@@ -36,6 +40,7 @@
   },
   "devDependencies": {
     "@inlang/paraglide-js": "2.25.2",
+    "@playwright/test": "1.63.0",
     "@projection/config": "workspace:*",
     "@tanstack/react-router-devtools": "^1.167.1",
     "@testing-library/dom": "^10.4.1",

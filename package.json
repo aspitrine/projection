@@ -51,7 +51,8 @@
     "env:generate": "varlock codegen --path ./apps/web/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "varlock run --path ./apps/web/ -- vitest run"
+    "test:integration": "varlock run --path ./apps/web/ -- vitest run",
+    "test:e2e": "bun run --cwd apps/web test:e2e"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

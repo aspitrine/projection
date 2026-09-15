@@ -7,6 +7,7 @@ import {
   SystemHandlersLive,
   layerMigrations,
 } from "@projection/platform";
+import { SongsLive, songsMigrations } from "@projection/songs/server";
 import { Effect, Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
@@ -18,9 +19,12 @@ const AuthMigrationsLive = Layer.effectDiscard(
   Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
 );
 
-const HandlersLive = Layer.mergeAll(SystemHandlersLive, LiveLive, layerIdentity(auth)).pipe(
-  Layer.provide(DatabaseHealth.layer),
-);
+const HandlersLive = Layer.mergeAll(
+  SystemHandlersLive,
+  LiveLive,
+  layerIdentity(auth),
+  SongsLive,
+).pipe(Layer.provide(DatabaseHealth.layer));
 
 const ApiLive = RpcServer.layerHttp({
   group: ApiRpcs,
@@ -30,7 +34,7 @@ const ApiLive = RpcServer.layerHttp({
   Layer.provide(HandlersLive),
   Layer.provide(RpcSerialization.layerNdjson),
   // Les migrations sont construites avant le serveur RPC.
-  Layer.provide(Layer.mergeAll(AuthMigrationsLive, layerMigrations([]))),
+  Layer.provide(Layer.mergeAll(AuthMigrationsLive, layerMigrations([songsMigrations]))),
   Layer.provide(DatabaseLive),
   Layer.provide(LoggerLive),
 );
