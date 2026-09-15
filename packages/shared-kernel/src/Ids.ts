@@ -17,3 +17,13 @@ export const TextSlideId = Schema.String.check(Schema.isPattern(uuidPattern)).pi
   Schema.brand("TextSlideId"),
 );
 export type TextSlideId = typeof TextSlideId.Type;
+
+export const ProjectId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
+  Schema.brand("ProjectId"),
+);
+export type ProjectId = typeof ProjectId.Type;
+
+export const ProjectItemId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
+  Schema.brand("ProjectItemId"),
+);
+export type ProjectItemId = typeof ProjectItemId.Type;

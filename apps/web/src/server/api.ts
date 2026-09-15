@@ -8,6 +8,7 @@ import {
   SystemHandlersLive,
   layerMigrations,
 } from "@projection/platform";
+import { ProjectsLive, projectsMigrations } from "@projection/projects/server";
 import { SlidesLive, slidesMigrations } from "@projection/slides/server";
 import { SongsLive, songsMigrations } from "@projection/songs/server";
 import { Effect, Layer } from "effect";
@@ -28,6 +29,7 @@ const HandlersLive = Layer.mergeAll(
   SongsLive,
   BibleLive,
   SlidesLive,
+  ProjectsLive,
 ).pipe(Layer.provide(DatabaseHealth.layer));
 
 const ApiLive = RpcServer.layerHttp({
@@ -41,7 +43,7 @@ const ApiLive = RpcServer.layerHttp({
   Layer.provide(
     Layer.mergeAll(
       AuthMigrationsLive,
-      layerMigrations([songsMigrations, bibleMigrations, slidesMigrations]),
+      layerMigrations([songsMigrations, bibleMigrations, slidesMigrations, projectsMigrations]),
     ),
   ),
   Layer.provide(DatabaseLive),

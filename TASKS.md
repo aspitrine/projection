@@ -102,13 +102,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] UI : bibliothèque « Diapos texte » (recherche), éditeur avec barre d'outils (gras, italique, titre, liste) et aperçu 16:9 en direct.
 - [x] Tests unitaires (parseur + propriétés, cas d'usage, barre d'outils) et fonctionnels API sur Postgres.
 
-### T1.5 Projets [projects]
+### T1.5 Projets [projects] ✅
 
 **Dépend de** : T1.1, T1.3, T1.4
 
-- [ ] Domaine : `Project`, `ProjectItem` (union taguée : chant + arrangement, passage, diapo texte, écran vide), réordonnancement.
-- [ ] Migrations, `ProjectsRpc`.
-- [ ] UI : créer un projet, ajouter des éléments, drag & drop.
+- [x] Domaine : agrégat `Project` (nom, date, éléments ordonnés), éléments en union taguée (chant, passage, diapo texte, écran vide) ne stockant que des références ; opérations pures insérer / retirer / déplacer.
+- [x] Migration `projects`, repository SQL avec modification atomique (`SELECT … FOR UPDATE` en transaction) : pas de perte de mise à jour entre opérateurs.
+- [x] `ProjectsRpcs` : list, get, create, update, delete, addItem, removeItem, moveItem ; erreurs `ProjectNotFound`, `ProjectItemNotFound`.
+- [x] UI : liste et création de projets, page projet (nom, date, suppression), ordre de passage réordonnable (glisser-déposer + boutons monter/descendre), panneau d'ajout par onglets (chant, passage avec aperçu de la référence, diapo texte, écran vide).
+- [x] Tests unitaires (opérations + propriété de déplacement, cas d'usage) et fonctionnels API sur Postgres (dont 10 ajouts concurrents sans perte).
 
 ### T1.6 Rendu de diapo [presentation, web]
 

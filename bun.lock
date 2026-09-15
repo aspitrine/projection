@@ -24,6 +24,7 @@
         "@projection/live": "workspace:*",
         "@projection/platform": "workspace:*",
         "@projection/presentation": "workspace:*",
+        "@projection/projects": "workspace:*",
         "@projection/shared-kernel": "workspace:*",
         "@projection/slides": "workspace:*",
         "@projection/songs": "workspace:*",
@@ -137,6 +138,23 @@
       "devDependencies": {
         "@effect/vitest": "catalog:",
         "@projection/config": "workspace:*",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
+    "packages/projects": {
+      "name": "@projection/projects",
+      "version": "0.0.0",
+      "dependencies": {
+        "@effect/sql-pg": "catalog:",
+        "@projection/identity": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@projection/platform": "workspace:*",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -519,6 +537,8 @@
     "@projection/platform": ["@projection/platform@workspace:packages/platform"],
 
     "@projection/presentation": ["@projection/presentation@workspace:packages/presentation"],
+
+    "@projection/projects": ["@projection/projects@workspace:packages/projects"],
 
     "@projection/shared-kernel": ["@projection/shared-kernel@workspace:packages/shared-kernel"],
 
