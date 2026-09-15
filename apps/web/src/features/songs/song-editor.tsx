@@ -3,7 +3,6 @@ import { parseLyrics } from "@projection/songs/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
-import { Textarea } from "@projection/ui/components/textarea";
 import { Link } from "@tanstack/react-router";
 import { Effect, Exit, Option } from "effect";
 import { ArrowLeft } from "lucide-react";
@@ -13,6 +12,7 @@ import { SlidePreviewGrid } from "@/features/presentation/slide-preview-grid";
 import { m } from "@/paraglide/messages";
 
 import { lyricsErrorMessage } from "./errors";
+import { LyricsEditor } from "./lyrics-editor";
 import { PREVIEW_MAX_LINES, sectionLabel, toContentBlocks } from "./sections";
 
 export interface SongFormValues {
@@ -120,17 +120,16 @@ export function SongEditor({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="song-lyrics">{m.song_field_lyrics()}</Label>
+            <Label id="song-lyrics-label">{m.song_field_lyrics()}</Label>
             <p id="song-lyrics-help" className="text-muted-foreground text-xs">
               {m.song_lyrics_help()}
             </p>
-            <Textarea
-              id="song-lyrics"
-              aria-describedby="song-lyrics-help"
-              aria-invalid={lyricsError !== null}
-              className="min-h-80 font-mono text-sm"
+            <LyricsEditor
               value={values.lyrics}
-              onChange={(event) => set("lyrics")(event.target.value)}
+              labelledBy="song-lyrics-label"
+              describedBy="song-lyrics-help"
+              invalid={lyricsError !== null}
+              onChange={set("lyrics")}
             />
             {lyricsError && (
               <p role="alert" className="text-sm text-red-500">

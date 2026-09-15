@@ -2,15 +2,14 @@ import { hasVisibleContent, parseRichText } from "@projection/slides/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
-import { Textarea } from "@projection/ui/components/textarea";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Bold, Heading, Italic, List } from "lucide-react";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { m } from "@/paraglide/messages";
 
-import { type MarkupEdit, togglePrefix, toggleWrap } from "./markup";
+import { RichTextEditor } from "./rich-text-editor";
 
 export interface SlideFormValues {
   readonly title: string;
@@ -38,45 +37,10 @@ export function SlideEditor({
   actions?: ReactNode;
 }) {
   const [values, setValues] = useState(initial);
-  const textarea = useRef<HTMLTextAreaElement>(null);
 
   const blocks = useMemo(() => parseRichText(values.source), [values.source]);
   const hasContent = hasVisibleContent(values.source);
   const canSubmit = values.title.trim() !== "" && hasContent && !submitting;
-
-  const applyMarkup = (transform: (value: string, start: number, end: number) => MarkupEdit) => {
-    const element = textarea.current;
-    if (element === null) return;
-    const edit = transform(element.value, element.selectionStart, element.selectionEnd);
-    setValues((current) => ({ ...current, source: edit.value }));
-    requestAnimationFrame(() => {
-      element.focus();
-      element.setSelectionRange(edit.selectionStart, edit.selectionEnd);
-    });
-  };
-
-  const tools = [
-    {
-      label: m.slide_bold(),
-      icon: Bold,
-      apply: (v: string, s: number, e: number) => toggleWrap(v, s, e, "**", m.slide_bold()),
-    },
-    {
-      label: m.slide_italic(),
-      icon: Italic,
-      apply: (v: string, s: number, e: number) => toggleWrap(v, s, e, "*", m.slide_italic()),
-    },
-    {
-      label: m.slide_heading(),
-      icon: Heading,
-      apply: (v: string, s: number, e: number) => togglePrefix(v, s, e, "# "),
-    },
-    {
-      label: m.slide_list(),
-      icon: List,
-      apply: (v: string, s: number, e: number) => togglePrefix(v, s, e, "- "),
-    },
-  ];
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
@@ -115,31 +79,12 @@ export function SlideEditor({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slide-source">{m.slide_field_content()}</Label>
-            <div role="toolbar" aria-label={m.slide_toolbar()} className="flex gap-1">
-              {tools.map(({ label, icon: Icon, apply }) => (
-                <Button
-                  key={label}
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  aria-label={label}
-                  title={label}
-                  onClick={() => applyMarkup(apply)}
-                >
-                  <Icon className="size-4" aria-hidden />
-                </Button>
-              ))}
-            </div>
-            <Textarea
-              ref={textarea}
-              id="slide-source"
-              aria-describedby="slide-source-help"
-              className="min-h-64 font-mono text-sm"
+            <Label id="slide-source-label">{m.slide_field_content()}</Label>
+            <RichTextEditor
               value={values.source}
-              onChange={(event) =>
-                setValues((current) => ({ ...current, source: event.target.value }))
-              }
+              labelledBy="slide-source-label"
+              describedBy="slide-source-help"
+              onChange={(source) => setValues((current) => ({ ...current, source }))}
             />
             <p id="slide-source-help" className="text-muted-foreground text-xs">
               {m.slide_help()}

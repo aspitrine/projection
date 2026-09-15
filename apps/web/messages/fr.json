@@ -109,7 +109,7 @@
   "song_field_copyright": "Copyright",
   "song_field_ccli": "Numéro CCLI",
   "song_field_lyrics": "Paroles",
-  "song_lyrics_help": "Balises : [Couplet 1], [Refrain], [Pré-refrain], [Pont], [Intro], [Fin]… Une balise sans texte rejoue la section (ex. [Refrain]). Sans balise, chaque strophe devient un couplet.",
+  "song_lyrics_help": "Une ligne par ligne chantée. Insérez une section avec les boutons ou en tapant [Refrain] en début de ligne ; pour rejouer une section déjà écrite, ajoutez seulement son étiquette.",
   "song_title_required": "Le titre est obligatoire",
   "song_save": "Enregistrer",
   "song_saving": "Enregistrement…",
@@ -164,7 +164,7 @@
   "slide_italic": "Italique",
   "slide_heading": "Titre",
   "slide_list": "Liste",
-  "slide_help": "**gras**, *italique*, # Titre, ## Sous-titre, - élément de liste. Une ligne vide sépare les paragraphes.",
+  "slide_help": "Mettez en forme avec la barre d'outils ou au clavier : Ctrl+B gras, Ctrl+I italique, « # » en début de ligne pour un titre, « - » pour une liste.",
   "slide_preview": "Aperçu",
   "slide_content_hint": "Saisissez un contenu pour voir l'aperçu.",
   "slide_empty_content": "Le contenu de la diapo est vide.",
@@ -303,5 +303,11 @@
   "live_cover_hide_text": "Masquer le texte",
   "live_cover_active_black": "Écran noir",
   "live_cover_active_logo": "Logo à l'écran",
-  "live_cover_active_hide_text": "Texte masqué"
+  "live_cover_active_hide_text": "Texte masqué",
+  "slide_subheading": "Sous-titre",
+  "slide_placeholder": "Écrivez le texte de la diapo…",
+  "editor_undo": "Annuler",
+  "editor_redo": "Rétablir",
+  "song_lyrics_placeholder": "Tapez ou collez les paroles…",
+  "song_sections_toolbar": "Insérer une section"
 }

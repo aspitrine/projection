@@ -193,6 +193,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Tests unitaires (sessions, images par piste, rendu des boutons d'urgence) et fonctionnels sur Postgres.
 - [ ] Logo téléversé depuis la médiathèque : avec T2.8 (aujourd'hui, champ `logo` de l'organisation).
 
+### Éditeurs visuels (Tiptap) [slides, songs] ✅
+
+- [x] Diapos texte : éditeur visuel (gras, italique, titre, sous-titre, liste, annuler/rétablir, raccourcis Markdown) ; la source légère reste le format enregistré (conversion testée dans les deux sens).
+- [x] Paroles : étiquettes de section mises en évidence, insertion par boutons (couplets numérotés) ou en tapant `[Refrain]`, collage multi-lignes fidèle ; le texte à balises reste le format enregistré.
+
 ### T2.5 Thèmes personnalisables [presentation, outputs]
 
 **Dépend de** : T2.1, T2.8
@@ -266,6 +271,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 ## Tests E2E (en fin de projet)
 
 - [ ] Playwright est configuré (`apps/web/playwright.config.ts`, build de prod sur le port 3101, base `TEST_DATABASE_URL`) avec des specs identity, navigation et chants : à finaliser et exécuter en fin de projet.
+- [ ] Specs chants et diapos à adapter aux éditeurs Tiptap (plus de `textarea`).
 - [ ] Problème connu : sur le build de production, la réponse RPC de `SongsCreate` n'arrive pas au navigateur (le chant est pourtant enregistré) ; fonctionne en dev. À diagnostiquer.
 
 ## Phase v2
