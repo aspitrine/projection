@@ -56,3 +56,6 @@ coverage
 .cache
 tmp
 temp
+
+# Fixtures réelles (contenus sous droits)
+**/test/fixtures/**/local/
