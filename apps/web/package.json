@@ -12,6 +12,7 @@
   "dependencies": {
     "@effect/atom-react": "catalog:",
     "@projection/auth": "workspace:*",
+    "@projection/live": "workspace:*",
     "@projection/platform": "workspace:*",
     "@projection/shared-kernel": "workspace:*",
     "@projection/ui": "workspace:*",

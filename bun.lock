@@ -20,6 +20,7 @@
       "dependencies": {
         "@effect/atom-react": "catalog:",
         "@projection/auth": "workspace:*",
+        "@projection/live": "workspace:*",
         "@projection/platform": "workspace:*",
         "@projection/shared-kernel": "workspace:*",
         "@projection/ui": "workspace:*",
@@ -69,6 +70,19 @@
     "packages/config": {
       "name": "@projection/config",
       "version": "0.0.0",
+    },
+    "packages/live": {
+      "name": "@projection/live",
+      "version": "0.0.0",
+      "dependencies": {
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
     },
     "packages/platform": {
       "name": "@projection/platform",
@@ -403,6 +417,8 @@
     "@projection/auth": ["@projection/auth@workspace:packages/auth"],
 
     "@projection/config": ["@projection/config@workspace:packages/config"],
+
+    "@projection/live": ["@projection/live@workspace:packages/live"],
 
     "@projection/platform": ["@projection/platform@workspace:packages/platform"],
 

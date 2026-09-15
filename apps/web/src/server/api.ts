@@ -1,4 +1,5 @@
 import { migrateAuthSchema } from "@projection/auth";
+import { LiveLive } from "@projection/live/server";
 import {
   DatabaseHealth,
   DatabaseLive,
@@ -17,7 +18,9 @@ const AuthMigrationsLive = Layer.effectDiscard(
   Effect.tryPromise(() => migrateAuthSchema(auth)).pipe(Effect.withSpan("auth.migrations")),
 );
 
-const HandlersLive = Layer.mergeAll(SystemHandlersLive).pipe(Layer.provide(DatabaseHealth.layer));
+const HandlersLive = Layer.mergeAll(SystemHandlersLive, LiveLive).pipe(
+  Layer.provide(DatabaseHealth.layer),
+);
 
 const ApiLive = RpcServer.layerHttp({
   group: ApiRpcs,

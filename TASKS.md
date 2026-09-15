@@ -27,15 +27,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Port hôte Postgres configurable (`POSTGRES_PORT`).
 - [x] `docker compose up --build` fonctionne (RPC `SystemHealth` → `database: up` depuis le conteneur).
 
-### T0.2 Spike temps réel [live]
+### T0.2 Spike temps réel [live] ✅
 
 **Dépend de** : T0.1
 
-- [ ] RPC `stream: true` (NDJSON sur HTTP) servi via TanStack Start / Nitro, reçu par deux onglets.
-- [ ] Mutation dans un onglet → événement reçu dans l'autre en < 200 ms.
-- [ ] Reconnexion automatique après coupure réseau + resynchronisation de l'état complet.
-- [ ] Vérifié en build Docker. Si échec : repli WebSocket (`RpcServer` socket protocol).
-- **Livrable** : `docs/adr/0002-temps-reel.md`.
+- [x] RPC `stream: true` (NDJSON sur HTTP) servi via TanStack Start / Nitro, reçu par deux onglets (`/spike/live`).
+- [x] Mutation dans un onglet → événement reçu dans l'autre en < 200 ms (p50 1,6 ms, p95 2,7 ms en Docker).
+- [x] Reconnexion automatique après coupure + resynchronisation de l'état complet (flux coupé à 360 s, conteneur recréé).
+- [x] Vérifié en build Docker. Repli WebSocket inutile.
+- **Livrable** : [docs/adr/0002-temps-reel.md](docs/adr/0002-temps-reel.md).
 
 ### T0.3 Identité et organisations [identity]
 
