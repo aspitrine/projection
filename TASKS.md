@@ -164,12 +164,16 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Tests unitaires (gestion, découpage, bandeau du rendu, DeckSource) et fonctionnels API sur Postgres.
 - [ ] Vérification dans OBS (source navigateur 1920×1080) : à faire manuellement sur une machine avec OBS.
 
-### T2.2 Pistes Salle / Stream [live]
+### T2.2 Pistes Salle / Stream [live] ✅
 
 **Dépend de** : T2.1
 
-- [ ] Deux curseurs dans `LiveSession`, mode lié/délié ; en mode lié le stream suit la salle en sous-découpage.
-- [ ] Panneau stream dans la régie.
+- [x] Deux curseurs dans `LiveSession` (salle : élément + diapo ; stream : élément + diapo + partie), mode lié/délié persistés (`live_session`).
+- [x] Sous-découpage (`subSplit`, domaine `presentation`) : chaque diapo de salle porte ses parties stream selon le découpage Stream de l'organisation.
+- [x] Lié : le stream suit la diapo de la salle et défile ses parties ; délié : il parcourt tout le projet. Envoyer une autre diapo au stream délie ; relier recale sur la salle.
+- [x] `LiveFrames` : une image par piste ; les sorties salle et retour lisent la piste Salle, la sortie stream la piste Stream.
+- [x] Panneau stream dans la régie : aperçu sur damier, case « Lié à la salle », parties, marqueur sur les miniatures ; Maj + flèches et Maj + clic.
+- [x] Tests unitaires (sous-découpage, navigation stream avec propriétés, sessions liées/déliées) et fonctionnels sur Postgres.
 
 ### T2.3 Ajustement manuel du stream [live]
 

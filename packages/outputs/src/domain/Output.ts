@@ -1,4 +1,10 @@
-import { Frame, Splitting, roomSplitting, streamSplitting } from "@projection/presentation/domain";
+import {
+  Frame,
+  Splitting,
+  type Track,
+  roomSplitting,
+  streamSplitting,
+} from "@projection/presentation/domain";
 import { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Effect, Schema } from "effect";
 
@@ -7,7 +13,6 @@ export const OutputType = Schema.Literals(["room", "stage", "stream"]);
 export type OutputType = typeof OutputType.Type;
 
 /** Piste qui alimente une sortie : la salle pilote salle et retour, le stream a sa piste. */
-export type Track = "room" | "stream";
 export const trackOf = (type: OutputType): Track => (type === "stream" ? "stream" : "room");
 
 export const OutputName = Schema.String.check(

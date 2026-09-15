@@ -60,7 +60,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
       const snapshot = yield* client.LiveGoTo({ itemId: itemId(3), slideIndex: 0 });
       expect(snapshot.session).toMatchObject({ blackout: true, version: 4 });
 
-      const frame = yield* frames.current(organizationId);
+      const frame = yield* frames.current(organizationId, "room");
       expect(frame).toMatchObject({ blackout: true, content: { _tag: "Lines", lines: ["C1"] } });
 
       const stored = yield* repository.load(organizationId);
@@ -74,11 +74,24 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
       const error = yield* client.LiveGoTo({ itemId: itemId(2), slideIndex: 0 }).pipe(Effect.flip);
       expect(error._tag).toBe("LiveItemNotFound");
 
+      yield* client.LiveStreamSetLinked({ linked: false });
+      yield* client.LiveStreamGoTo({ itemId: itemId(1), slideIndex: 1, part: 0 });
+      expect(Option.getOrNull(yield* repository.load(organizationId))).toMatchObject({
+        streamLinked: false,
+        streamCursor: { itemId: itemId(1), slideIndex: 1, part: 0 },
+      });
+      expect((yield* frames.current(organizationId, "stream")).content).toEqual({
+        _tag: "Lines",
+        lines: ["A2"],
+        caption: null,
+      });
+
       yield* client.LiveStop();
       expect(Option.getOrNull(yield* repository.load(organizationId))).toMatchObject({
         projectId: null,
         cursor: null,
-        version: 5,
+        streamLinked: true,
+        version: 7,
       });
     }).pipe(Effect.provide(ApiLive)),
   );

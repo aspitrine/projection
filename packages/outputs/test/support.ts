@@ -1,4 +1,4 @@
-import { Frame, type FrameContent, initialFrame } from "@projection/presentation/domain";
+import { Frame, type Track, initialFrame } from "@projection/presentation/domain";
 import { Actor, CurrentActor, OrganizationId, type Role, UserId } from "@projection/shared-kernel";
 import { Effect, Layer, Stream, SubscriptionRef } from "effect";
 
@@ -14,28 +14,34 @@ export const asActor = (organizationId: string, role: Role = "operator") =>
     }),
   );
 
-/** Passerelle en mémoire, une image par organisation. */
+/** Passerelle en mémoire, une image par organisation et par piste. */
 export const FrameGatewayMemory = Layer.effect(
   FrameGateway,
   Effect.sync(() => {
     const refs = new Map<string, SubscriptionRef.SubscriptionRef<Frame>>();
-    const refFor = (organizationId: string) =>
+    const refFor = (organizationId: string, track: Track) =>
       Effect.suspend(() => {
-        const existing = refs.get(organizationId);
+        const key = `${organizationId}:${track}`;
+        const existing = refs.get(key);
         if (existing) return Effect.succeed(existing);
         return SubscriptionRef.make(initialFrame).pipe(
-          Effect.tap((ref) => Effect.sync(() => refs.set(organizationId, ref))),
+          Effect.tap((ref) => Effect.sync(() => refs.set(key, ref))),
         );
       });
     return FrameGateway.of({
-      watch: (organizationId) =>
-        Stream.unwrap(Effect.map(refFor(organizationId), SubscriptionRef.changes)),
-      show: (organizationId, content: FrameContent) =>
-        Effect.flatMap(refFor(organizationId), (ref) =>
-          SubscriptionRef.updateAndGet(
-            ref,
-            (frame) => new Frame({ ...frame, version: frame.version + 1, content }),
-          ),
+      watch: (organizationId, track) =>
+        Stream.unwrap(Effect.map(refFor(organizationId, track), SubscriptionRef.changes)),
+      show: (organizationId, content) =>
+        Effect.forEach(
+          ["room", "stream"] as const,
+          (track) =>
+            Effect.flatMap(refFor(organizationId, track), (ref) =>
+              SubscriptionRef.update(
+                ref,
+                (frame) => new Frame({ ...frame, version: frame.version + 1, content }),
+              ),
+            ),
+          { discard: true },
         ),
     });
   }),

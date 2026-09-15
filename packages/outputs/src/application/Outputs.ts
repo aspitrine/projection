@@ -12,6 +12,7 @@ import {
   defaultSplittingSettings,
   generateDisplayToken,
   isDisplayToken,
+  trackOf,
 } from "../domain/Output";
 import { FrameGateway, OutputRepository } from "./ports";
 
@@ -146,7 +147,7 @@ export class Outputs extends Context.Service<
               }
               const { name, type, organizationId } = output.value;
               return gateway
-                .watch(organizationId)
+                .watch(organizationId, trackOf(type))
                 .pipe(
                   Stream.map(
                     (frame) => new DisplayFrame({ outputName: name, outputType: type, frame }),

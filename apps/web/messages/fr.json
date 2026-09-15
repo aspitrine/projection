@@ -255,7 +255,7 @@
   "live_missing": "Élément introuvable dans la bibliothèque",
   "live_blank_item": "Écran vide",
   "live_slide_label": "Diapo {number}",
-  "live_shortcuts": "Raccourcis : → ↓ Espace Page suiv. pour avancer, ← ↑ Page préc. pour reculer, B pour l'écran noir.",
+  "live_shortcuts": "Raccourcis : → ↓ Espace Page suiv. pour avancer, ← ↑ Page préc. pour reculer, B pour l'écran noir. Maj + flèches : piste Stream. Maj + clic sur une diapo : l'envoyer au stream (délie les pistes).",
   "live_load_error": "Impossible de joindre la régie.",
   "live_action_error": "Action impossible",
   "live_outputs_link": "Ouvrir la page Sorties (lien de l'écran de salle)",
@@ -286,5 +286,13 @@
   "splitting_song_lines": "Lignes de chant par diapo",
   "splitting_scripture_characters": "Caractères de Bible par diapo",
   "splitting_saved": "Découpage enregistré",
-  "splitting_readonly": "Seuls les propriétaires et administrateurs peuvent modifier le découpage."
+  "splitting_readonly": "Seuls les propriétaires et administrateurs peuvent modifier le découpage.",
+  "live_room": "Salle",
+  "live_stream": "Stream",
+  "live_stream_linked": "Lié à la salle",
+  "live_stream_previous": "Partie précédente",
+  "live_stream_next": "Partie suivante",
+  "live_stream_parts": "Parties de la diapo",
+  "live_stream_part": "Partie {number}",
+  "live_stream_marker": "Au stream"
 }

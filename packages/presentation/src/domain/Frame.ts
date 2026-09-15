@@ -30,3 +30,7 @@ export const initialFrame = new Frame({
   content: { _tag: "Blank" },
   updatedAt: 0,
 });
+
+/** Piste de diffusion : la salle alimente salle et retour, le stream a sa propre piste. */
+export const Track = Schema.Literals(["room", "stream"]);
+export type Track = typeof Track.Type;

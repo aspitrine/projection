@@ -14,6 +14,11 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveNext: () => sessions.next,
       LivePrevious: () => sessions.previous,
       LiveSetBlackout: ({ blackout }) => sessions.setBlackout(blackout),
+      LiveStreamGoTo: ({ itemId, slideIndex, part }) =>
+        sessions.streamGoTo(itemId, slideIndex, part),
+      LiveStreamNext: () => sessions.streamNext,
+      LiveStreamPrevious: () => sessions.streamPrevious,
+      LiveStreamSetLinked: ({ linked }) => sessions.setStreamLinked(linked),
       LiveRefresh: () => sessions.refresh,
       LiveStop: () => sessions.stop,
     };

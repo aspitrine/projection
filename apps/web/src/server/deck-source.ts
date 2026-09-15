@@ -8,14 +8,17 @@ import {
   LiveProjectNotFound,
 } from "@projection/live/domain";
 import { DeckSource } from "@projection/live/server";
+import type { SplittingSettings } from "@projection/outputs/domain";
 import { Outputs } from "@projection/outputs/server";
 import {
   ContentBlock,
+  type FrameContent,
   type Slide,
-  type Splitting,
+  type SplitRules,
   scriptureSplitRules,
   songSplitRules,
   split,
+  subSplit,
 } from "@projection/presentation/domain";
 import type { ProjectItem } from "@projection/projects/domain";
 import { Projects } from "@projection/projects/server";
@@ -25,13 +28,21 @@ import { type Song, formatTag } from "@projection/songs/domain";
 import { Songs } from "@projection/songs/server";
 import { Effect, Layer } from "effect";
 
-const toDeckSlide = (slide: Slide) =>
-  new DeckSlide({
-    content: { _tag: "Lines", lines: slide.lines, caption: slide.label },
+/** Diapo de salle et ses parties pour la piste Stream (sous-découpage). */
+const toDeckSlide = (streamRules: SplitRules) => (slide: Slide) => {
+  const content: FrameContent = { _tag: "Lines", lines: slide.lines, caption: slide.label };
+  return new DeckSlide({
+    content,
     label: slide.parts > 1 ? `${slide.label ?? ""} (${slide.part}/${slide.parts})` : slide.label,
+    parts: subSplit(content, streamRules),
   });
+};
 
-const songSlides = (song: Song, splitting: Splitting) => {
+/** Diapo non découpable (texte enrichi, écran vide) : une seule partie. */
+const wholeSlide = (content: FrameContent, label: string | null) =>
+  new DeckSlide({ content, label, parts: [content] });
+
+const songSlides = (song: Song, splitting: SplittingSettings) => {
   const sections = new Map(song.sections.map((section) => [section.id, section]));
   const blocks = song.arrangement.flatMap((id) => {
     const section = sections.get(id);
@@ -39,15 +50,17 @@ const songSlides = (song: Song, splitting: Splitting) => {
       ? []
       : [new ContentBlock({ key: section.id, label: formatTag(section), lines: section.lines })];
   });
-  return split(blocks, songSplitRules(splitting.songMaxLines)).map(toDeckSlide);
+  return split(blocks, songSplitRules(splitting.room.songMaxLines)).map(
+    toDeckSlide(songSplitRules(splitting.stream.songMaxLines)),
+  );
 };
 
 const missingItem = (item: ProjectItem, kind: DeckItemKind, title = "") =>
   new DeckItem({ itemId: item.id, kind, title, missing: true, slides: [] });
 
 /**
- * Résout un projet en diapos à partir des contextes songs, bible et slides,
- * avec le découpage de la piste Salle (contexte outputs).
+ * Résout un projet en diapos à partir des contextes songs, bible et slides, avec le
+ * découpage de la piste Salle et le sous-découpage de la piste Stream (contexte outputs).
  * Un contenu supprimé de la bibliothèque devient un élément « introuvable » sans diapo.
  */
 export const DeckSourceLive = Layer.effect(
@@ -59,7 +72,7 @@ export const DeckSourceLive = Layer.effect(
     const textSlides = yield* TextSlides;
     const outputs = yield* Outputs;
 
-    const resolveItem = (splitting: Splitting) => (item: ProjectItem) => {
+    const resolveItem = (splitting: SplittingSettings) => (item: ProjectItem) => {
       switch (item._tag) {
         case "Song":
           return songs.get(item.songId).pipe(
@@ -91,9 +104,10 @@ export const DeckSourceLive = Layer.effect(
                 kind: "Scripture",
                 title: `${passage.label} (${passage.translation.code})`,
                 missing: false,
-                slides: split(blocks, scriptureSplitRules(splitting.scriptureMaxCharacters)).map(
-                  toDeckSlide,
-                ),
+                slides: split(
+                  blocks,
+                  scriptureSplitRules(splitting.room.scriptureMaxCharacters),
+                ).map(toDeckSlide(scriptureSplitRules(splitting.stream.scriptureMaxCharacters))),
               });
             }),
             Effect.catch(() => Effect.succeed(missingItem(item, "Scripture", item.reference))),
@@ -108,10 +122,10 @@ export const DeckSourceLive = Layer.effect(
                   title: slide.title,
                   missing: false,
                   slides: [
-                    new DeckSlide({
-                      content: { _tag: "Rich", source: slide.source, caption: slide.title },
-                      label: slide.title,
-                    }),
+                    wholeSlide(
+                      { _tag: "Rich", source: slide.source, caption: slide.title },
+                      slide.title,
+                    ),
                   ],
                 }),
             ),
@@ -126,7 +140,7 @@ export const DeckSourceLive = Layer.effect(
               kind: "Blank",
               title: "",
               missing: false,
-              slides: [new DeckSlide({ content: { _tag: "Blank" }, label: null })],
+              slides: [wholeSlide({ _tag: "Blank" }, null)],
             }),
           );
       }
@@ -141,9 +155,10 @@ export const DeckSourceLive = Layer.effect(
               Effect.fail(new LiveProjectNotFound({ projectId })),
             ),
           );
-        // Les diapos de la régie suivent le découpage de la piste Salle.
-        const { room } = yield* outputs.splitting;
-        const items = yield* Effect.forEach(project.items, resolveItem(room), { concurrency: 4 });
+        const splitting = yield* outputs.splitting;
+        const items = yield* Effect.forEach(project.items, resolveItem(splitting), {
+          concurrency: 4,
+        });
         return new Deck({ projectId, projectName: project.name, items });
       }),
     });

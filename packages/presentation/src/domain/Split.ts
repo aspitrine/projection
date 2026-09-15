@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import type { FrameContent } from "./Frame";
+
 /**
  * Bloc de contenu à projeter : une section de chant (dans l'ordre de passage)
  * ou un verset biblique. Les lignes ne sont jamais coupées.
@@ -154,3 +156,18 @@ export type Splitting = typeof Splitting.Type;
 export const roomSplitting: Splitting = { songMaxLines: 4, scriptureMaxCharacters: 320 };
 /** Stream : lower third court. */
 export const streamSplitting: Splitting = { songMaxLines: 2, scriptureMaxCharacters: 140 };
+
+/**
+ * Sous-découpe une diapo pour la piste Stream (ex. strophe de 4 lignes → 2 × 2 lignes).
+ * Le texte enrichi et l'écran vide restent entiers. Toujours au moins une partie.
+ */
+export const subSplit = (content: FrameContent, rules: SplitRules): ReadonlyArray<FrameContent> => {
+  if (content._tag !== "Lines") return [content];
+  const parts = split(
+    [new ContentBlock({ key: "slide", label: content.caption, lines: content.lines })],
+    rules,
+  );
+  return parts.length <= 1
+    ? [content]
+    : parts.map((part) => ({ _tag: "Lines", lines: part.lines, caption: content.caption }));
+};

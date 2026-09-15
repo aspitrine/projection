@@ -35,7 +35,7 @@ describe("LiveSessions", () => {
     Effect.gen(function* () {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
-      const onScreen = Effect.map(frames.current(organizationId), screen);
+      const onScreen = Effect.map(frames.current(organizationId, "room"), screen);
 
       const started = yield* sessions.start(projectId).pipe(asActor());
       expect(started.deck?.projectName).toBe("Culte");
@@ -85,12 +85,12 @@ describe("LiveSessions", () => {
       editable.set(deckOf([item(4, ["D1"]), item(1, ["A1", "A2", "A3"])]));
       const inserted = yield* sessions.refresh.pipe(asActor());
       expect(inserted.session.cursor).toEqual(new LiveCursor({ itemId: itemId(1), slideIndex: 1 }));
-      expect(screen(yield* frames.current(organizationId))).toBe("A2");
+      expect(screen(yield* frames.current(organizationId, "room"))).toBe("A2");
 
       editable.set(deckOf([item(4, ["D1"])]));
       const removed = yield* sessions.refresh.pipe(asActor());
       expect(removed.session.cursor).toBeNull();
-      expect(screen(yield* frames.current(organizationId))).toBe("Blank");
+      expect(screen(yield* frames.current(organizationId, "room"))).toBe("Blank");
 
       editable.set(null);
       const deleted = yield* sessions.refresh.pipe(asActor());
@@ -108,6 +108,8 @@ describe("LiveSessions", () => {
           projectId,
           cursor: new LiveCursor({ itemId: itemId(3), slideIndex: 0 }),
           blackout: true,
+          streamLinked: true,
+          streamCursor: null,
           version: 7,
           updatedAt: 1,
         }),
@@ -121,7 +123,7 @@ describe("LiveSessions", () => {
         expect(restored.value.session.version).toBe(7);
         expect(restored.value.deck?.items).toHaveLength(3);
       }
-      expect(screen(yield* frames.current(organizationId))).toBe("[noir] C1");
+      expect(screen(yield* frames.current(organizationId, "room"))).toBe("[noir] C1");
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 
@@ -148,5 +150,53 @@ describe("LiveSessions", () => {
       const other = yield* sessions.watch.pipe(Stream.runHead, asActor("org-b"));
       expect(other._tag === "Some" && other.value.session.version).toBe(0);
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
+  );
+
+  it.effect("pistes Salle et Stream : liées puis déliées", () =>
+    Effect.gen(function* () {
+      const sessions = yield* LiveSessions;
+      const frames = yield* LiveFrames;
+      const onTrack = (track: "room" | "stream") =>
+        Effect.map(frames.current(organizationId, track), screen);
+
+      yield* sessions.start(projectId).pipe(asActor());
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A1", "A1.1"]);
+
+      // Lié : le stream défile les parties de la diapo de la salle, puis suit la salle.
+      yield* sessions.streamNext.pipe(asActor());
+      expect(yield* onTrack("stream")).toBe("A1.2");
+      yield* sessions.streamNext.pipe(asActor());
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A1", "A1.2"]);
+      yield* sessions.next.pipe(asActor());
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A2", "A2.1"]);
+
+      // Délié : la salle avance seule, le stream parcourt le projet.
+      yield* sessions.setStreamLinked(false).pipe(asActor());
+      yield* sessions.next.pipe(asActor());
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["C1", "A2.1"]);
+      yield* sessions.streamNext.pipe(asActor());
+      yield* sessions.streamNext.pipe(asActor());
+      expect(yield* onTrack("stream")).toBe("C1.1");
+
+      // Relier recale le stream sur la diapo de la salle en gardant la partie.
+      const relinked = yield* sessions.setStreamLinked(true).pipe(asActor());
+      expect(relinked.session.streamLinked).toBe(true);
+      expect(yield* onTrack("stream")).toBe("C1.1");
+
+      // Envoyer une autre diapo au stream délie les pistes.
+      const picked = yield* sessions.streamGoTo(itemId(1), 0, 1).pipe(asActor());
+      expect(picked.session.streamLinked).toBe(false);
+      expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["C1", "A1.2"]);
+
+      yield* sessions.setBlackout(true).pipe(asActor());
+      expect(yield* onTrack("stream")).toBe("[noir] A1.2");
+
+      const stopped = yield* sessions.stop.pipe(asActor());
+      expect(stopped.session).toMatchObject({ streamLinked: true, streamCursor: null });
+    }).pipe(
+      Effect.provide(
+        layerWith(makeDeckSource(deckOf([item(1, ["A1", "A2"], 2), item(3, ["C1"], 2)]))),
+      ),
+    ),
   );
 });

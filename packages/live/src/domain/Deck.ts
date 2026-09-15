@@ -7,6 +7,8 @@ export class DeckSlide extends Schema.Class<DeckSlide>("DeckSlide")({
   content: FrameContent,
   /** Section, verset ou titre ; affiché en régie, masqué sur les écrans de salle. */
   label: Schema.NullOr(Schema.String),
+  /** Sous-découpage pour la piste Stream (au moins une partie). */
+  parts: Schema.Array(FrameContent),
 }) {}
 
 export const DeckItemKind = Schema.Literals(["Song", "Scripture", "TextSlide", "Blank"]);

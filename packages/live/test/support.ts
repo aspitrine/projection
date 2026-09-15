@@ -1,3 +1,4 @@
+import type { FrameContent } from "@projection/presentation/domain";
 import {
   Actor,
   CurrentActor,
@@ -28,7 +29,13 @@ export const asActor = (organization = "org-a") =>
 export const itemId = (index: number) =>
   ProjectItemId.make(`00000000-0000-4000-8000-${index.toString().padStart(12, "0")}`);
 
-export const item = (index: number, texts: ReadonlyArray<string>) =>
+const linesOf = (text: string): FrameContent => ({ _tag: "Lines", lines: [text], caption: null });
+
+/**
+ * Élément dont chaque diapo affiche `texte` en salle ; avec `parts` > 1, le stream
+ * voit les parties `texte.1`, `texte.2`…
+ */
+export const item = (index: number, texts: ReadonlyArray<string>, parts = 1) =>
   new DeckItem({
     itemId: itemId(index),
     kind: "Song",
@@ -36,7 +43,14 @@ export const item = (index: number, texts: ReadonlyArray<string>) =>
     missing: false,
     slides: texts.map(
       (text) =>
-        new DeckSlide({ content: { _tag: "Lines", lines: [text], caption: null }, label: text }),
+        new DeckSlide({
+          content: linesOf(text),
+          label: text,
+          parts:
+            parts === 1
+              ? [linesOf(text)]
+              : Array.from({ length: parts }, (_, part) => linesOf(`${text}.${part + 1}`)),
+        }),
     ),
   });
 

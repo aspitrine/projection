@@ -4,9 +4,12 @@ import {
   type DeckItem,
   type LiveCursor,
   type LiveSnapshot,
+  type StreamCursor,
   contentAt,
   nextCursor,
+  streamContentAt,
 } from "@projection/live/domain";
+import type { FrameContent } from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
 import { Button } from "@projection/ui/components/button";
 import { cn } from "@projection/ui/lib/utils";
@@ -17,7 +20,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
-import { contentToSlide, roomTheme } from "@/features/display/frame";
+import { contentToSlide, roomTheme, streamTheme } from "@/features/display/frame";
 import {
   liveAtom,
   liveGoToAtom,
@@ -27,6 +30,10 @@ import {
   liveSetBlackoutAtom,
   liveStartAtom,
   liveStopAtom,
+  liveStreamGoToAtom,
+  liveStreamNextAtom,
+  liveStreamPreviousAtom,
+  liveStreamSetLinkedAtom,
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
@@ -40,6 +47,15 @@ export const Route = createFileRoute("/_auth/_app/live")({
     </ClientOnly>
   ),
 });
+
+/** Damier derrière l'aperçu stream : rend la transparence visible. */
+const transparencyBackground = {
+  backgroundImage: "repeating-conic-gradient(#3f3f46 0% 25%, #27272a 0% 50%)",
+  backgroundSize: "16px 16px",
+} as const;
+
+const partSummary = (content: FrameContent) =>
+  content._tag === "Lines" ? content.lines.join(" / ") : content._tag === "Rich" ? "…" : "—";
 
 /** Lance une commande et signale un échec (l'état arrive par le flux de la régie). */
 function useRun() {
@@ -106,9 +122,14 @@ function ProjectPicker() {
   );
 }
 
+/** Champs de saisie : les raccourcis n'y sont pas interceptés (une case à cocher ne compte pas). */
+const nonTextInputs = new Set(["checkbox", "radio", "button", "submit", "reset", "range"]);
+
 const isEditable = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
-  (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+  (target.isContentEditable ||
+    ["TEXTAREA", "SELECT"].includes(target.tagName) ||
+    (target instanceof HTMLInputElement && !nonTextInputs.has(target.type)));
 
 function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const { session } = snapshot;
@@ -119,6 +140,9 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const setBlackout = useAtomSet(liveSetBlackoutAtom, { mode: "promiseExit" });
   const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
   const stop = useAtomSet(liveStopAtom, { mode: "promiseExit" });
+  const streamGoTo = useAtomSet(liveStreamGoToAtom, { mode: "promiseExit" });
+  const streamNext = useAtomSet(liveStreamNextAtom, { mode: "promiseExit" });
+  const streamPrevious = useAtomSet(liveStreamPreviousAtom, { mode: "promiseExit" });
 
   const blackout = useRef(session.blackout);
   blackout.current = session.blackout;
@@ -133,9 +157,15 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditable(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(event.key)) {
+      const forward = ["ArrowRight", "ArrowDown", "PageDown", " "].includes(event.key);
+      const backward = ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key);
+      if (event.shiftKey && forward) {
+        void run(streamNext({ payload: undefined }));
+      } else if (event.shiftKey && backward) {
+        void run(streamPrevious({ payload: undefined }));
+      } else if (forward) {
         void run(next({ payload: undefined }));
-      } else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key)) {
+      } else if (backward) {
         void run(previous({ payload: undefined }));
       } else if (event.key === "b" || event.key === "B") {
         void run(setBlackout({ payload: { blackout: !blackout.current } }));
@@ -146,7 +176,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [next, previous, setBlackout, run]);
+  }, [next, previous, setBlackout, streamNext, streamPrevious, run]);
 
   const current = contentAt(deck, session.cursor);
   const upcomingCursor = session.cursor === null ? null : nextCursor(deck, session.cursor);
@@ -193,13 +223,19 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
         <DeckView
           deck={deck}
           cursor={session.cursor}
+          streamCursor={session.streamCursor}
           onPick={(itemId, slideIndex) => run(goTo({ payload: { itemId, slideIndex } }))}
+          onPickStream={(itemId, slideIndex) =>
+            run(streamGoTo({ payload: { itemId, slideIndex, part: 0 } }))
+          }
         />
       </div>
 
       <aside className="bg-card space-y-4 border-t p-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l xl:w-96">
         <section className="space-y-1">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_screen()}</h2>
+          <h2 className="text-muted-foreground text-xs font-medium uppercase">
+            {m.live_room()} · {m.live_screen()}
+          </h2>
           <div
             className={cn("relative ring-2", session.blackout ? "ring-red-500" : "ring-green-600")}
             data-testid="live-screen"
@@ -230,11 +266,107 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             <p className="text-muted-foreground text-xs">{m.live_end()}</p>
           )}
         </section>
+        <StreamPanel snapshot={snapshot} deck={deck} />
         <Link to="/outputs" className="text-muted-foreground block text-xs underline">
           {m.live_outputs_link()}
         </Link>
       </aside>
     </div>
+  );
+}
+
+function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
+  const { session } = snapshot;
+  const { streamCursor } = session;
+  const run = useRun();
+  const streamGoTo = useAtomSet(liveStreamGoToAtom, { mode: "promiseExit" });
+  const streamNext = useAtomSet(liveStreamNextAtom, { mode: "promiseExit" });
+  const streamPrevious = useAtomSet(liveStreamPreviousAtom, { mode: "promiseExit" });
+  const setLinked = useAtomSet(liveStreamSetLinkedAtom, { mode: "promiseExit" });
+
+  const parts =
+    streamCursor === null
+      ? []
+      : (deck.items.find((item) => item.itemId === streamCursor.itemId)?.slides[
+          streamCursor.slideIndex
+        ]?.parts ?? []);
+
+  return (
+    <section className="space-y-2" data-testid="live-stream">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_stream()}</h2>
+        <label className="flex items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={session.streamLinked}
+            onChange={(event) => run(setLinked({ payload: { linked: event.target.checked } }))}
+          />
+          {m.live_stream_linked()}
+        </label>
+      </div>
+      <div className="ring-2 ring-sky-500" style={transparencyBackground}>
+        <SlideRenderer
+          theme={streamTheme}
+          slide={
+            session.blackout
+              ? { kind: "blank" }
+              : contentToSlide(streamContentAt(deck, streamCursor))
+          }
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex-1"
+          onClick={() => run(streamPrevious({ payload: undefined }))}
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          {m.live_stream_previous()}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex-1"
+          onClick={() => run(streamNext({ payload: undefined }))}
+        >
+          {m.live_stream_next()}
+          <ChevronRight className="size-4" aria-hidden />
+        </Button>
+      </div>
+      {streamCursor !== null && parts.length > 1 && (
+        <ol className="space-y-1" aria-label={m.live_stream_parts()}>
+          {parts.map((part, index) => (
+            <li key={index}>
+              <button
+                type="button"
+                aria-current={index === streamCursor.part ? "true" : undefined}
+                onClick={() =>
+                  run(
+                    streamGoTo({
+                      payload: {
+                        itemId: streamCursor.itemId,
+                        slideIndex: streamCursor.slideIndex,
+                        part: index,
+                      },
+                    }),
+                  )
+                }
+                className={cn(
+                  "hover:bg-muted w-full truncate border px-2 py-1 text-left text-xs",
+                  index === streamCursor.part && "border-sky-500 bg-sky-500/10",
+                )}
+              >
+                <span className="text-muted-foreground mr-1.5">
+                  {m.live_stream_part({ number: index + 1 })}
+                </span>
+                {partSummary(part)}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
@@ -244,11 +376,15 @@ const itemTitle = (item: DeckItem) =>
 function DeckView({
   deck,
   cursor,
+  streamCursor,
   onPick,
+  onPickStream,
 }: {
   deck: Deck;
   cursor: LiveCursor | null;
+  streamCursor: StreamCursor | null;
   onPick: (itemId: ProjectItemId, slideIndex: number) => void;
+  onPickStream: (itemId: ProjectItemId, slideIndex: number) => void;
 }) {
   const currentSlide = useRef<HTMLButtonElement | null>(null);
 
@@ -270,6 +406,8 @@ function DeckView({
             <div className="grid grid-cols-2 gap-2 pl-7 sm:grid-cols-3 xl:grid-cols-4">
               {item.slides.map((slide, slideIndex) => {
                 const active = cursor?.itemId === item.itemId && cursor.slideIndex === slideIndex;
+                const onStream =
+                  streamCursor?.itemId === item.itemId && streamCursor.slideIndex === slideIndex;
                 const label = slide.label ?? m.live_slide_label({ number: slideIndex + 1 });
                 return (
                   <button
@@ -278,13 +416,27 @@ function DeckView({
                     type="button"
                     aria-current={active ? "true" : undefined}
                     aria-label={`${itemTitle(item)} — ${label}`}
-                    onClick={() => onPick(item.itemId, slideIndex)}
+                    onClick={(event) =>
+                      event.shiftKey
+                        ? onPickStream(item.itemId, slideIndex)
+                        : onPick(item.itemId, slideIndex)
+                    }
                     className={cn(
-                      "block w-full text-left ring-1 ring-foreground/10 transition hover:ring-foreground/40 focus-visible:ring-2 focus-visible:outline-none",
+                      "relative block w-full text-left ring-1 ring-foreground/10 transition hover:ring-foreground/40 focus-visible:ring-2 focus-visible:outline-none",
                       active && "ring-2 ring-red-500 hover:ring-red-500",
                     )}
                   >
                     <SlideRenderer theme={roomTheme} slide={contentToSlide(slide.content)} />
+                    {onStream && (
+                      <span
+                        className="absolute top-1 right-1 bg-sky-500 px-1 text-[0.6rem] font-medium text-white"
+                        data-testid="stream-marker"
+                      >
+                        {m.live_stream_marker()}
+                        {slide.parts.length > 1 &&
+                          ` ${streamCursor.part + 1}/${slide.parts.length}`}
+                      </span>
+                    )}
                     <span className="text-muted-foreground block truncate px-1 py-0.5 text-[0.65rem]">
                       {label}
                     </span>

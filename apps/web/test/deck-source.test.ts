@@ -38,7 +38,7 @@ const FrameGatewayStub = Layer.succeed(
   FrameGateway,
   FrameGateway.of({
     watch: () => Stream.make(initialFrame),
-    show: () => Effect.succeed(initialFrame),
+    show: () => Effect.void,
   }),
 );
 
@@ -123,6 +123,13 @@ describe("DeckSourceLive", () => {
         caption: "Couplet 1",
       });
 
+      // Sous-découpage stream par défaut : 2 lignes.
+      expect(songItem?.slides[0]?.parts).toEqual([
+        { _tag: "Lines", lines: ["L1", "L2"], caption: "Couplet 1" },
+        { _tag: "Lines", lines: ["L3"], caption: "Couplet 1" },
+      ]);
+      expect(blank?.slides[0]?.parts).toEqual([{ _tag: "Blank" }]);
+
       expect(scripture).toMatchObject({ kind: "Scripture", title: "Jean 3.16-17 (LSG)" });
       expect(scripture?.slides).toHaveLength(1);
       expect(scripture?.slides[0]?.label).toBe("Jean 3.16");
@@ -148,6 +155,7 @@ describe("DeckSourceLive", () => {
         caption: "Couplet 1",
       });
       expect(resplit.items[0]?.slides).toHaveLength(5);
+      expect(resplit.items[0]?.slides[0]?.parts).toHaveLength(2);
 
       const unknown = yield* decks
         .resolve(ProjectId.make("11111111-1111-4111-8111-111111111111"))

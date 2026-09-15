@@ -19,5 +19,15 @@ export const liveMigrations = {
         )
       `;
     }),
+    "0002_add_stream_track": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        ALTER TABLE live_session
+          ADD COLUMN stream_linked boolean NOT NULL DEFAULT true,
+          ADD COLUMN stream_item_id uuid,
+          ADD COLUMN stream_slide_index integer NOT NULL DEFAULT 0,
+          ADD COLUMN stream_part integer NOT NULL DEFAULT 0
+      `;
+    }),
   },
 };

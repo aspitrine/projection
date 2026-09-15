@@ -1,4 +1,4 @@
-import type { Frame, FrameContent } from "@projection/presentation/domain";
+import type { Frame, FrameContent, Track } from "@projection/presentation/domain";
 import type { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref, type Stream } from "effect";
 
@@ -106,7 +106,9 @@ export class OutputRepository extends Context.Service<
 export class FrameGateway extends Context.Service<
   FrameGateway,
   {
-    watch(organizationId: OrganizationId): Stream.Stream<Frame>;
-    show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<Frame>;
+    /** Image courante d'une piste puis chaque changement. */
+    watch(organizationId: OrganizationId, track: Track): Stream.Stream<Frame>;
+    /** Affiche un contenu sur toutes les pistes (test d'affichage). */
+    show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
   }
 >()("@projection/outputs/FrameGateway") {}

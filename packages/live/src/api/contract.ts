@@ -26,6 +26,14 @@ export const LiveRpcs = RpcGroup.make(
   Rpc.make("LiveNext", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LivePrevious", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LiveSetBlackout", { payload: { blackout: Schema.Boolean }, success: LiveSnapshot }),
+  Rpc.make("LiveStreamGoTo", {
+    payload: { itemId: ProjectItemId, slideIndex: Schema.Int, part: Schema.Int },
+    success: LiveSnapshot,
+    error: Schema.Union([NoLiveProject, LiveItemNotFound]),
+  }),
+  Rpc.make("LiveStreamNext", { success: LiveSnapshot, error: NoLiveProject }),
+  Rpc.make("LiveStreamPrevious", { success: LiveSnapshot, error: NoLiveProject }),
+  Rpc.make("LiveStreamSetLinked", { payload: { linked: Schema.Boolean }, success: LiveSnapshot }),
   Rpc.make("LiveRefresh", { success: LiveSnapshot }),
   Rpc.make("LiveStop", { success: LiveSnapshot }),
 ).middleware(ActorMiddleware);

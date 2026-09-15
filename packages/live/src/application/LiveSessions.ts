@@ -14,15 +14,23 @@ import {
   LiveSession,
   LiveSnapshot,
   NoLiveProject,
+  type StreamCursor,
   idleSession,
 } from "../domain/LiveSession";
 import {
   contentAt,
   firstCursor,
+  followRoom,
   goToCursor,
+  goToStreamCursor,
   nextCursor,
+  nextStreamCursor,
   normalizeCursor,
   previousCursor,
+  previousStreamCursor,
+  reconcileStream,
+  streamContentAt,
+  streamPositions,
 } from "../domain/Navigation";
 import { LiveFrames } from "./LiveFrames";
 import { DeckSource, LiveSessionRepository } from "./ports";
@@ -32,6 +40,8 @@ interface Draft {
   readonly projectId: ProjectId | null;
   readonly cursor: LiveCursor | null;
   readonly blackout: boolean;
+  readonly streamLinked: boolean;
+  readonly streamCursor: StreamCursor | null;
 }
 
 interface OrganizationState {
@@ -41,9 +51,19 @@ interface OrganizationState {
 
 type Command<E = never> = Effect.Effect<LiveSnapshot, E, CurrentActor>;
 
+const idleDraft = (streamLinked: boolean, blackout: boolean): Draft => ({
+  deck: null,
+  projectId: null,
+  cursor: null,
+  blackout,
+  streamLinked,
+  streamCursor: null,
+});
+
 /**
  * Régie : une session par organisation, partagée par toutes les régies ouvertes.
- * Chaque commande est sérialisée, persistée, diffusée aux régies et publiée aux sorties.
+ * Deux pistes : Salle (sorties salle et retour) et Stream. Chaque commande est
+ * sérialisée, persistée, diffusée aux régies et publiée aux sorties de chaque piste.
  */
 export class LiveSessions extends Context.Service<
   LiveSessions,
@@ -54,7 +74,17 @@ export class LiveSessions extends Context.Service<
     readonly next: Command<NoLiveProject>;
     readonly previous: Command<NoLiveProject>;
     setBlackout(blackout: boolean): Command;
-    /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant la position. */
+    /** Stream : partie précise ; une autre diapo que celle de la salle délie les pistes. */
+    streamGoTo(
+      itemId: ProjectItemId,
+      slideIndex: number,
+      part: number,
+    ): Command<NoLiveProject | LiveItemNotFound>;
+    readonly streamNext: Command<NoLiveProject>;
+    readonly streamPrevious: Command<NoLiveProject>;
+    /** Lier recale le stream sur la diapo de la salle. */
+    setStreamLinked(linked: boolean): Command;
+    /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant les positions. */
     readonly refresh: Command;
     readonly stop: Command;
   }
@@ -68,18 +98,68 @@ export class LiveSessions extends Context.Service<
       const states = new Map<OrganizationId, OrganizationState>();
       const initLock = yield* Semaphore.make(1);
 
-      const publish = (snapshot: LiveSnapshot) =>
-        frames.publish(
-          snapshot.session.organizationId,
-          contentAt(snapshot.deck, snapshot.session.cursor),
-          snapshot.session.blackout,
+      const publish = (snapshot: LiveSnapshot) => {
+        const { organizationId, cursor, streamCursor, blackout } = snapshot.session;
+        return Effect.all(
+          [
+            frames.publish(organizationId, "room", contentAt(snapshot.deck, cursor), blackout),
+            frames.publish(
+              organizationId,
+              "stream",
+              streamContentAt(snapshot.deck, streamCursor),
+              blackout,
+            ),
+          ],
+          { discard: true },
         );
+      };
 
       const tryResolve = (projectId: ProjectId) =>
         decks.resolve(projectId).pipe(
           Effect.map(Option.some),
           Effect.catchTag("LiveProjectNotFound", () => Effect.succeed(Option.none<Deck>())),
         );
+
+      /** Recale les deux pistes sur un projet (re)lu. */
+      const reconcile = (
+        deck: Option.Option<Deck>,
+        projectId: ProjectId | null,
+        from: Pick<Draft, "cursor" | "streamCursor" | "streamLinked" | "blackout">,
+      ): Draft =>
+        Option.match(deck, {
+          onNone: () => idleDraft(from.streamLinked, from.blackout),
+          onSome: (resolved) => {
+            const cursor = normalizeCursor(resolved, from.cursor);
+            return {
+              deck: resolved,
+              projectId,
+              cursor,
+              blackout: from.blackout,
+              streamLinked: from.streamLinked,
+              streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
+            };
+          },
+        });
+
+      const toSnapshot = (
+        draft: Draft,
+        organizationId: OrganizationId,
+        version: number,
+        updatedAt: number,
+      ) =>
+        new LiveSnapshot({
+          deck: draft.deck,
+          session: new LiveSession({
+            organizationId,
+            projectId: draft.projectId,
+            cursor: draft.cursor,
+            blackout: draft.blackout,
+            streamLinked: draft.streamLinked,
+            streamCursor: draft.streamCursor,
+            version,
+            updatedAt,
+          }),
+        });
 
       /** État de l'organisation, chargé depuis la base au premier accès (et republié). */
       const stateFor = Effect.gen(function* () {
@@ -100,21 +180,12 @@ export class LiveSessions extends Context.Service<
             );
             const deck =
               stored.projectId === null ? Option.none<Deck>() : yield* tryResolve(stored.projectId);
-            const snapshot = Option.match(deck, {
-              onNone: () =>
-                new LiveSnapshot({
-                  session: new LiveSession({ ...stored, projectId: null, cursor: null }),
-                  deck: null,
-                }),
-              onSome: (resolved) =>
-                new LiveSnapshot({
-                  session: new LiveSession({
-                    ...stored,
-                    cursor: normalizeCursor(resolved, stored.cursor),
-                  }),
-                  deck: resolved,
-                }),
-            });
+            const snapshot = toSnapshot(
+              reconcile(deck, stored.projectId, stored),
+              organizationId,
+              stored.version,
+              stored.updatedAt,
+            );
 
             const state: OrganizationState = {
               ref: yield* SubscriptionRef.make(snapshot),
@@ -140,17 +211,12 @@ export class LiveSessions extends Context.Service<
               const current = yield* SubscriptionRef.get(state.ref);
               const draft = yield* transform(current);
               const now = yield* Clock.currentTimeMillis;
-              const snapshot = new LiveSnapshot({
-                deck: draft.deck,
-                session: new LiveSession({
-                  organizationId: current.session.organizationId,
-                  projectId: draft.projectId,
-                  cursor: draft.cursor,
-                  blackout: draft.blackout,
-                  version: current.session.version + 1,
-                  updatedAt: now,
-                }),
-              });
+              const snapshot = toSnapshot(
+                draft,
+                current.session.organizationId,
+                current.session.version + 1,
+                now,
+              );
               yield* repository.save(snapshot.session);
               yield* SubscriptionRef.set(state.ref, snapshot);
               yield* publish(snapshot);
@@ -164,10 +230,30 @@ export class LiveSessions extends Context.Service<
         projectId: current.session.projectId,
         cursor: current.session.cursor,
         blackout: current.session.blackout,
+        streamLinked: current.session.streamLinked,
+        streamCursor: current.session.streamCursor,
+      });
+
+      /** Nouvelle position de la salle ; en mode lié, le stream suit. */
+      const moveRoom = (current: LiveSnapshot, deck: Deck, cursor: LiveCursor | null): Draft => ({
+        ...keep(current),
+        cursor,
+        streamCursor: current.session.streamLinked
+          ? reconcileStream(deck, cursor, current.session.streamCursor, true)
+          : current.session.streamCursor,
       });
 
       const requireDeck = (current: LiveSnapshot) =>
         current.deck === null ? Effect.fail(new NoLiveProject()) : Effect.succeed(current.deck);
+
+      const moveStream = (move: typeof nextStreamCursor): Command<NoLiveProject> =>
+        command((current) =>
+          Effect.map(requireDeck(current), (deck) => {
+            const { streamLinked, streamCursor, cursor } = current.session;
+            const from = streamCursor ?? (streamLinked ? followRoom(cursor) : null);
+            return { ...keep(current), streamCursor: move(deck, from, streamLinked) };
+          }),
+        );
 
       return LiveSessions.of({
         watch: Stream.unwrap(Effect.map(stateFor, (state) => SubscriptionRef.changes(state.ref))),
@@ -175,12 +261,20 @@ export class LiveSessions extends Context.Service<
         start: (projectId) =>
           command((current) =>
             decks.resolve(projectId).pipe(
-              Effect.map((deck): Draft => ({
-                deck,
-                projectId,
-                cursor: firstCursor(deck),
-                blackout: current.session.blackout,
-              })),
+              Effect.map((deck): Draft => {
+                const { streamLinked, blackout } = current.session;
+                const cursor = firstCursor(deck);
+                return {
+                  deck,
+                  projectId,
+                  cursor,
+                  blackout,
+                  streamLinked,
+                  streamCursor: streamLinked
+                    ? followRoom(cursor)
+                    : (streamPositions(deck)[0] ?? null),
+                };
+              }),
             ),
           ).pipe(Effect.withSpan("LiveSessions.start")),
 
@@ -188,23 +282,20 @@ export class LiveSessions extends Context.Service<
           command((current) =>
             Effect.gen(function* () {
               const deck = yield* requireDeck(current);
-              const cursor = yield* goToCursor(deck, itemId, slideIndex);
-              return { ...keep(current), cursor };
+              return moveRoom(current, deck, yield* goToCursor(deck, itemId, slideIndex));
             }),
           ).pipe(Effect.withSpan("LiveSessions.goTo")),
 
         next: command((current) =>
-          Effect.map(requireDeck(current), (deck) => ({
-            ...keep(current),
-            cursor: nextCursor(deck, current.session.cursor),
-          })),
+          Effect.map(requireDeck(current), (deck) =>
+            moveRoom(current, deck, nextCursor(deck, current.session.cursor)),
+          ),
         ).pipe(Effect.withSpan("LiveSessions.next")),
 
         previous: command((current) =>
-          Effect.map(requireDeck(current), (deck) => ({
-            ...keep(current),
-            cursor: previousCursor(deck, current.session.cursor),
-          })),
+          Effect.map(requireDeck(current), (deck) =>
+            moveRoom(current, deck, previousCursor(deck, current.session.cursor)),
+          ),
         ).pipe(Effect.withSpan("LiveSessions.previous")),
 
         setBlackout: (blackout) =>
@@ -212,26 +303,49 @@ export class LiveSessions extends Context.Service<
             Effect.withSpan("LiveSessions.setBlackout"),
           ),
 
-        refresh: command((current) => {
-          const { projectId, cursor, blackout } = current.session;
-          if (projectId === null) return Effect.succeed(keep(current));
-          return Effect.map(
-            tryResolve(projectId),
-            Option.match({
-              onNone: (): Draft => ({ deck: null, projectId: null, cursor: null, blackout }),
-              onSome: (deck): Draft => ({
-                deck,
-                projectId,
-                cursor: normalizeCursor(deck, cursor),
-                blackout,
-              }),
+        streamGoTo: (itemId, slideIndex, part) =>
+          command((current) =>
+            Effect.gen(function* () {
+              const deck = yield* requireDeck(current);
+              const streamCursor = yield* goToStreamCursor(deck, itemId, slideIndex, part);
+              const { cursor, streamLinked } = current.session;
+              const onRoomSlide =
+                cursor !== null && cursor.itemId === itemId && cursor.slideIndex === slideIndex;
+              return {
+                ...keep(current),
+                streamCursor,
+                streamLinked: streamLinked && onRoomSlide,
+              };
             }),
+          ).pipe(Effect.withSpan("LiveSessions.streamGoTo")),
+
+        streamNext: moveStream(nextStreamCursor).pipe(Effect.withSpan("LiveSessions.streamNext")),
+
+        streamPrevious: moveStream(previousStreamCursor).pipe(
+          Effect.withSpan("LiveSessions.streamPrevious"),
+        ),
+
+        setStreamLinked: (linked) =>
+          command((current) => {
+            const { deck } = current;
+            const streamCursor =
+              linked && deck !== null
+                ? reconcileStream(deck, current.session.cursor, current.session.streamCursor, true)
+                : current.session.streamCursor;
+            return Effect.succeed({ ...keep(current), streamLinked: linked, streamCursor });
+          }).pipe(Effect.withSpan("LiveSessions.setStreamLinked")),
+
+        refresh: command((current) => {
+          const { projectId } = current.session;
+          if (projectId === null) return Effect.succeed(keep(current));
+          return Effect.map(tryResolve(projectId), (deck) =>
+            reconcile(deck, projectId, current.session),
           );
         }).pipe(Effect.withSpan("LiveSessions.refresh")),
 
-        stop: command(() =>
-          Effect.succeed<Draft>({ deck: null, projectId: null, cursor: null, blackout: false }),
-        ).pipe(Effect.withSpan("LiveSessions.stop")),
+        stop: command(() => Effect.succeed(idleDraft(true, false))).pipe(
+          Effect.withSpan("LiveSessions.stop"),
+        ),
       });
     }),
   );
