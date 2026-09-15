@@ -6,8 +6,9 @@
     "build": "vp build",
     "serve": "vp preview",
     "dev": "vp dev",
-    "check-types": "tsc --noEmit",
-    "env:generate": "varlock codegen"
+    "check-types": "bun run i18n:compile && tsc --noEmit",
+    "env:generate": "varlock codegen",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy baseLocale --output-structure locale-modules --emit-ts-declarations --silent"
   },
   "dependencies": {
     "@effect/atom-react": "catalog:",
@@ -34,6 +35,7 @@
     "varlock": "catalog:"
   },
   "devDependencies": {
+    "@inlang/paraglide-js": "2.25.2",
     "@projection/config": "workspace:*",
     "@tanstack/react-router-devtools": "^1.167.1",
     "@testing-library/dom": "^10.4.1",

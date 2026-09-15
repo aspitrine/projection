@@ -3,14 +3,15 @@
 Logiciel de vidéo-projection web et auto-hébergeable (chants, versets bibliques, diapos, sorties salle / retour / stream).
 
 - Produit : [docs/PRD.md](docs/PRD.md) · Tâches : [TASKS.md](TASKS.md)
-- Architecture : [ADR 0001 — DDD par feature + Effect 4](docs/adr/0001-architecture-ddd-effect.md) · [Gabarit de contexte](docs/architecture/gabarit-contexte.md)
+- Architecture : [ADR 0001 — DDD par feature + Effect 4](docs/adr/0001-architecture-ddd-effect.md) · [ADR 0002 — Temps réel](docs/adr/0002-temps-reel.md) · [Gabarit de contexte](docs/architecture/gabarit-contexte.md) · [i18n](docs/architecture/i18n.md)
 
 ## Stack
 
 - **TanStack Start** — SSR et routing
 - **Effect 4** — RPC (`effect/unstable/rpc`), SQL (`@effect/sql-pg`), Schema, Atom (`@effect/atom-react`)
 - **PostgreSQL** — base de données, migrations Effect par bounded context
-- **Better-Auth** — authentification
+- **Better-Auth** — authentification et organisations
+- **Paraglide JS** — i18n (français)
 - **Vite+** — toolchain, lint, format ; **Vitest 5** + `@effect/vitest` pour les tests
 
 ## Démarrage

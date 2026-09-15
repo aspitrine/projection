@@ -10,6 +10,7 @@ import {
 } from "@projection/ui/components/dropdown-menu";
 
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
 export default function OrganizationSwitcher() {
   const { data: organizations } = authClient.useListOrganizations();
@@ -28,13 +29,15 @@ export default function OrganizationSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="outline" data-testid="organization-switcher" />}
+        render={
+          <Button variant="outline" className="max-w-48" data-testid="organization-switcher" />
+        }
       >
-        {activeOrganization?.name ?? "Choisir une organisation"}
+        <span className="truncate">{activeOrganization?.name ?? m.org_switcher_placeholder()}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Organisations</DropdownMenuLabel>
+          <DropdownMenuLabel>{m.org_switcher_label()}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {organizations.map((organization) => (
             <DropdownMenuItem key={organization.id} onClick={() => switchTo(organization.id)}>
@@ -44,7 +47,7 @@ export default function OrganizationSwitcher() {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => window.location.assign("/onboarding")}>
-            Nouvelle organisation
+            {m.org_switcher_new()}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

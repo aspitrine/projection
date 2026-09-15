@@ -49,15 +49,20 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Vérifié dans le navigateur : inscription → organisation → invitation → inscription de l'invité → rôle opérateur ; refus serveur (403) d'une invitation par un opérateur ; RPC sans session → `Unauthenticated`.
 - [ ] Envoi réel des e-mails d'invitation (SMTP configurable) — à planifier.
 
-### T0.4 i18n
+### T0.4 i18n ✅
 
-- [ ] Bibliothèque i18n, catalogue `fr`, textes existants migrés, convention de clés documentée.
+- [x] Paraglide JS : projet inlang `apps/web/project.inlang`, catalogue `messages/fr.json`, plugin Vite + `bun run i18n:compile` (appelé par `check-types`).
+- [x] Tous les textes d'interface migrés vers `m.*()` (formulaires, messages de validation, menus, pages identity, `aria-label`).
+- [x] Convention de clés : [docs/architecture/i18n.md](docs/architecture/i18n.md).
 
-### T0.5 Layout applicatif
+### T0.5 Layout applicatif ✅
 
 **Dépend de** : T0.3
 
-- [ ] Shell authentifié : navigation (Projets, Bibliothèque, Sorties, Paramètres), responsive.
+- [x] Layouts de routes : `_public` (accueil, connexion), `_auth/_setup` (onboarding, invitation, sans organisation), `_auth/_app` (organisation active requise).
+- [x] Shell : barre latérale (Tableau de bord, Projets, Bibliothèque › Chants / Bible / Médias, Sorties, Paramètres › Membres), sélecteur d'organisation et menu utilisateur dans la barre du haut.
+- [x] Responsive : tiroir de navigation sous 768 px (fermeture au clic, à la navigation et sur Échap).
+- [x] Pages « Bientôt disponible » pour les sections non implémentées ; Membres déplacé sous `/settings/members`.
 
 ---
 

@@ -6,19 +6,21 @@ import { Schema } from "effect";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
 import Loader from "./loader";
 
-const SignInValues = Schema.toStandardSchemaV1(
-  Schema.Struct({
-    email: Schema.String.check(
-      Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email address" }),
-    ),
-    password: Schema.String.check(
-      Schema.isMinLength(8, { message: "Password must be at least 8 characters" }),
-    ),
-  }),
-);
+const signInValues = () =>
+  Schema.toStandardSchemaV1(
+    Schema.Struct({
+      email: Schema.String.check(
+        Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: m.auth_invalid_email() }),
+      ),
+      password: Schema.String.check(
+        Schema.isMinLength(8, { message: m.auth_password_too_short() }),
+      ),
+    }),
+  );
 
 export default function SignInForm({
   onSwitchToSignUp,
@@ -44,7 +46,7 @@ export default function SignInForm({
           onSuccess: () => {
             // Rechargement complet : session, organisations et atoms repartent de zéro.
             window.location.assign(redirectTo ?? "/dashboard");
-            toast.success("Sign in successful");
+            toast.success(m.auth_sign_in_success());
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
@@ -53,7 +55,7 @@ export default function SignInForm({
       );
     },
     validators: {
-      onSubmit: SignInValues,
+      onSubmit: signInValues(),
     },
   });
 
@@ -62,8 +64,8 @@ export default function SignInForm({
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
+    <div className="mx-auto mt-10 w-full max-w-md p-6">
+      <h1 className="mb-6 text-center text-3xl font-bold">{m.auth_sign_in_title()}</h1>
 
       <form
         onSubmit={(e) => {
@@ -73,70 +75,62 @@ export default function SignInForm({
         }}
         className="space-y-4"
       >
-        <div>
-          <form.Field name="email">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
+        <form.Field name="email">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>{m.auth_email()}</Label>
+              <Input
+                id={field.name}
+                name={field.name}
+                type="email"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p key={error?.message} className="text-red-500">
+                  {error?.message}
+                </p>
+              ))}
+            </div>
+          )}
+        </form.Field>
 
-        <div>
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
+        <form.Field name="password">
+          {(field) => (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>{m.auth_password()}</Label>
+              <Input
+                id={field.name}
+                name={field.name}
+                type="password"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              {field.state.meta.errors.map((error) => (
+                <p key={error?.message} className="text-red-500">
+                  {error?.message}
+                </p>
+              ))}
+            </div>
+          )}
+        </form.Field>
 
         <form.Subscribe
           selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
         >
           {({ canSubmit, isSubmitting }) => (
             <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Sign In"}
+              {isSubmitting ? m.auth_submitting() : m.auth_sign_in()}
             </Button>
           )}
         </form.Subscribe>
       </form>
 
       <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignUp}
-          className="text-indigo-600 hover:text-indigo-800"
-        >
-          Need an account? Sign Up
+        <Button variant="link" onClick={onSwitchToSignUp}>
+          {m.auth_to_sign_up()}
         </Button>
       </div>
     </div>

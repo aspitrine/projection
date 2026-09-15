@@ -6,7 +6,7 @@ import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 import { safeRedirect } from "@/lib/safe-redirect";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/_public/login")({
   validateSearch: Schema.toStandardSchemaV1(
     Schema.Struct({ redirect: Schema.optional(Schema.String) }),
   ),

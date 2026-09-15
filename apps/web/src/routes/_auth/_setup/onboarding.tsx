@@ -8,30 +8,30 @@ import { toast } from "sonner";
 
 import { slugify } from "@/features/identity/slug";
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/_auth/onboarding")({
+export const Route = createFileRoute("/_auth/_setup/onboarding")({
   component: Onboarding,
 });
 
-const OrganizationValues = Schema.toStandardSchemaV1(
-  Schema.Struct({
-    name: Schema.String.check(
-      Schema.isMinLength(2, { message: "Le nom doit contenir au moins 2 caractères" }),
-    ),
-  }),
-);
+const organizationValues = () =>
+  Schema.toStandardSchemaV1(
+    Schema.Struct({
+      name: Schema.String.check(Schema.isMinLength(2, { message: m.onboarding_name_too_short() })),
+    }),
+  );
 
 function Onboarding() {
   const form = useForm({
     defaultValues: { name: "" },
-    validators: { onSubmit: OrganizationValues },
+    validators: { onSubmit: organizationValues() },
     onSubmit: async ({ value }) => {
       const { error } = await authClient.organization.create({
         name: value.name.trim(),
         slug: slugify(value.name),
       });
       if (error) {
-        toast.error(error.message ?? "Création impossible");
+        toast.error(error.message ?? m.onboarding_error());
         return;
       }
       window.location.assign("/dashboard");
@@ -40,12 +40,8 @@ function Onboarding() {
 
   return (
     <div className="mx-auto mt-10 w-full max-w-md p-6">
-      <h1 className="mb-2 text-2xl font-semibold">Créer votre organisation</h1>
-      <p className="text-muted-foreground mb-6 text-sm">
-        Une organisation regroupe vos chants, vos projets et vos écrans. Vous pourrez inviter
-        d'autres opérateurs ensuite. Pour rejoindre une organisation existante, ouvrez le lien
-        d'invitation reçu.
-      </p>
+      <h1 className="mb-2 text-2xl font-semibold">{m.onboarding_title()}</h1>
+      <p className="text-muted-foreground mb-6 text-sm">{m.onboarding_description()}</p>
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -56,11 +52,11 @@ function Onboarding() {
         <form.Field name="name">
           {(field) => (
             <div className="space-y-2">
-              <Label htmlFor={field.name}>Nom de l'organisation</Label>
+              <Label htmlFor={field.name}>{m.onboarding_name_label()}</Label>
               <Input
                 id={field.name}
                 name={field.name}
-                placeholder="Église de …"
+                placeholder={m.onboarding_name_placeholder()}
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
@@ -76,7 +72,7 @@ function Onboarding() {
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Création…" : "Créer l'organisation"}
+              {isSubmitting ? m.onboarding_submitting() : m.onboarding_submit()}
             </Button>
           )}
         </form.Subscribe>

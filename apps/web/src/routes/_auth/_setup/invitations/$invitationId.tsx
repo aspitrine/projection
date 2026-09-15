@@ -6,8 +6,9 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { roleLabel } from "@/features/identity/roles";
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/_auth/invitations/$invitationId")({
+export const Route = createFileRoute("/_auth/_setup/invitations/$invitationId")({
   component: () => (
     <ClientOnly fallback={<Loader />}>
       <InvitationPage />
@@ -37,10 +38,8 @@ function InvitationPage() {
   if (invitation === null || invitation.status !== "pending") {
     return (
       <div className="mx-auto mt-10 max-w-md p-6">
-        <h1 className="mb-2 text-2xl font-semibold">Invitation invalide</h1>
-        <p className="text-muted-foreground text-sm">
-          Ce lien a expiré, a déjà été utilisé ou ne correspond pas à votre adresse e-mail.
-        </p>
+        <h1 className="mb-2 text-2xl font-semibold">{m.invitation_invalid_title()}</h1>
+        <p className="text-muted-foreground text-sm">{m.invitation_invalid_description()}</p>
       </div>
     );
   }
@@ -50,7 +49,7 @@ function InvitationPage() {
     const { error } = await authClient.organization.acceptInvitation({ invitationId });
     if (error) {
       setPending(false);
-      toast.error(error.message ?? "Impossible d'accepter l'invitation");
+      toast.error(error.message ?? m.invitation_accept_error());
       return;
     }
     await authClient.organization.setActive({ organizationId: invitation.organizationId });
@@ -65,17 +64,21 @@ function InvitationPage() {
 
   return (
     <div className="mx-auto mt-10 max-w-md space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Rejoindre « {invitation.organizationName} »</h1>
+      <h1 className="text-2xl font-semibold">
+        {m.invitation_title({ organization: invitation.organizationName })}
+      </h1>
       <p className="text-muted-foreground text-sm">
-        {invitation.inviterEmail} vous invite en tant que{" "}
-        <strong>{roleLabel(invitation.role)}</strong>.
+        {m.invitation_description({
+          inviter: invitation.inviterEmail,
+          role: roleLabel(invitation.role),
+        })}
       </p>
       <div className="flex gap-2">
         <Button onClick={accept} disabled={pending}>
-          Accepter
+          {m.invitation_accept()}
         </Button>
         <Button variant="outline" onClick={reject} disabled={pending}>
-          Refuser
+          {m.invitation_reject()}
         </Button>
       </div>
     </div>

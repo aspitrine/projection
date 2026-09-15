@@ -3,7 +3,8 @@ import { Toaster } from "@projection/ui/components/sonner";
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import Header from "../components/header";
+import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
 
 import appCss from "../index.css?url";
 
@@ -18,7 +19,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Projection",
+        title: m.app_name(),
       },
     ],
     links: [
@@ -34,16 +35,13 @@ export const Route = createRootRoute({
 
 function RootDocument() {
   return (
-    <html lang="fr" className="dark">
+    <html lang={getLocale()} className="dark">
       <head>
         <HeadContent />
       </head>
       <body>
         <RegistryProvider>
-          <div className="grid h-svh grid-rows-[auto_1fr]">
-            <Header />
-            <Outlet />
-          </div>
+          <Outlet />
         </RegistryProvider>
         <Toaster richColors />
         <TanStackRouterDevtools position="bottom-left" />

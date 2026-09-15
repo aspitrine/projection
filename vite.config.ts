@@ -9,6 +9,7 @@ export default defineConfig({
       "apps/web/.vinxi/**",
       "apps/web/.tanstack/**",
       "apps/web/src/routeTree.gen.ts",
+      "apps/web/src/paraglide/**",
     ],
     options: {
       typeAware: false,
@@ -23,6 +24,7 @@ export default defineConfig({
       "apps/web/.vinxi/**",
       "apps/web/.tanstack/**",
       "apps/web/src/routeTree.gen.ts",
+      "apps/web/src/paraglide/**",
     ],
     singleQuote: false,
     semi: true,

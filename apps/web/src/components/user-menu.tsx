@@ -1,4 +1,4 @@
-import { Button } from "@projection/ui/components/button";
+import { Button, buttonVariants } from "@projection/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,12 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@projection/ui/components/dropdown-menu";
 import { Skeleton } from "@projection/ui/components/skeleton";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
 export default function UserMenu() {
-  const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
@@ -23,8 +23,8 @@ export default function UserMenu() {
 
   if (!session) {
     return (
-      <Link to="/login">
-        <Button variant="outline">Sign In</Button>
+      <Link to="/login" className={buttonVariants({ variant: "outline" })}>
+        {m.user_menu_sign_in()}
       </Link>
     );
   }
@@ -36,7 +36,7 @@ export default function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>{m.user_menu_account()}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
           <DropdownMenuItem
@@ -44,16 +44,12 @@ export default function UserMenu() {
             onClick={() => {
               authClient.signOut({
                 fetchOptions: {
-                  onSuccess: () => {
-                    navigate({
-                      to: "/",
-                    });
-                  },
+                  onSuccess: () => window.location.assign("/"),
                 },
               });
             }}
           >
-            Sign Out
+            {m.user_menu_sign_out()}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

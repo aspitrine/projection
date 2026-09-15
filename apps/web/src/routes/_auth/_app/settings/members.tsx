@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { assignableRoles, roleLabel } from "@/features/identity/roles";
 import { authClient } from "@/lib/auth-client";
+import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/_auth/organization/members")({
+export const Route = createFileRoute("/_auth/_app/settings/members")({
   component: () => (
     <ClientOnly fallback={<Loader />}>
       <MembersPage />
@@ -24,6 +25,15 @@ const invitationUrl = (invitationId: string) =>
 
 const selectClass = "border-input bg-background h-8 rounded-none border px-2 text-xs";
 
+const run = async (action: Promise<{ error: { message?: string } | null }>, success: string) => {
+  const { error } = await action;
+  if (error) {
+    toast.error(error.message ?? m.members_action_error());
+  } else {
+    toast.success(success);
+  }
+};
+
 function MembersPage() {
   const { data: organization, isPending } = authClient.useActiveOrganization();
   const { data: currentMember } = authClient.useActiveMember();
@@ -37,42 +47,35 @@ function MembersPage() {
     (invitation) => invitation.status === "pending",
   );
 
-  const run = async (action: Promise<{ error: { message?: string } | null }>, success: string) => {
-    const { error } = await action;
-    if (error) {
-      toast.error(error.message ?? "Action impossible");
-    } else {
-      toast.success(success);
-    }
-  };
-
   return (
     <div className="container mx-auto max-w-3xl space-y-8 px-4 py-6">
       <header>
-        <h1 className="text-2xl font-semibold">Membres de « {organization.name} »</h1>
+        <h1 className="text-2xl font-semibold">
+          {m.members_title({ organization: organization.name })}
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Votre rôle : {currentMember ? roleLabel(currentMember.role) : "—"}
+          {m.members_your_role({ role: currentMember ? roleLabel(currentMember.role) : "—" })}
         </p>
       </header>
 
       <section className="space-y-2">
-        <h2 className="font-medium">Membres</h2>
+        <h2 className="font-medium">{m.members_list()}</h2>
         <ul className="divide-y border" data-testid="members">
           {organization.members.map((member) => {
             const isSelf = member.id === currentMember?.id;
             const editable = canManage && !isSelf && member.role !== "owner";
             return (
-              <li key={member.id} className="flex items-center gap-3 p-3 text-sm">
+              <li key={member.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {member.user.name}
-                    {isSelf ? " (vous)" : ""}
+                    {isSelf ? ` ${m.members_you()}` : ""}
                   </p>
                   <p className="text-muted-foreground truncate text-xs">{member.user.email}</p>
                 </div>
                 {editable ? (
                   <select
-                    aria-label={`Rôle de ${member.user.name}`}
+                    aria-label={m.members_role_of({ name: member.user.name })}
                     className={selectClass}
                     value={member.role}
                     onChange={(event) =>
@@ -81,7 +84,7 @@ function MembersPage() {
                           memberId: member.id,
                           role: event.target.value as AssignableRole,
                         }),
-                        "Rôle mis à jour",
+                        m.members_role_updated(),
                       )
                     }
                   >
@@ -101,11 +104,11 @@ function MembersPage() {
                     onClick={() =>
                       run(
                         authClient.organization.removeMember({ memberIdOrEmail: member.id }),
-                        "Membre retiré",
+                        m.members_removed(),
                       )
                     }
                   >
-                    Retirer
+                    {m.members_remove()}
                   </Button>
                 )}
               </li>
@@ -118,13 +121,13 @@ function MembersPage() {
         <>
           <InviteForm />
           <section className="space-y-2">
-            <h2 className="font-medium">Invitations en attente</h2>
+            <h2 className="font-medium">{m.members_pending_title()}</h2>
             {pendingInvitations.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune invitation en attente.</p>
+              <p className="text-muted-foreground text-sm">{m.members_pending_empty()}</p>
             ) : (
               <ul className="divide-y border" data-testid="invitations">
                 {pendingInvitations.map((invitation) => (
-                  <li key={invitation.id} className="flex items-center gap-3 p-3 text-sm">
+                  <li key={invitation.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                     <div className="min-w-0 flex-1">
                       <p className="truncate">{invitation.email}</p>
                       <p className="text-muted-foreground text-xs">{roleLabel(invitation.role)}</p>
@@ -135,10 +138,10 @@ function MembersPage() {
                       onClick={() =>
                         navigator.clipboard
                           .writeText(invitationUrl(invitation.id))
-                          .then(() => toast.success("Lien copié"))
+                          .then(() => toast.success(m.members_link_copied()))
                       }
                     >
-                      Copier le lien
+                      {m.members_copy_link()}
                     </Button>
                     <Button
                       size="sm"
@@ -148,11 +151,11 @@ function MembersPage() {
                           authClient.organization.cancelInvitation({
                             invitationId: invitation.id,
                           }),
-                          "Invitation annulée",
+                          m.members_invitation_cancelled(),
                         )
                       }
                     >
-                      Annuler
+                      {m.members_cancel_invitation()}
                     </Button>
                   </li>
                 ))}
@@ -173,7 +176,7 @@ function InviteForm() {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium">Inviter un membre</h2>
+      <h2 className="font-medium">{m.members_invite_title()}</h2>
       <form
         className="flex flex-wrap items-end gap-2"
         onSubmit={async (event) => {
@@ -182,7 +185,7 @@ function InviteForm() {
           const { data, error } = await authClient.organization.inviteMember({ email, role });
           setPending(false);
           if (error || !data) {
-            toast.error(error?.message ?? "Invitation impossible");
+            toast.error(error?.message ?? m.members_invite_error());
             return;
           }
           setEmail("");
@@ -190,7 +193,7 @@ function InviteForm() {
         }}
       >
         <div className="min-w-48 flex-1 space-y-1">
-          <Label htmlFor="invite-email">E-mail</Label>
+          <Label htmlFor="invite-email">{m.members_invite_email()}</Label>
           <Input
             id="invite-email"
             type="email"
@@ -200,7 +203,7 @@ function InviteForm() {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="invite-role">Rôle</Label>
+          <Label htmlFor="invite-role">{m.members_invite_role()}</Label>
           <select
             id="invite-role"
             className={selectClass}
@@ -215,12 +218,12 @@ function InviteForm() {
           </select>
         </div>
         <Button type="submit" disabled={pending}>
-          Inviter
+          {m.members_invite_submit()}
         </Button>
       </form>
       {link && (
         <p className="text-sm" data-testid="invitation-link">
-          Envoyez ce lien à la personne invitée : <code className="break-all">{link}</code>
+          {m.members_invite_link()} <code className="break-all">{link}</code>
         </p>
       )}
     </section>
