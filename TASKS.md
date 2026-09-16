@@ -228,9 +228,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 **Dépend de** : T0.3
 
-- [ ] Service Garage dans `docker-compose.yml`, init bucket/clé documentée.
-- [ ] Layer S3 dans `platform`, port `MediaStorage` dans `media`, upload pré-signé.
-- [ ] Bibliothèque médias, élément de projet média, lecture vidéo pilotée depuis la régie.
+- [x] Service Garage dans `docker-compose.yml` (`bun run storage:start`), initialisation scriptée (disposition, bucket, clé, règles CORS) et documentée dans [docs/medias.md](docs/medias.md).
+- [x] `ObjectStorage` (S3 compatible) dans `platform`, port `MediaStorage` dans `media` : le serveur ne transporte aucun fichier, il signe des URL courtes (10 min en écriture, 15 min en lecture).
+- [x] Contexte `media` : types et tailles validés, téléversement en deux temps (réservation signée puis confirmation), suppression qui retire aussi l'objet du stockage, isolation par organisation.
+- [x] Bibliothèque médias : ajout multi-fichiers, aperçus image et vidéo, suppression.
+- [ ] Élément de projet média et lecture vidéo pilotée depuis la régie.
 
 ### T2.9 Import VideoPsalm [songs, projects]
 

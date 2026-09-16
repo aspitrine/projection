@@ -347,5 +347,22 @@
   "live_edit_saved": "Paroles enregistrées et diffusées",
   "live_edit_failed": "Modification impossible.",
   "live_edit_notice": "Paroles mises à jour : {title} ({section})",
-  "live_edit_unavailable": "Seuls les chants peuvent être modifiés depuis la régie."
+  "live_edit_unavailable": "Seuls les chants peuvent être modifiés depuis la régie.",
+  "media_intro": "Images et vidéos de l'organisation, stockées à part de l'application et servies par liens signés.",
+  "media_choose": "Ajouter des fichiers",
+  "media_uploading": "Envoi en cours… ({count})",
+  "media_hint": "JPEG, PNG, WebP, AVIF, GIF, MP4, WebM ou MOV. 20 Mo par image, 500 Mo par vidéo.",
+  "media_uploaded": "« {name} » ajouté",
+  "media_upload_failed": "Envoi de « {name} » impossible.",
+  "media_unsupported": "« {name} » : format non géré.",
+  "media_too_large": "« {name} » dépasse la taille autorisée.",
+  "media_empty_title": "Aucun média",
+  "media_load_error": "Impossible de charger les médias.",
+  "media_preview_error": "Aperçu indisponible",
+  "media_kind_image": "Image",
+  "media_kind_video": "Vidéo",
+  "media_delete": "Supprimer",
+  "media_delete_confirm": "Supprimer « {name} » ? Le fichier sera retiré du stockage.",
+  "media_deleted": "Média supprimé",
+  "media_action_error": "Action impossible"
 }

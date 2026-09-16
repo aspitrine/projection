@@ -17,6 +17,7 @@
     "@projection/bible": "workspace:*",
     "@projection/identity": "workspace:*",
     "@projection/live": "workspace:*",
+    "@projection/media": "workspace:*",
     "@projection/outputs": "workspace:*",
     "@projection/platform": "workspace:*",
     "@projection/presentation": "workspace:*",

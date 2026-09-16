@@ -1,6 +1,7 @@
 import { BibleRpcs } from "@projection/bible/contract";
 import { IdentityRpcs } from "@projection/identity/contract";
 import { LiveRpcs } from "@projection/live/contract";
+import { MediaRpcs } from "@projection/media/contract";
 import { SystemRpcs } from "@projection/platform/contract";
 import { DisplayRpcs, OutputsRpcs } from "@projection/outputs/contract";
 import { ProjectsRpcs } from "@projection/projects/contract";
@@ -20,4 +21,5 @@ export const ApiRpcs = SystemRpcs.merge(
   ProjectsRpcs,
   OutputsRpcs,
   DisplayRpcs,
+  MediaRpcs,
 );

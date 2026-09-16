@@ -52,8 +52,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  garage:
+    image: dxflrs/garage:v1.0.1
+    container_name: projection-garage
+    ports:
+      - "${GARAGE_S3_PORT:-3900}:3900"
+      - "${GARAGE_ADMIN_PORT:-3903}:3903"
+    volumes:
+      - ./docker/garage.toml:/etc/garage.toml:ro
+      - projection_garage_meta:/var/lib/garage/meta
+      - projection_garage_data:/var/lib/garage/data
+    restart: unless-stopped
+
 volumes:
   projection_postgres_data:
+  projection_garage_meta:
+  projection_garage_data:
 
 # BuildKit makes these available only while install/build commands run.
 secrets:

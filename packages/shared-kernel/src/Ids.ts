@@ -32,3 +32,8 @@ export const OutputId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
   Schema.brand("OutputId"),
 );
 export type OutputId = typeof OutputId.Type;
+
+export const MediaId = Schema.String.check(Schema.isPattern(uuidPattern)).pipe(
+  Schema.brand("MediaId"),
+);
+export type MediaId = typeof MediaId.Type;

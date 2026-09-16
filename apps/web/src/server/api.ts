@@ -1,5 +1,6 @@
 import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
+import { MediaLive, mediaMigrations } from "@projection/media/server";
 import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
 import {
   FrameGateway,
@@ -11,6 +12,7 @@ import {
   DatabaseHealth,
   DatabaseLive,
   LoggerLive,
+  ObjectStorage,
   SystemHandlersLive,
   layerMigrations,
 } from "@projection/platform";
@@ -25,6 +27,7 @@ import { ApiRpcs } from "../api/contract";
 import { auth, ensureAuthSchema } from "../services";
 import { BrandingSourceLive } from "./branding";
 import { DeckSourceLive } from "./deck-source";
+import { MediaStorageLive } from "./media-storage";
 import { SongEditingLive } from "./song-editing";
 
 const AuthMigrationsLive = Layer.effectDiscard(
@@ -49,6 +52,7 @@ const HandlersLive = Layer.mergeAll(
   SlidesLive,
   ProjectsLive,
   OutputsLive,
+  MediaLive,
 ).pipe(
   Layer.provide(DatabaseHealth.layer),
   // La régie résout les projets en diapos via les cas d'usage des autres contextes.
@@ -66,6 +70,7 @@ const HandlersLive = Layer.mergeAll(
     ),
   ),
   Layer.provide(SongEditingLive.pipe(Layer.provide(SongsServiceLive))),
+  Layer.provide(MediaStorageLive.pipe(Layer.provide(ObjectStorage.layerConfig))),
   Layer.provide(FrameGatewayLive),
   Layer.provide(BrandingSourceLive),
   Layer.provide(LiveFrames.layerMemory),
@@ -89,6 +94,7 @@ const ApiLive = RpcServer.layerHttp({
         projectsMigrations,
         outputsMigrations,
         liveMigrations,
+        mediaMigrations,
       ]),
     ),
   ),
