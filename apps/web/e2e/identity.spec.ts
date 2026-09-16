@@ -14,8 +14,8 @@ test("inscription, création d'organisation et tableau de bord", async ({ page }
 
 test("une page de l'application sans session redirige vers la connexion", async ({ page }) => {
   await page.goto("/library/songs");
-  await expect(page).toHaveURL(/\/login\?redirect=/);
-  await expect(page.getByRole("heading", { name: "Créer un compte" })).toBeVisible();
+  await expect(page).toHaveURL(/\/\?redirect=/);
+  await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
 });
 
 test("invitation d'un opérateur par lien", async ({ page, browser }) => {
@@ -32,7 +32,7 @@ test("invitation d'un opérateur par lien", async ({ page, browser }) => {
   const inviteeContext = await browser.newContext();
   const inviteePage = await inviteeContext.newPage();
   await inviteePage.goto(link ?? "");
-  await expect(inviteePage).toHaveURL(/\/login\?redirect=/);
+  await expect(inviteePage).toHaveURL(/\/signup\?redirect=/);
   await signUp(inviteePage, invitee, inviteePage.url());
 
   await expect(

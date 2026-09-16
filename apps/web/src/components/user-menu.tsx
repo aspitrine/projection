@@ -23,7 +23,7 @@ export default function UserMenu() {
 
   if (!session) {
     return (
-      <Link to="/login" className={buttonVariants({ variant: "outline" })}>
+      <Link to="/" className={buttonVariants({ variant: "outline" })}>
         {m.user_menu_sign_in()}
       </Link>
     );

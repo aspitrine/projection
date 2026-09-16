@@ -17,7 +17,7 @@ export const newUser = (): TestUser => {
   };
 };
 
-export async function signUp(page: Page, user: TestUser, path = "/login") {
+export async function signUp(page: Page, user: TestUser, path = "/signup") {
   await page.goto(path);
   await page.getByLabel("Nom", { exact: true }).fill(user.name);
   await page.getByLabel("E-mail").fill(user.email);

@@ -1,22 +1,21 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import SignInForm from "@/components/sign-in-form";
+import SignUpForm from "@/components/sign-up-form";
 import { authSearch } from "@/features/identity/auth-search";
 import { getUser } from "@/functions/get-user";
 import { safeRedirect } from "@/lib/safe-redirect";
 
-/** L'accueil est la page de connexion ; une session ouverte mène droit à l'application. */
-export const Route = createFileRoute("/_public/")({
+export const Route = createFileRoute("/_public/signup")({
   validateSearch: authSearch,
   beforeLoad: async ({ search }) => {
     if (await getUser()) {
       throw redirect({ href: safeRedirect(search.redirect) ?? "/dashboard" });
     }
   },
-  component: SignInPage,
+  component: SignUpPage,
 });
 
-function SignInPage() {
+function SignUpPage() {
   const { redirect: target } = Route.useSearch();
-  return <SignInForm redirectTo={safeRedirect(target)} />;
+  return <SignUpForm redirectTo={safeRedirect(target)} />;
 }

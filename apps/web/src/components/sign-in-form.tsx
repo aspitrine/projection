@@ -1,7 +1,8 @@
-import { Button } from "@projection/ui/components/button";
+import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
 import { useForm } from "@tanstack/react-form";
+import { Link } from "@tanstack/react-router";
 import { Schema } from "effect";
 import { toast } from "sonner";
 
@@ -22,13 +23,7 @@ const signInValues = () =>
     }),
   );
 
-export default function SignInForm({
-  onSwitchToSignUp,
-  redirectTo,
-}: {
-  onSwitchToSignUp: () => void;
-  redirectTo?: string | undefined;
-}) {
+export default function SignInForm({ redirectTo }: { redirectTo?: string | undefined }) {
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -129,9 +124,13 @@ export default function SignInForm({
       </form>
 
       <div className="mt-4 text-center">
-        <Button variant="link" onClick={onSwitchToSignUp}>
+        <Link
+          to="/signup"
+          search={{ redirect: redirectTo }}
+          className={buttonVariants({ variant: "link" })}
+        >
           {m.auth_to_sign_up()}
-        </Button>
+        </Link>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
+import { isInvitationRedirect } from "@/features/identity/auth-search";
 import { getUser } from "@/functions/get-user";
 
 export const Route = createFileRoute("/_auth")({
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_auth")({
     const session = await getUser();
     if (!session) {
       throw redirect({
-        to: "/login",
+        to: isInvitationRedirect(location.href) ? "/signup" : "/",
         search: { redirect: location.href },
       });
     }
