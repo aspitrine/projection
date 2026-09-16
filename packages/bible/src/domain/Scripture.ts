@@ -27,7 +27,29 @@ export class Translation extends Schema.Class<Translation>("Translation")({
   name: Schema.String,
   language: Schema.String,
   license: Schema.String,
+  /** `null` : traduction livrée avec l'application ; sinon, importée par cette organisation. */
+  organizationId: Schema.NullOr(Schema.String),
 }) {}
+
+/** Ce que l'utilisateur décrit en important un fichier biblique. */
+export class TranslationInput extends Schema.Class<TranslationInput>("TranslationInput")({
+  code: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(16)),
+  name: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(120)),
+  language: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(16)),
+  license: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(200)),
+}) {}
+
+/** Résultat d'un import de traduction. */
+export class TranslationImported extends Schema.Class<TranslationImported>("TranslationImported")({
+  translationId: Schema.String,
+  books: Schema.Int,
+  verses: Schema.Int,
+}) {}
+
+export class InvalidTranslationFile extends Schema.TaggedError<InvalidTranslationFile>()(
+  "InvalidTranslationFile",
+  { reason: Schema.Literals(["UnknownFormat", "NoVerses"]) },
+) {}
 
 export class Passage extends Schema.Class<Passage>("Passage")({
   translation: Translation,

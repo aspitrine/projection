@@ -11,6 +11,9 @@ export const BibleHandlersLive = BibleRpcs.toLayer(
       BibleTranslations: () => bible.translations,
       BibleLookup: ({ translationId, reference }) => bible.lookup(translationId, reference),
       BibleSearch: ({ translationId, query }) => bible.search(translationId, query),
+      BibleImport: ({ input, content }) => bible.importFile(input, content),
+      BibleDefaultTranslation: () => bible.defaultTranslationId,
+      BibleSetDefaultTranslation: ({ translationId }) => bible.setDefaultTranslation(translationId),
     };
   }),
 );

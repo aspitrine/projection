@@ -26,6 +26,7 @@ const lsg1910 = new Translation({
   name: "Louis Segond 1910",
   language: "fr",
   license: "Domaine public",
+  organizationId: null,
 });
 
 const program = Effect.gen(function* () {

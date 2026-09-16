@@ -46,5 +46,16 @@ export const bibleMigrations = {
       `;
       yield* sql`CREATE INDEX bible_verse_search_idx ON bible_verse USING gin (search)`;
     }),
+    "0003_translation_owner": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // `NULL` : traduction livrée avec l'application (domaine public), visible par tous.
+      yield* sql`ALTER TABLE bible_translation ADD COLUMN organization_id text`;
+      yield* sql`
+        CREATE TABLE bible_preference (
+          organization_id text PRIMARY KEY,
+          default_translation_id text REFERENCES bible_translation (id) ON DELETE SET NULL
+        )
+      `;
+    }),
   },
 };

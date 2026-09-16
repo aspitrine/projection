@@ -21,6 +21,7 @@ const testTranslation = new Translation({
   name: "Traduction de test",
   language: "fr",
   license: "Domaine public",
+  organizationId: null,
 });
 
 const DatabaseLive = PgClient.layerConfig({ url: Config.Redacted("TEST_DATABASE_URL") });
@@ -41,7 +42,8 @@ const FakeActorMiddleware = Layer.succeed(
       new Actor({
         userId: UserId.make("user"),
         organizationId: OrganizationId.make("org"),
-        role: "operator",
+        // L'import et la traduction par défaut sont réservés aux administrateurs.
+        role: "admin",
       }),
     ),
   ),
@@ -128,6 +130,46 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API bible (Postgres)", () => {
         .BibleSearch({ translationId: "inconnue", query: "monde" })
         .pipe(Effect.flip);
       expect(unknown._tag).toBe("UnknownTranslation");
+    }).pipe(Effect.provide(ApiLive)),
+  );
+
+  it.effect("importe une traduction OSIS dans l'organisation et la choisit par défaut", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(BibleRpcs);
+      const osis = `<osis><osisText>
+        <div type="book" osisID="John">
+          <verse osisID="John.3.16">Car Dieu a tant aim&#233; le monde</verse>
+          <verse osisID="John.3.17">Dieu n'a pas envoy&#233; son Fils</verse>
+        </div>
+      </osisText></osis>`;
+
+      const imported = yield* client.BibleImport({
+        input: { code: "TSTX", name: "Traduction importée", language: "fr", license: "Test" },
+        content: osis,
+      });
+      expect(imported).toMatchObject({ books: 1, verses: 2 });
+
+      // Elle devient visible pour l'organisation, à côté des traductions livrées.
+      const translations = yield* client.BibleTranslations();
+      expect(translations.map((translation) => translation.id)).toContain(imported.translationId);
+
+      const passage = yield* client.BibleLookup({
+        translationId: imported.translationId,
+        reference: "Jean 3.16",
+      });
+      expect(passage.verses[0]?.text).toBe("Car Dieu a tant aimé le monde");
+
+      yield* client.BibleSetDefaultTranslation({ translationId: imported.translationId });
+      expect(yield* client.BibleDefaultTranslation()).toBe(imported.translationId);
+
+      // Un fichier illisible est refusé.
+      const invalid = yield* client
+        .BibleImport({
+          input: { code: "BAD", name: "Mauvais", language: "fr", license: "Test" },
+          content: "<html>pas une bible</html>",
+        })
+        .pipe(Effect.flip);
+      expect(invalid).toMatchObject({ _tag: "InvalidTranslationFile", reason: "UnknownFormat" });
     }).pipe(Effect.provide(ApiLive)),
   );
 });

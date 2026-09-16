@@ -2,7 +2,9 @@ import { Atom } from "effect/unstable/reactivity";
 
 import { ApiClient } from "@/api/client";
 
-export const translationsAtom = ApiClient.query("BibleTranslations", undefined);
+export const translationsAtom = ApiClient.query("BibleTranslations", undefined, {
+  reactivityKeys: ["bible"],
+});
 
 /** Clé : `<translationId>\n<référence>`. */
 export const passageAtom = Atom.family((key: string) => {
@@ -21,3 +23,12 @@ export const scriptureSearchAtom = Atom.family((key: string) => {
 
 export const searchKey = (translationId: string, query: string) =>
   `${translationId}\n${query.trim()}`;
+
+export const bibleReactivity = ["bible"] as const;
+
+export const defaultTranslationAtom = ApiClient.query("BibleDefaultTranslation", undefined, {
+  reactivityKeys: bibleReactivity,
+});
+
+export const importTranslationAtom = ApiClient.mutation("BibleImport");
+export const setDefaultTranslationAtom = ApiClient.mutation("BibleSetDefaultTranslation");

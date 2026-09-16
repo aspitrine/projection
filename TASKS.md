@@ -268,12 +268,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Page « Recherche » unifiée : chants et versets, extraits centrés sur les mots trouvés et surlignés, accents conservés même quand la recherche est écrite sans.
 - [x] Tests unitaires (services, extraits) et fonctionnels sur Postgres.
 
-### T2.12 Traductions bibliques libres + import [bible]
+### T2.12 Traductions bibliques libres + import [bible] ✅
 
 **Dépend de** : T1.3
 
-- [ ] Inventaire des traductions du domaine public dans `docs/bibles.md`, seeds associés.
-- [ ] Import OSIS / USFM / Zefania par organisation ; traduction par défaut par organisation.
+- [x] Parsers OSIS (éléments et jalons `sID`) et Zefania, entités décodées, notes et références écartées, livres hors canon ignorés.
+- [x] Import depuis la page Bible (USFM, OSIS, Zefania, 30 Mo au plus), réservé propriétaire/admin : la traduction appartient à l'organisation et n'est visible que par elle ; réimporter le même code remplace ses versets.
+- [x] Traduction par défaut par organisation, présélectionnée sur la page Bible et dans la recherche.
+- [x] Inventaire mis à jour dans [docs/bibles.md](docs/bibles.md) : pistes de sources et points à vérifier pour Darby, Martin, Ostervald, Crampon et Lausanne.
+- [ ] Distribuer d'autres traductions avec l'application : chaque édition numérique doit encore être vérifiée.
 
 ### T2.13 Diapos texte — mises en page [slides]
 

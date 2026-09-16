@@ -2,12 +2,17 @@ import { ActorMiddleware } from "@projection/identity/contract";
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
 
+import { Forbidden } from "@projection/shared-kernel";
+
 import {
   InvalidReference,
+  InvalidTranslationFile,
   Passage,
   PassageNotFound,
   ScriptureMatch,
   Translation,
+  TranslationImported,
+  TranslationInput,
   UnknownTranslation,
 } from "../domain/Scripture";
 
@@ -25,5 +30,19 @@ export const BibleRpcs = RpcGroup.make(
     },
     success: Schema.Array(ScriptureMatch),
     error: UnknownTranslation,
+  }),
+  /** Import d'une traduction (USFM, OSIS ou Zefania) dans l'organisation : 30 Mo au plus. */
+  Rpc.make("BibleImport", {
+    payload: {
+      input: TranslationInput,
+      content: Schema.String.check(Schema.isMaxLength(30_000_000)),
+    },
+    success: TranslationImported,
+    error: Schema.Union([InvalidTranslationFile, Forbidden]),
+  }),
+  Rpc.make("BibleDefaultTranslation", { success: Schema.NullOr(Schema.String) }),
+  Rpc.make("BibleSetDefaultTranslation", {
+    payload: { translationId: Schema.NullOr(Schema.String) },
+    error: Schema.Union([UnknownTranslation, Forbidden]),
   }),
 ).middleware(ActorMiddleware);

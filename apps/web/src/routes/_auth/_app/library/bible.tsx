@@ -14,7 +14,13 @@ import { Cause, Option, Schema } from "effect";
 import { useDeferredValue, useState } from "react";
 
 import Loader from "@/components/loader";
-import { passageAtom, passageKey, translationsAtom } from "@/features/bible/atoms";
+import {
+  defaultTranslationAtom,
+  passageAtom,
+  passageKey,
+  translationsAtom,
+} from "@/features/bible/atoms";
+import { TranslationAdmin } from "@/features/bible/translation-admin";
 import { SlidePreviewGrid } from "@/features/presentation/slide-preview-grid";
 import { m } from "@/paraglide/messages";
 
@@ -36,6 +42,7 @@ const PREVIEW_MAX_CHARACTERS = 320;
 
 function BibleExplorer() {
   const translations = useAtomValue(translationsAtom);
+  const preferred = useAtomValue(defaultTranslationAtom);
   const [translationId, setTranslationId] = useState<string>();
   const [reference, setReference] = useState("");
   const deferredReference = useDeferredValue(reference);
@@ -48,10 +55,12 @@ function BibleExplorer() {
     return <p className="text-muted-foreground text-sm">{m.bible_no_translation()}</p>;
   }
 
-  const selected = translationId ?? translations.value[0]?.id ?? "";
+  const preferredId = preferred._tag === "Success" ? preferred.value : null;
+  const selected = translationId ?? preferredId ?? translations.value[0]?.id ?? "";
 
   return (
     <div className="space-y-6">
+      <TranslationAdmin translations={translations.value} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label htmlFor="bible-translation">{m.bible_translation()}</Label>

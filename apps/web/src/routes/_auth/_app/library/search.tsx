@@ -6,7 +6,12 @@ import { BookOpen, Music, Search } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 
 import Loader from "@/components/loader";
-import { scriptureSearchAtom, searchKey, translationsAtom } from "@/features/bible/atoms";
+import {
+  defaultTranslationAtom,
+  scriptureSearchAtom,
+  searchKey,
+  translationsAtom,
+} from "@/features/bible/atoms";
 import { songsListAtom } from "@/features/songs/atoms";
 import { m } from "@/paraglide/messages";
 
@@ -45,10 +50,12 @@ function UnifiedSearch() {
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query.trim());
   const translations = useAtomValue(translationsAtom);
+  const preferred = useAtomValue(defaultTranslationAtom);
   const [translationId, setTranslationId] = useState<string>();
 
   const available = translations._tag === "Success" ? translations.value : [];
-  const selected = translationId ?? available[0]?.id ?? "";
+  const preferredId = preferred._tag === "Success" ? preferred.value : null;
+  const selected = translationId ?? preferredId ?? available[0]?.id ?? "";
   const enabled = deferred.length >= 2;
 
   return (

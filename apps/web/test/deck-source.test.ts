@@ -38,6 +38,7 @@ const lsg = new Translation({
   name: "Louis Segond 1910",
   language: "fr",
   license: "Domaine public",
+  organizationId: null,
 });
 
 const FrameGatewayStub = Layer.succeed(

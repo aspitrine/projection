@@ -421,5 +421,21 @@
   "search_songs": "Chants ({count})",
   "search_verses": "Versets ({count})",
   "search_no_song": "Aucun chant ne contient ces mots.",
-  "search_no_verse": "Aucun verset ne contient ces mots."
+  "search_no_verse": "Aucun verset ne contient ces mots.",
+  "bible_import_title": "Importer une traduction",
+  "bible_import_hint": "Fichiers USFM, OSIS ou Zefania (30 Mo au plus), pour une traduction dont votre organisation détient les droits. Réimporter le même code remplace les versets.",
+  "bible_field_code": "Code",
+  "bible_field_name": "Nom",
+  "bible_field_language": "Langue",
+  "bible_field_license": "Licence",
+  "bible_import_choose": "Choisir un fichier",
+  "bible_import_running": "Import en cours…",
+  "bible_import_done": "Traduction importée : {books} livres, {verses} versets",
+  "bible_import_unreadable": "Fichier illisible : format inconnu ou sans verset.",
+  "bible_import_failed": "Import impossible.",
+  "bible_import_too_large": "Fichier trop volumineux (30 Mo au plus).",
+  "bible_default_translation": "Traduction par défaut",
+  "bible_default_saved": "Traduction par défaut enregistrée",
+  "bible_default_clear": "Aucune",
+  "bible_default_cleared": "Traduction par défaut retirée"
 }

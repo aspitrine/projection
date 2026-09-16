@@ -1,9 +1,21 @@
 import { describe, expect, it } from "@effect/vitest";
+import { Actor, CurrentActor, OrganizationId, type Role, UserId } from "@projection/shared-kernel";
 import { Effect, Layer } from "effect";
 
 import { Bible } from "../src/application/Bible";
 import { ScriptureRepository } from "../src/application/ScriptureRepository";
 import { Translation, Verse } from "../src/domain/Scripture";
+
+/** Les cas d'usage lisent l'organisation courante : chaque test fournit un acteur. */
+const asActor = (organizationId = "org-a", role: Role = "operator") =>
+  Effect.provideService(
+    CurrentActor,
+    new Actor({
+      userId: UserId.make("user"),
+      organizationId: OrganizationId.make(organizationId),
+      role,
+    }),
+  );
 
 const lsg = new Translation({
   id: "lsg1910",
@@ -11,6 +23,7 @@ const lsg = new Translation({
   name: "Louis Segond 1910",
   language: "fr",
   license: "Domaine public",
+  organizationId: null,
 });
 
 const verse = (chapter: number, number: number) =>
@@ -32,7 +45,7 @@ describe("Bible.lookup", () => {
       expect(passage.label).toBe("Jean 3.16-17");
       expect(passage.translation.code).toBe("LSG");
       expect(passage.verses.map((v) => v.text)).toEqual(["Jean 3.16", "Jean 3.17"]);
-    }).pipe(Effect.provide(TestLayer)),
+    }).pipe(asActor(), Effect.provide(TestLayer)),
   );
 
   it.effect("couvre un passage sur deux chapitres et un chapitre entier", () =>
@@ -40,7 +53,7 @@ describe("Bible.lookup", () => {
       const bible = yield* Bible;
       expect((yield* bible.lookup("lsg1910", "Jean 3.18-4.1")).verses).toHaveLength(2);
       expect((yield* bible.lookup("lsg1910", "Jean 4")).verses.map((v) => v.verse)).toEqual([1, 2]);
-    }).pipe(Effect.provide(TestLayer)),
+    }).pipe(asActor(), Effect.provide(TestLayer)),
   );
 
   it.effect("signale une référence invalide, un passage absent ou une traduction inconnue", () =>
@@ -57,7 +70,7 @@ describe("Bible.lookup", () => {
       expect(yield* bible.lookup("kjv", "Jean 3.16").pipe(Effect.flip)).toMatchObject({
         _tag: "UnknownTranslation",
       });
-    }).pipe(Effect.provide(TestLayer)),
+    }).pipe(asActor(), Effect.provide(TestLayer)),
   );
 });
 
@@ -90,7 +103,7 @@ describe("Bible.search", () => {
       ]);
       // La limite borne le nombre de résultats rendus.
       expect(yield* bible.search("lsg1910", "monde", 1)).toHaveLength(1);
-    }).pipe(Effect.provide(SearchLayer)),
+    }).pipe(asActor(), Effect.provide(SearchLayer)),
   );
 
   it.effect("ignore une recherche trop courte et refuse une traduction inconnue", () =>
@@ -99,6 +112,6 @@ describe("Bible.search", () => {
       expect(yield* bible.search("lsg1910", " a ")).toEqual([]);
       const unknown = yield* bible.search("inconnue", "monde").pipe(Effect.flip);
       expect(unknown._tag).toBe("UnknownTranslation");
-    }).pipe(Effect.provide(SearchLayer)),
+    }).pipe(asActor(), Effect.provide(SearchLayer)),
   );
 });

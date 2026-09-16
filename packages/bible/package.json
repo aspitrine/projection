@@ -15,7 +15,8 @@
     "@effect/sql-pg": "catalog:",
     "@projection/identity": "workspace:*",
     "@projection/platform": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

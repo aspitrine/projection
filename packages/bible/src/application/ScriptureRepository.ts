@@ -3,13 +3,25 @@ import { Context, Effect, Layer } from "effect";
 
 import { verseLabel } from "../domain/Scripture";
 
+import type { ParsedBook } from "../domain/Osis";
 import type { ScriptureMatch, ScriptureReference, Translation, Verse } from "../domain/Scripture";
 
 /** Port de lecture des textes bibliques. */
 export class ScriptureRepository extends Context.Service<
   ScriptureRepository,
   {
-    readonly translations: Effect.Effect<ReadonlyArray<Translation>>;
+    /** Traductions livrées avec l'application, plus celles importées par l'organisation. */
+    translations(organizationId: string): Effect.Effect<ReadonlyArray<Translation>>;
+    /** Remplace tous les versets de la traduction (import idempotent). */
+    importBooks(
+      translation: Translation,
+      books: ReadonlyArray<ParsedBook>,
+    ): Effect.Effect<{ readonly books: number; readonly verses: number }>;
+    defaultTranslationId(organizationId: string): Effect.Effect<string | null>;
+    setDefaultTranslation(
+      organizationId: string,
+      translationId: string | null,
+    ): Effect.Effect<void>;
     verses(
       translationId: string,
       reference: ScriptureReference,
@@ -30,7 +42,21 @@ export class ScriptureRepository extends Context.Service<
     Layer.succeed(
       ScriptureRepository,
       ScriptureRepository.of({
-        translations: Effect.succeed(translations),
+        translations: (organizationId) =>
+          Effect.succeed(
+            translations.filter(
+              (translation) =>
+                translation.organizationId === null ||
+                translation.organizationId === organizationId,
+            ),
+          ),
+        importBooks: (_translation, books) =>
+          Effect.succeed({
+            books: books.length,
+            verses: books.reduce((total, book) => total + book.verses.length, 0),
+          }),
+        defaultTranslationId: () => Effect.succeed(null),
+        setDefaultTranslation: () => Effect.void,
         search: (translationId, query, limit) =>
           Effect.succeed(
             (versesByTranslation[translationId] ?? [])
