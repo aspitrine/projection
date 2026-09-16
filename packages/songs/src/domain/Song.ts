@@ -12,6 +12,8 @@ export class Song extends Schema.Class<Song>("Song")({
   authors: OptionalText,
   copyright: OptionalText,
   ccli: OptionalText,
+  /** Identifiant du contenu d'origine pour les imports (`videopsalm:GUID`). */
+  externalId: Schema.NullOr(Schema.String),
   sections: Schema.Array(SongSection),
   /** Ordre de passage par défaut (une section peut apparaître plusieurs fois). */
   arrangement: Schema.Array(SectionId),

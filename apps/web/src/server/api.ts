@@ -1,5 +1,6 @@
 import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
+import { ImportsLive } from "@projection/imports/server";
 import { MediaLive, MediaServiceLive, mediaMigrations } from "@projection/media/server";
 import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
 import {
@@ -27,6 +28,7 @@ import { ApiRpcs } from "../api/contract";
 import { auth, ensureAuthSchema } from "../services";
 import { BrandingSourceLive } from "./branding";
 import { DeckSourceLive } from "./deck-source";
+import { ProjectLibraryLive, SongLibraryLive } from "./imports";
 import { MediaStorageLive } from "./media-storage";
 import { SongEditingLive } from "./song-editing";
 
@@ -53,6 +55,7 @@ const HandlersLive = Layer.mergeAll(
   ProjectsLive,
   OutputsLive,
   MediaLive,
+  ImportsLive,
 ).pipe(
   Layer.provide(DatabaseHealth.layer),
   // La régie résout les projets en diapos via les cas d'usage des autres contextes.
@@ -71,6 +74,12 @@ const HandlersLive = Layer.mergeAll(
     ),
   ),
   Layer.provide(SongEditingLive.pipe(Layer.provide(SongsServiceLive))),
+  Layer.provide(
+    Layer.mergeAll(
+      SongLibraryLive.pipe(Layer.provide(SongsServiceLive)),
+      ProjectLibraryLive.pipe(Layer.provide(ProjectsServiceLive)),
+    ),
+  ),
   Layer.provide(MediaStorageLive.pipe(Layer.provide(ObjectStorage.layerConfig))),
   Layer.provide(FrameGatewayLive),
   Layer.provide(BrandingSourceLive),

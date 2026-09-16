@@ -16,6 +16,7 @@
     "@effect/atom-react": "catalog:",
     "@projection/bible": "workspace:*",
     "@projection/identity": "workspace:*",
+    "@projection/imports": "workspace:*",
     "@projection/live": "workspace:*",
     "@projection/media": "workspace:*",
     "@projection/outputs": "workspace:*",

@@ -12,6 +12,10 @@ export class SongRepository extends Context.Service<
       search: string | null,
     ): Effect.Effect<ReadonlyArray<SongSummary>>;
     findById(organizationId: OrganizationId, id: SongId): Effect.Effect<Option.Option<Song>>;
+    findByExternalId(
+      organizationId: OrganizationId,
+      externalId: string,
+    ): Effect.Effect<Option.Option<Song>>;
     insert(song: Song): Effect.Effect<void>;
     update(song: Song): Effect.Effect<void>;
     delete(organizationId: OrganizationId, id: SongId): Effect.Effect<boolean>;
@@ -48,6 +52,17 @@ export class SongRepository extends Context.Service<
                       updatedAt: song.updatedAt,
                     }),
                 ),
+            ),
+          ),
+        findByExternalId: (organizationId, externalId) =>
+          Ref.get(store).pipe(
+            Effect.map((songs) =>
+              Option.fromNullishOr(
+                [...songs.values()].find(
+                  (song) =>
+                    song.organizationId === organizationId && song.externalId === externalId,
+                ),
+              ),
             ),
           ),
         findById: (organizationId, id) =>

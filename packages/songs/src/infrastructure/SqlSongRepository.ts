@@ -16,6 +16,7 @@ const columns = (sql: PgClient.PgClient) => sql`
   authors,
   copyright,
   ccli,
+  external_id AS "externalId",
   sections,
   arrangement,
   (extract(epoch FROM created_at) * 1000)::float8 AS "createdAt",
@@ -55,6 +56,15 @@ export const SqlSongRepository = Layer.effect(
       `,
     });
 
+    const findByExternalId = SqlSchema.findOneOption({
+      Request: Schema.Struct({ organizationId: OrganizationId, externalId: Schema.String }),
+      Result: Song,
+      execute: ({ organizationId, externalId }) => sql`
+        SELECT ${columns(sql)} FROM song
+        WHERE organization_id = ${organizationId} AND external_id = ${externalId}
+      `,
+    });
+
     const write = (song: Song) => ({
       title: song.title,
       authors: song.authors,
@@ -72,6 +82,12 @@ export const SqlSongRepository = Layer.effect(
           Effect.withSpan("SqlSongRepository.list"),
         ),
 
+      findByExternalId: (organizationId, externalId) =>
+        findByExternalId({ organizationId, externalId }).pipe(
+          Effect.orDie,
+          Effect.withSpan("SqlSongRepository.findByExternalId"),
+        ),
+
       findById: (organizationId, id) =>
         findById({ organizationId, id }).pipe(
           Effect.orDie,
@@ -81,9 +97,11 @@ export const SqlSongRepository = Layer.effect(
       insert: (song) => {
         const values = write(song);
         return sql`
-          INSERT INTO song (id, organization_id, title, authors, copyright, ccli, sections, arrangement, created_at, updated_at)
+          INSERT INTO song (id, organization_id, title, authors, copyright, ccli, external_id,
+            sections, arrangement, created_at, updated_at)
           VALUES (${song.id}::uuid, ${song.organizationId}, ${values.title}, ${values.authors}, ${values.copyright},
-                  ${values.ccli}, ${values.sections}, ${values.arrangement}, ${new Date(song.createdAt)}, ${values.updatedAt})
+                  ${values.ccli}, ${song.externalId}, ${values.sections}, ${values.arrangement},
+                  ${new Date(song.createdAt)}, ${values.updatedAt})
         `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlSongRepository.insert"));
       },
 

@@ -400,5 +400,13 @@
   "theme_saved": "Thème enregistré",
   "theme_reset": "Réinitialiser",
   "theme_reset_done": "Thème par défaut rétabli",
-  "theme_default": "Thème par défaut du type de sortie"
+  "theme_default": "Thème par défaut du type de sortie",
+  "projects_import": "Importer un agenda VideoPsalm",
+  "projects_import_hint": "Fichier .vpagd : les chants absents sont ajoutés à la bibliothèque, puis un projet reprend l'ordre de l'agenda.",
+  "projects_import_choose": "Choisir un fichier .vpagd",
+  "projects_import_running": "Import en cours…",
+  "projects_import_done": "Projet « {name} » créé : {imported} chants importés, {reused} déjà connus",
+  "projects_import_errors": "{count} chants n'ont pas pu être importés",
+  "projects_import_failed": "Fichier VideoPsalm illisible.",
+  "projects_import_no_songs": "Aucun chant trouvé dans ce fichier."
 }

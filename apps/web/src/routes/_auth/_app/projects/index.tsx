@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { createProjectAtom, projectsListAtom, projectsReactivity } from "@/features/projects/atoms";
 import { formatProjectDate } from "@/features/projects/format";
+import { ImportAgendaPanel } from "@/features/projects/import-agenda";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/projects/")({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_auth/_app/projects/")({
       <h1 className="text-2xl font-semibold">{m.nav_projects()}</h1>
       <ClientOnly fallback={<Loader />}>
         <NewProjectForm />
+        <ImportAgendaPanel />
         <ProjectsTable />
       </ClientOnly>
     </div>

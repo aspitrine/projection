@@ -21,6 +21,7 @@
         "@effect/atom-react": "catalog:",
         "@projection/bible": "workspace:*",
         "@projection/identity": "workspace:*",
+        "@projection/imports": "workspace:*",
         "@projection/live": "workspace:*",
         "@projection/media": "workspace:*",
         "@projection/outputs": "workspace:*",
@@ -103,6 +104,23 @@
         "@effect/vitest": "catalog:",
         "@projection/config": "workspace:*",
         "@types/pg": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
+    "packages/imports": {
+      "name": "@projection/imports",
+      "version": "0.0.0",
+      "dependencies": {
+        "@projection/identity": "workspace:*",
+        "@projection/shared-kernel": "workspace:*",
+        "effect": "catalog:",
+        "fflate": "^0.8.2",
+      },
+      "devDependencies": {
+        "@effect/vitest": "catalog:",
+        "@projection/config": "workspace:*",
+        "@projection/songs": "workspace:*",
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
@@ -617,6 +635,8 @@
     "@projection/config": ["@projection/config@workspace:packages/config"],
 
     "@projection/identity": ["@projection/identity@workspace:packages/identity"],
+
+    "@projection/imports": ["@projection/imports@workspace:packages/imports"],
 
     "@projection/live": ["@projection/live@workspace:packages/live"],
 

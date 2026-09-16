@@ -29,7 +29,9 @@ export class Songs extends Context.Service<
   {
     list(search: string | null): Effect.Effect<ReadonlyArray<SongSummary>, never, CurrentActor>;
     get(id: SongId): Effect.Effect<Song, SongNotFound, CurrentActor>;
-    create(input: SongInput): Effect.Effect<Song, InvalidLyrics, CurrentActor>;
+    create(input: SongInput, externalId?: string): Effect.Effect<Song, InvalidLyrics, CurrentActor>;
+    /** Chant déjà importé depuis la même source, s'il existe. */
+    findByExternalId(externalId: string): Effect.Effect<Option.Option<Song>, never, CurrentActor>;
     update(
       id: SongId,
       input: SongInput,
@@ -56,7 +58,7 @@ export class Songs extends Context.Service<
         });
       });
 
-      const create = Effect.fn("Songs.create")(function* (input: SongInput) {
+      const create = Effect.fn("Songs.create")(function* (input: SongInput, externalId?: string) {
         const actor = yield* CurrentActor;
         const lyrics = yield* parseLyrics(input.lyrics);
         const now = yield* Clock.currentTimeMillis;
@@ -67,6 +69,7 @@ export class Songs extends Context.Service<
           authors: optionalText(input.authors),
           copyright: optionalText(input.copyright),
           ccli: optionalText(input.ccli),
+          externalId: externalId ?? null,
           sections: lyrics.sections,
           arrangement: lyrics.arrangement,
           createdAt: now,
@@ -155,7 +158,12 @@ export class Songs extends Context.Service<
         return new ImportReport(report);
       });
 
-      return Songs.of({ list, get, create, update, remove, importFiles });
+      const findByExternalId = Effect.fn("Songs.findByExternalId")(function* (externalId: string) {
+        const actor = yield* CurrentActor;
+        return yield* repository.findByExternalId(actor.organizationId, externalId);
+      });
+
+      return Songs.of({ list, get, create, update, remove, importFiles, findByExternalId });
     }),
   );
 }

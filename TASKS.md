@@ -243,10 +243,11 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 **Dépend de** : T1.1, T1.5
 
-- [ ] Parser tolérant (clés non quotées, retours à la ligne bruts) + tests sur `culte-synthetique.vpagd`.
-- [ ] Normalisation : retrait des accords, NFC, nettoyage, dédoublonnage des sections, ordre de passage.
-- [ ] Import `.vpagd` → chants en bibliothèque (dédoublonnés par `Guid`) + projet créé dans l'ordre de l'agenda.
-- [ ] Import de recueil (dès réception d'un échantillon).
+- [x] Contexte `imports` : lecteur tolérant (clés non quotées, retours à la ligne bruts, nombres) et lecture de l'archive ZIP, testés sur `culte-synthetique.vpagd`.
+- [x] Normalisation : accords retirés, accents recomposés (NFC), lignes nettoyées, sections sans texte ignorées, répétitions transformées en rejeu, ordre de passage conservé.
+- [x] Import `.vpagd` → chants créés en bibliothèque (dédoublonnés par `Guid`, champ `external_id`) puis projet dans l'ordre de l'agenda ; rapport importés / déjà connus / refusés.
+- [x] Panneau d'import sur la page Projets.
+- [ ] Import de recueil, et agendas contenant autre chose que des chants (Bible, image, vidéo) : échantillons encore nécessaires.
 
 ### T2.10 Imports OpenLyrics et ChordPro [songs]
 

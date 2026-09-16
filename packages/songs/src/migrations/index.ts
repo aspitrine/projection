@@ -23,5 +23,14 @@ export const songsMigrations = {
       `;
       yield* sql`CREATE INDEX song_organization_title_idx ON song (organization_id, lower(title))`;
     }),
+    "0002_add_song_external_id": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE song ADD COLUMN external_id text`;
+      yield* sql`
+        CREATE UNIQUE INDEX song_external_id_idx
+        ON song (organization_id, external_id)
+        WHERE external_id IS NOT NULL
+      `;
+    }),
   },
 };
