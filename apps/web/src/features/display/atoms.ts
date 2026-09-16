@@ -1,4 +1,5 @@
 import type { DisplayFrame } from "@projection/outputs/domain";
+import { withHeartbeatTimeout } from "@projection/shared-kernel";
 import { Effect, Schedule, Stream } from "effect";
 import { Atom } from "effect/unstable/reactivity";
 
@@ -11,7 +12,8 @@ export type DisplayEvent =
 /**
  * Flux d'un écran. Token invalide : on l'indique puis on réessaie lentement (le lien
  * peut avoir été régénéré puis rétabli). Coupure réseau : reconnexion rapide, et
- * l'état complet est renvoyé à chaque (ré)abonnement.
+ * l'état complet est renvoyé à chaque (ré)abonnement. Un flux qui ne bat plus est
+ * abandonné, faute de quoi l'écran garderait indéfiniment une image figée.
  */
 export const displayAtom = Atom.family((token: string) =>
   ApiClient.runtime.atom(
@@ -21,6 +23,7 @@ export const displayAtom = Atom.family((token: string) =>
         return client("DisplayWatch", { token });
       }),
     ).pipe(
+      withHeartbeatTimeout,
       Stream.map((display): DisplayEvent => ({ _tag: "Frame", display })),
       Stream.catchTag("InvalidDisplayToken", () =>
         Stream.make({ _tag: "InvalidToken" } as DisplayEvent).pipe(

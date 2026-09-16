@@ -1,4 +1,10 @@
-import { CurrentActor, type Forbidden, OutputId, requireRole } from "@projection/shared-kernel";
+import {
+  CurrentActor,
+  type Forbidden,
+  OutputId,
+  requireRole,
+  withHeartbeat,
+} from "@projection/shared-kernel";
 import type { SlideTheme } from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Stream } from "effect";
 
@@ -164,7 +170,7 @@ export class Outputs extends Context.Service<
               }
               const connected = output.value;
               const branding = yield* brandingSource.get(connected.organizationId);
-              return gateway.watch(connected.organizationId, trackOf(connected.type)).pipe(
+              const frames = gateway.watch(connected.organizationId, trackOf(connected.type)).pipe(
                 // Nom et thème sont relus à chaque image : une sortie renommée ou
                 // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
                 Stream.mapEffect((frame) =>
@@ -182,6 +188,8 @@ export class Outputs extends Context.Service<
                   ),
                 ),
               );
+              // Battement de cœur : un écran silencieux se réabonne plutôt que de rester figé.
+              return withHeartbeat(frames);
             }),
           ),
       });

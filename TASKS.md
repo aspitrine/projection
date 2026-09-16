@@ -146,7 +146,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] UI régie `/live` : choix du projet, éléments et grille des diapos, écran courant et diapo suivante, écran noir, arrêt ; raccourcis (flèches, Espace, Page préc./suiv., `B`) ; bouton « Diffuser » sur la page projet.
 - [x] Régies synchronisées ; projet modifié pendant le direct : relecture automatique en gardant la position.
 - [x] Tests unitaires (navigation, sessions, DeckSource) et fonctionnels API sur Postgres.
-- [ ] Limite connue : état en mémoire par instance (multi-instance en T3.3) ; pas de battement de cœur applicatif sur les flux.
+- [x] Battement de cœur des flux (`withHeartbeat`, 10 s) : la dernière image est réémise, et le client abandonne un flux muet depuis 35 s pour se réabonner. Une connexion morte en silence (bascule Wi-Fi/4G) ne laisse plus un écran figé.
+- [ ] Limite connue : état en mémoire par instance (multi-instance en T3.3).
 
 **🎯 Jalon MVP** : un culte complet projeté depuis le navigateur, piloté par deux opérateurs.
 

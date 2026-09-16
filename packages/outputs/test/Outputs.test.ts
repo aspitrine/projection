@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
+import { HEARTBEAT_INTERVAL } from "@projection/shared-kernel";
 import { Effect, Layer, Queue, Stream } from "effect";
+import { TestClock } from "effect/testing";
 
 import { Outputs } from "../src/application/Outputs";
 import { OutputRepository } from "../src/application/ports";
@@ -79,6 +81,27 @@ describe("Outputs", () => {
       expect(yield* Queue.take(screen)).toBe("vide");
       yield* outputs.identify(output.id).pipe(asActor("org-a"));
       expect(yield* Queue.take(screen)).toBe("Salle");
+    }).pipe(Effect.provide(TestLayer)),
+  );
+
+  it.effect("réémet l'image courante à chaque battement de cœur", () =>
+    Effect.gen(function* () {
+      const outputs = yield* Outputs;
+      const [output] = yield* outputs.list.pipe(asActor("org-a"));
+      if (output === undefined) throw new Error("sortie manquante");
+
+      const received = yield* Queue.unbounded<number>();
+      yield* outputs.watchDisplay(output.token).pipe(
+        Stream.runForEach((display) => Queue.offer(received, display.frame.version)),
+        Effect.forkChild,
+      );
+
+      expect(yield* Queue.take(received)).toBe(0);
+      // Sans changement d'image, le flux continue de parler : l'écran sait qu'il est vivant.
+      yield* TestClock.adjust(HEARTBEAT_INTERVAL);
+      expect(yield* Queue.take(received)).toBe(0);
+      yield* TestClock.adjust(HEARTBEAT_INTERVAL);
+      expect(yield* Queue.take(received)).toBe(0);
     }).pipe(Effect.provide(TestLayer)),
   );
 

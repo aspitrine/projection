@@ -1,14 +1,20 @@
+import { withHeartbeatTimeout } from "@projection/shared-kernel";
 import { Effect, Schedule, Stream } from "effect";
 
 import { ApiClient } from "@/api/client";
 
-/** État de la régie ; réabonnement automatique après coupure (état complet renvoyé). */
+/**
+ * État de la régie ; réabonnement automatique après coupure (état complet renvoyé).
+ * Un flux qui ne bat plus (connexion morte en silence) est abandonné puis repris.
+ */
 export const liveAtom = ApiClient.runtime.atom(
-  Stream.unwrap(
-    Effect.gen(function* () {
-      const client = yield* ApiClient;
-      return client("LiveWatch", undefined);
-    }),
+  withHeartbeatTimeout(
+    Stream.unwrap(
+      Effect.gen(function* () {
+        const client = yield* ApiClient;
+        return client("LiveWatch", undefined);
+      }),
+    ),
   ).pipe(Stream.retry(Schedule.spaced("1 second")), Stream.repeat(Schedule.spaced("1 second"))),
 );
 

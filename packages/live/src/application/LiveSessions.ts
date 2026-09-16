@@ -3,6 +3,7 @@ import {
   type OrganizationId,
   type ProjectId,
   type ProjectItemId,
+  withHeartbeat,
 } from "@projection/shared-kernel";
 import {
   type Cover,
@@ -347,7 +348,9 @@ export class LiveSessions extends Context.Service<
         );
 
       return LiveSessions.of({
-        watch: Stream.unwrap(Effect.map(stateFor, (state) => SubscriptionRef.changes(state.ref))),
+        watch: withHeartbeat(
+          Stream.unwrap(Effect.map(stateFor, (state) => SubscriptionRef.changes(state.ref))),
+        ),
 
         start: (projectId) =>
           command((current) =>
