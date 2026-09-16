@@ -31,7 +31,7 @@ bun run dev
 
 Les migrations (better-auth et contextes) s'appliquent au premier appel de l'API. Ouvrir [http://localhost:3001](http://localhost:3001).
 
-Le service `postgres` de `docker-compose.yml` sert au déploiement auto-hébergé (`bun run docker:up`). En local il reste utilisable via `bun run db:start` (`POSTGRES_PORT` pour changer le port hôte).
+Le service `postgres` de `docker-compose.yml` sert au déploiement auto-hébergé (`bun run docker:up`) ; voir [docs/deploiement.md](docs/deploiement.md) pour le reverse proxy (les flux temps réel exigent un proxy sans tampon). En local il reste utilisable via `bun run db:start` (`POSTGRES_PORT` pour changer le port hôte).
 
 ## Tests
 

@@ -36,7 +36,7 @@ Objectif < 200 ms largement atteint.
 - ➕ Aucune infrastructure supplémentaire : même route `/api/rpc`, même sérialisation, fonctionne derrière n'importe quel reverse proxy HTTP.
 - ➕ Diffuser l'état complet rend le client trivial et robuste (pas de deltas perdus).
 - ➖ Un flux inactif est coupé au bout de 6 min (origine non isolée : timeout du serveur Node, du client fetch Bun ou du port-forwarding Docker). Sans impact grâce au réabonnement, mais **T1.8** ajoutera un battement de cœur applicatif (ré-émission périodique de l'état) pour détecter plus tôt une connexion morte côté sortie.
-- ➖ Chaque abonnement garde une requête HTTP ouverte : prévoir la désactivation du buffering sur les reverse proxies (`X-Accel-Buffering: no` / `proxy_buffering off` pour nginx) dans la doc de déploiement.
+- ➖ Chaque abonnement garde une requête HTTP ouverte : la route `/api/rpc` renvoie `X-Accel-Buffering: no` et `Cache-Control: no-cache, no-store, no-transform`, et [docs/deploiement.md](../deploiement.md) donne la configuration des reverse proxies (`proxy_buffering off` pour nginx).
 - ➖ États complets : acceptable tant que l'état live reste petit (quelques Ko). Si l'état grossit, émettre un état « vue » par sortie plutôt que des deltas.
 - ➖ État en mémoire dans le spike : perdu au redémarrage. **T1.8** persiste l'état en Postgres ; **T3.3** diffuse entre instances via `LISTEN/NOTIFY`.
 - Repli WebSocket (`RpcServer` protocole socket) inutile à ce stade ; envisageable si un proxy cible ne supporte pas les réponses HTTP longues.
