@@ -37,6 +37,16 @@ export class Passage extends Schema.Class<Passage>("Passage")({
   verses: Schema.Array(Verse),
 }) {}
 
+/** Verset trouvé par une recherche par contenu. */
+export class ScriptureMatch extends Schema.Class<ScriptureMatch>("ScriptureMatch")({
+  translationId: Schema.String,
+  /** Référence formatée : « Jean 3.16 ». */
+  label: Schema.String,
+  verse: Verse,
+  /** Texte du verset avec les mots trouvés encadrés. */
+  excerpt: Schema.String,
+}) {}
+
 export class InvalidReference extends Schema.TaggedError<InvalidReference>()("InvalidReference", {
   reason: Schema.Literals(["Empty", "UnknownBook", "Malformed", "InvalidRange"]),
   input: Schema.String,

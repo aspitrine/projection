@@ -5,11 +5,15 @@ import {
   Passage,
   PassageNotFound,
   type Translation,
+  type ScriptureMatch,
   UnknownTranslation,
   formatReference,
   parseReference,
 } from "../domain/Scripture";
 import { ScriptureRepository } from "./ScriptureRepository";
+
+/** Assez de résultats pour choisir, assez peu pour rester lisible. */
+export const DEFAULT_SEARCH_LIMIT = 50;
 
 export class Bible extends Context.Service<
   Bible,
@@ -19,6 +23,12 @@ export class Bible extends Context.Service<
       translationId: string,
       reference: string,
     ): Effect.Effect<Passage, InvalidReference | PassageNotFound | UnknownTranslation>;
+    /** Recherche par contenu dans une traduction ; deux caractères au moins. */
+    search(
+      translationId: string,
+      query: string,
+      limit?: number,
+    ): Effect.Effect<ReadonlyArray<ScriptureMatch>, UnknownTranslation>;
   }
 >()("@projection/bible/Bible") {
   static readonly layer = Layer.effect(
@@ -42,7 +52,21 @@ export class Bible extends Context.Service<
         return new Passage({ translation, reference, label, verses });
       });
 
-      return Bible.of({ translations: repository.translations, lookup });
+      const search = Effect.fn("Bible.search")(function* (
+        translationId: string,
+        query: string,
+        limit = DEFAULT_SEARCH_LIMIT,
+      ) {
+        const translations = yield* repository.translations;
+        if (!translations.some((candidate) => candidate.id === translationId)) {
+          return yield* new UnknownTranslation({ translationId });
+        }
+        const trimmed = query.trim();
+        if (trimmed.length < 2) return [];
+        return yield* repository.search(translationId, trimmed, limit);
+      });
+
+      return Bible.of({ translations: repository.translations, lookup, search });
     }),
   );
 }

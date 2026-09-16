@@ -137,6 +137,9 @@ function SongsTable({ search }: { search: string }) {
                 >
                   {song.title}
                 </Link>
+                {song.excerpt !== null && (
+                  <p className="text-muted-foreground mt-1 text-xs">{song.excerpt}</p>
+                )}
               </td>
               <td className="text-muted-foreground hidden p-3 sm:table-cell">{song.authors}</td>
               <td className="text-muted-foreground hidden p-3 md:table-cell">

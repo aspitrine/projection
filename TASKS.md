@@ -259,11 +259,14 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] UI d'import multi-fichiers avec rapport sur la page Chants (réutilisable pour T2.9).
 - [x] OpenLyrics : parser (accords `<chord/>` retirés, `<br/>`, noms de sections `v1`/`c`/`b`…, `verseOrder`) branché sur `SongsImport`, avec choix du format dans le panneau d'import.
 
-### T2.11 Recherche full-text [songs, bible]
+### T2.11 Recherche full-text [songs, bible] ✅
 
 **Dépend de** : T1.1, T1.3
 
-- [ ] `tsvector` + `unaccent` (config `french`) sur paroles et versets ; recherche unifiée.
+- [x] Index `tsvector` (configuration `french`) sur les chants (titre, auteurs, paroles) et sur les versets, accents repliés par `unaccent` enveloppé dans une fonction immuable ; création sérialisée par verrou consultatif.
+- [x] Recherche des chants par contenu (liste et page Chants) et `BibleSearch` par traduction, dans l'ordre canonique.
+- [x] Page « Recherche » unifiée : chants et versets, extraits centrés sur les mots trouvés et surlignés, accents conservés même quand la recherche est écrite sans.
+- [x] Tests unitaires (services, extraits) et fonctionnels sur Postgres.
 
 ### T2.12 Traductions bibliques libres + import [bible]
 

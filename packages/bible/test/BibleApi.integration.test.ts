@@ -109,4 +109,25 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API bible (Postgres)", () => {
       ).toMatchObject({ _tag: "UnknownTranslation" });
     }).pipe(Effect.provide(ApiLive)),
   );
+
+  it.effect("recherche par contenu : sans accents, ordre canonique, extrait surligné", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(BibleRpcs);
+
+      // « aimé » cherché sans accent, et « eternelle » sans accent non plus.
+      const found = yield* client.BibleSearch({ translationId: "test-lsg", query: "aime" });
+      expect(found.map((match) => match.label)).toEqual(["Jean 3.16"]);
+      expect(found[0]?.excerpt).toContain("«aimé»");
+
+      const many = yield* client.BibleSearch({ translationId: "test-lsg", query: "monde" });
+      // Ordre canonique : Jean 3.16 avant 3.17.
+      expect(many.map((match) => match.label)).toEqual(["Jean 3.16", "Jean 3.17"]);
+
+      expect(yield* client.BibleSearch({ translationId: "test-lsg", query: "zzz" })).toEqual([]);
+      const unknown = yield* client
+        .BibleSearch({ translationId: "inconnue", query: "monde" })
+        .pipe(Effect.flip);
+      expect(unknown._tag).toBe("UnknownTranslation");
+    }).pipe(Effect.provide(ApiLive)),
+  );
 });

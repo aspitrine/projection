@@ -155,3 +155,35 @@ describe("Import de fichiers ChordPro", () => {
     }).pipe(Effect.provide(TestLayer)),
   );
 });
+
+describe("Recherche de chants", () => {
+  it.effect("cherche dans le titre et les paroles, sans casse ni accents, avec extrait", () =>
+    Effect.gen(function* () {
+      const songs = yield* Songs;
+      yield* songs.create(input()).pipe(inOrganization("org-a"));
+      yield* songs
+        .create(
+          input({
+            title: "Grâce infinie",
+            lyrics: "[Couplet 1]\nQuelle grâce merveilleuse\nElle sauve un pécheur",
+          }),
+        )
+        .pipe(inOrganization("org-a"));
+
+      // Mot présent seulement dans les paroles, écrit sans accent.
+      const found = yield* songs.list("pecheur").pipe(inOrganization("org-a"));
+      expect(found.map((song) => song.title)).toEqual(["Grâce infinie"]);
+      expect(found[0]?.excerpt).toContain("pécheur");
+
+      // Recherche par titre : l'extrait n'est pas obligatoire.
+      expect(
+        (yield* songs.list("il est").pipe(inOrganization("org-a"))).map((s) => s.title),
+      ).toEqual(["Il est bon"]);
+      // Sans recherche, pas d'extrait.
+      const all = yield* songs.list(null).pipe(inOrganization("org-a"));
+      expect(all.every((song) => song.excerpt === null)).toBe(true);
+      // Une autre organisation ne voit rien.
+      expect(yield* songs.list("pecheur").pipe(inOrganization("org-b"))).toEqual([]);
+    }).pipe(Effect.provide(TestLayer)),
+  );
+});

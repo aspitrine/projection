@@ -1,5 +1,5 @@
 import { PgClient } from "@effect/sql-pg";
-import { OrganizationId, SongId } from "@projection/shared-kernel";
+import { OrganizationId, SongId, excerptAround } from "@projection/shared-kernel";
 import { Effect, Layer, Schema } from "effect";
 import { SqlSchema } from "effect/unstable/sql";
 
@@ -34,16 +34,32 @@ export const SqlSongRepository = Layer.effect(
         search: Schema.NullOr(Schema.String),
       }),
       Result: SongSummary,
+      // Recherche plein texte (français, sans accents) sur titre, auteurs et paroles ;
+      // l'extrait montre le passage trouvé. Sans recherche, tri alphabétique.
       execute: ({ organizationId, search }) => sql`
         SELECT
           id::text AS "id",
           title,
           authors,
+          ${search === null ? sql`NULL::text` : sql`search_source`} AS "excerpt",
           (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
         FROM song
         WHERE organization_id = ${organizationId}
-          ${search === null ? sql`` : sql`AND title ILIKE ${`%${search}%`}`}
-        ORDER BY lower(title), id
+          ${
+            search === null
+              ? sql``
+              : sql`AND (
+                  search @@ websearch_to_tsquery('french', projection_unaccent(${search}))
+                  OR projection_unaccent(title) ILIKE projection_unaccent(${`%${search}%`})
+                )`
+          }
+        ORDER BY
+          ${
+            search === null
+              ? sql``
+              : sql`ts_rank(search, websearch_to_tsquery('french', projection_unaccent(${search}))) DESC,`
+          }
+          lower(title), id
       `,
     });
 
@@ -65,12 +81,19 @@ export const SqlSongRepository = Layer.effect(
       `,
     });
 
+    /** Texte indexé : titre, auteurs et paroles à plat. */
+    const searchSource = (song: Song) =>
+      [song.title, song.authors ?? "", ...song.sections.flatMap((section) => section.lines)]
+        .join(" ")
+        .trim();
+
     const write = (song: Song) => ({
       title: song.title,
       authors: song.authors,
       copyright: song.copyright,
       ccli: song.ccli,
       sections: sql.json(encodeSections(song.sections)),
+      searchSource: searchSource(song),
       arrangement: sql.json(song.arrangement),
       updatedAt: new Date(song.updatedAt),
     });
@@ -78,6 +101,19 @@ export const SqlSongRepository = Layer.effect(
     return SongRepository.of({
       list: (organizationId, search) =>
         list({ organizationId, search }).pipe(
+          // L'extrait est taillé côté application : le texte garde ses accents même
+          // quand la recherche est écrite sans (Postgres, lui, compare sans accents).
+          Effect.map((summaries) =>
+            search === null
+              ? summaries
+              : summaries.map(
+                  (summary) =>
+                    new SongSummary({
+                      ...summary,
+                      excerpt: excerptAround(summary.excerpt ?? "", search),
+                    }),
+                ),
+          ),
           Effect.orDie,
           Effect.withSpan("SqlSongRepository.list"),
         ),
@@ -98,10 +134,10 @@ export const SqlSongRepository = Layer.effect(
         const values = write(song);
         return sql`
           INSERT INTO song (id, organization_id, title, authors, copyright, ccli, external_id,
-            sections, arrangement, created_at, updated_at)
+            sections, arrangement, search_source, created_at, updated_at)
           VALUES (${song.id}::uuid, ${song.organizationId}, ${values.title}, ${values.authors}, ${values.copyright},
                   ${values.ccli}, ${song.externalId}, ${values.sections}, ${values.arrangement},
-                  ${new Date(song.createdAt)}, ${values.updatedAt})
+                  ${values.searchSource}, ${new Date(song.createdAt)}, ${values.updatedAt})
         `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlSongRepository.insert"));
       },
 
@@ -115,6 +151,7 @@ export const SqlSongRepository = Layer.effect(
             ccli = ${values.ccli},
             sections = ${values.sections},
             arrangement = ${values.arrangement},
+            search_source = ${values.searchSource},
             updated_at = ${values.updatedAt}
           WHERE id = ${song.id}::uuid AND organization_id = ${song.organizationId}
         `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlSongRepository.update"));

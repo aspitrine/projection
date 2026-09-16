@@ -60,3 +60,45 @@ describe("Bible.lookup", () => {
     }).pipe(Effect.provide(TestLayer)),
   );
 });
+
+describe("Bible.search", () => {
+  const withText = (chapter: number, number: number, text: string) =>
+    new Verse({ book: "JHN", chapter, verse: number, text });
+
+  const SearchLayer = Bible.layer.pipe(
+    Layer.provide(
+      ScriptureRepository.layerMemory([lsg], {
+        lsg1910: [
+          withText(3, 16, "Car Dieu a tant aimé le monde"),
+          withText(3, 17, "Dieu n'a pas envoyé son Fils pour juger le monde"),
+          withText(4, 1, "Le Seigneur sut que les pharisiens"),
+        ],
+      }),
+    ),
+  );
+
+  it.effect("cherche sans casse ni accents et rend la référence de chaque verset", () =>
+    Effect.gen(function* () {
+      const bible = yield* Bible;
+      const found = yield* bible.search("lsg1910", "AIME");
+      expect(found.map((match) => match.label)).toEqual(["Jean 3.16"]);
+      expect(found[0]?.verse.text).toContain("aimé le monde");
+
+      expect((yield* bible.search("lsg1910", "monde")).map((m) => m.label)).toEqual([
+        "Jean 3.16",
+        "Jean 3.17",
+      ]);
+      // La limite borne le nombre de résultats rendus.
+      expect(yield* bible.search("lsg1910", "monde", 1)).toHaveLength(1);
+    }).pipe(Effect.provide(SearchLayer)),
+  );
+
+  it.effect("ignore une recherche trop courte et refuse une traduction inconnue", () =>
+    Effect.gen(function* () {
+      const bible = yield* Bible;
+      expect(yield* bible.search("lsg1910", " a ")).toEqual([]);
+      const unknown = yield* bible.search("inconnue", "monde").pipe(Effect.flip);
+      expect(unknown._tag).toBe("UnknownTranslation");
+    }).pipe(Effect.provide(SearchLayer)),
+  );
+});

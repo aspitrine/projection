@@ -8,6 +8,7 @@ import {
   Music,
   Presentation,
   Radio,
+  Search,
   Users,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ export interface NavigationItem {
     | "/library/bible"
     | "/library/slides"
     | "/library/media"
+    | "/library/search"
     | "/live"
     | "/outputs"
     | "/settings/members";
@@ -50,6 +52,7 @@ export const navigation: ReadonlyArray<NavigationGroup> = [
       { to: "/library/bible", label: m.nav_bible, icon: BookOpen },
       { to: "/library/slides", label: m.nav_slides, icon: Presentation },
       { to: "/library/media", label: m.nav_media, icon: ImageIcon },
+      { to: "/library/search", label: m.nav_search, icon: Search },
     ],
   },
   {

@@ -412,5 +412,14 @@
   "songs_import_format_chordpro": "ChordPro",
   "songs_import_format_openlyrics": "OpenLyrics",
   "songs_import_hint_chordpro": "Fichiers .cho, .chordpro, .chopro, .crd ou .pro, {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré.",
-  "songs_import_hint_openlyrics": "Fichiers .xml OpenLyrics (OpenLP, Eliakim…), {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré."
+  "songs_import_hint_openlyrics": "Fichiers .xml OpenLyrics (OpenLP, Eliakim…), {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré.",
+  "nav_search": "Recherche",
+  "search_intro": "Cherchez dans les paroles des chants et dans le texte biblique, sans vous soucier des accents.",
+  "search_query": "Rechercher",
+  "search_placeholder": "Un mot, une expression…",
+  "search_hint": "Saisissez au moins deux caractères.",
+  "search_songs": "Chants ({count})",
+  "search_verses": "Versets ({count})",
+  "search_no_song": "Aucun chant ne contient ces mots.",
+  "search_no_verse": "Aucun verset ne contient ces mots."
 }

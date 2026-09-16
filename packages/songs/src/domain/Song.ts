@@ -35,6 +35,8 @@ export class SongSummary extends Schema.Class<SongSummary>("SongSummary")({
   id: SongId,
   title: Schema.String,
   authors: OptionalText,
+  /** Extrait des paroles autour des mots cherchés, ou `null` hors recherche. */
+  excerpt: OptionalText,
   updatedAt: Schema.Number,
 }) {}
 

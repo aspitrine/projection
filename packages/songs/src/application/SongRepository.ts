@@ -1,4 +1,9 @@
-import type { OrganizationId, SongId } from "@projection/shared-kernel";
+import {
+  type OrganizationId,
+  type SongId,
+  excerptAround,
+  matchesSearch,
+} from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref } from "effect";
 
 import { Song, SongSummary } from "../domain/Song";
@@ -27,11 +32,12 @@ export class SongRepository extends Context.Service<
     Effect.gen(function* () {
       const store = yield* Ref.make(new Map<SongId, Song>());
 
-      const normalize = (value: string) =>
-        value
-          .normalize("NFD")
-          .replace(/[̀-ͯ]/g, "")
-          .toLowerCase();
+      const plainLyrics = (song: Song) =>
+        song.sections.flatMap((section) => section.lines).join(" ");
+
+      /** Le titre, les auteurs et les paroles sont cherchés, sans casse ni accents. */
+      const matches = (song: Song, search: string) =>
+        matchesSearch(`${song.title} ${song.authors ?? ""} ${plainLyrics(song)}`, search);
 
       return SongRepository.of({
         list: (organizationId, search) =>
@@ -39,9 +45,7 @@ export class SongRepository extends Context.Service<
             Effect.map((songs) =>
               [...songs.values()]
                 .filter((song) => song.organizationId === organizationId)
-                .filter(
-                  (song) => search === null || normalize(song.title).includes(normalize(search)),
-                )
+                .filter((song) => search === null || matches(song, search))
                 .sort((a, b) => a.title.localeCompare(b.title))
                 .map(
                   (song) =>
@@ -49,6 +53,7 @@ export class SongRepository extends Context.Service<
                       id: song.id,
                       title: song.title,
                       authors: song.authors,
+                      excerpt: search === null ? null : excerptAround(plainLyrics(song), search),
                       updatedAt: song.updatedAt,
                     }),
                 ),

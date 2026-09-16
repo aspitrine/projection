@@ -10,6 +10,7 @@ export const BibleHandlersLive = BibleRpcs.toLayer(
     return {
       BibleTranslations: () => bible.translations,
       BibleLookup: ({ translationId, reference }) => bible.lookup(translationId, reference),
+      BibleSearch: ({ translationId, query }) => bible.search(translationId, query),
     };
   }),
 );

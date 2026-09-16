@@ -1,6 +1,9 @@
+import { excerptAround, matchesSearch } from "@projection/shared-kernel";
 import { Context, Effect, Layer } from "effect";
 
-import type { ScriptureReference, Translation, Verse } from "../domain/Scripture";
+import { verseLabel } from "../domain/Scripture";
+
+import type { ScriptureMatch, ScriptureReference, Translation, Verse } from "../domain/Scripture";
 
 /** Port de lecture des textes bibliques. */
 export class ScriptureRepository extends Context.Service<
@@ -11,6 +14,12 @@ export class ScriptureRepository extends Context.Service<
       translationId: string,
       reference: ScriptureReference,
     ): Effect.Effect<ReadonlyArray<Verse>>;
+    /** Recherche par contenu, sans casse ni accents. */
+    search(
+      translationId: string,
+      query: string,
+      limit: number,
+    ): Effect.Effect<ReadonlyArray<ScriptureMatch>>;
   }
 >()("@projection/bible/ScriptureRepository") {
   /** Implémentation en mémoire pour les tests d'application. */
@@ -22,6 +31,18 @@ export class ScriptureRepository extends Context.Service<
       ScriptureRepository,
       ScriptureRepository.of({
         translations: Effect.succeed(translations),
+        search: (translationId, query, limit) =>
+          Effect.succeed(
+            (versesByTranslation[translationId] ?? [])
+              .filter((verse) => matchesSearch(verse.text, query))
+              .slice(0, limit)
+              .map((verse) => ({
+                translationId,
+                label: verseLabel(verse),
+                verse,
+                excerpt: excerptAround(verse.text, query, 200) ?? verse.text,
+              })),
+          ),
         verses: (translationId, { book, start, end }) =>
           Effect.succeed(
             (versesByTranslation[translationId] ?? [])

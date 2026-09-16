@@ -196,4 +196,33 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API songs (Postgres)", () => {
       expect(Exit.isFailure(tooMany)).toBe(true);
     }).pipe(Effect.provide(ApiLive)),
   );
+
+  it.effect("recherche plein texte : paroles, sans accents, avec extrait", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(SongsRpcs);
+      const organization = { headers: { "x-test-organization": "org-search" } };
+      yield* client.SongsCreate(
+        {
+          title: "Grâce infinie",
+          authors: null,
+          copyright: null,
+          ccli: null,
+          lyrics: "[Couplet 1]\nQuelle grâce merveilleuse\nElle sauve un pécheur perdu",
+        },
+        organization,
+      );
+
+      // Mot des paroles, écrit sans accent : l'index Postgres le trouve quand même.
+      const found = yield* client.SongsList({ search: "pecheur" }, organization);
+      expect(found.map((song) => song.title)).toEqual(["Grâce infinie"]);
+      expect(found[0]?.excerpt).toContain("«pécheur»");
+
+      // Recherche à deux mots, et titre accentué trouvé sans accent.
+      expect(yield* client.SongsList({ search: "grace merveilleuse" }, organization)).toHaveLength(
+        1,
+      );
+      expect(yield* client.SongsList({ search: "inconnu" }, organization)).toEqual([]);
+      expect((yield* client.SongsList({ search: null }, organization))[0]?.excerpt).toBeNull();
+    }).pipe(Effect.provide(ApiLive)),
+  );
 });

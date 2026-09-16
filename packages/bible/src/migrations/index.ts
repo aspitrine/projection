@@ -28,5 +28,23 @@ export const bibleMigrations = {
         )
       `;
     }),
+    "0002_verse_search": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // `unaccent` est une extension « de confiance » : le propriétaire de la base peut
+      // l'installer. Elle est STABLE, donc on l'enveloppe pour pouvoir indexer.
+      // Le verrou sérialise deux contextes qui migrent en même temps sur une base neuve.
+      yield* sql`SELECT pg_advisory_xact_lock(hashtext('projection:search-setup'))`;
+      yield* sql`CREATE EXTENSION IF NOT EXISTS unaccent`;
+      yield* sql`
+        CREATE OR REPLACE FUNCTION projection_unaccent(text) RETURNS text
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+        AS $$ SELECT public.unaccent('public.unaccent', $1) $$
+      `;
+      yield* sql`
+        ALTER TABLE bible_verse ADD COLUMN search tsvector
+        GENERATED ALWAYS AS (to_tsvector('french', projection_unaccent(text))) STORED
+      `;
+      yield* sql`CREATE INDEX bible_verse_search_idx ON bible_verse USING gin (search)`;
+    }),
   },
 };
