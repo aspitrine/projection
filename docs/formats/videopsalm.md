@@ -1,6 +1,8 @@
 # Format VideoPsalm
 
-Analyse faite à partir d'un fichier réel `Culte.vpagd` (agenda de 10 chants, `Version.json` = `2`). Les points marqués **(hypothèse)** doivent être confirmés avec d'autres fichiers.
+Analyse faite à partir de deux fichiers réels : `Culte.vpagd` (agenda de 10 chants) et un second
+agenda de 14 chants (`Version.json` = `2` dans les deux cas). Les points marqués **(hypothèse)**
+doivent être confirmés avec d'autres fichiers.
 
 ## Conteneur `.vpagd` (agenda / culte)
 
@@ -36,6 +38,7 @@ Seuls des chants sont présents dans l'échantillon. Les autres types d'élémen
 | `Guid`      | `"6f34eb36d9308b62d84c31"`              | identifiant externe (dédoublonnage à l'import)       |
 | `Text`      | `"Car ta bonté"`                        | titre                                                |
 | `Author`    | `"Paul Wilbur"`, `" Inconnu - Inconnu"` | auteurs (trim ; `Inconnu` → vide)                    |
+| `Composer`  | `"NV Junior"`                           | auteurs, quand `Author` est absent                   |
 | `Copyright` | `"© 2006 …"`                            | copyright                                            |
 | `Key`       | `"Em"`                                  | tonalité                                             |
 | `Reference` | `"JEM669"`, `"!JEM910"`                 | référence recueil (préfixe `!` à conserver tel quel) |
@@ -44,14 +47,20 @@ Seuls des chants sont présents dans l'échantillon. Les autres types d'élémen
 
 ### `Tag` des sections
 
-| Tag    | Signification                                  | Indice                              |
-| ------ | ---------------------------------------------- | ----------------------------------- |
-| absent | couplet                                        | numérotés dans l'ordre d'apparition |
-| `1`    | refrain                                        | observé répété plusieurs fois       |
-| `2`    | pré-refrain **(hypothèse)**                    | avant un refrain (« Majesté »)      |
-| `3`    | pont **(hypothèse)**                           | section distincte en fin de chant   |
-| `8`    | intro / interlude instrumental **(hypothèse)** | accords seuls                       |
-| `9`    | fin **(hypothèse)**                            | accords seuls, dernière section     |
+| Tag    | Signification                                  | Indice                                            |
+| ------ | ---------------------------------------------- | ------------------------------------------------- |
+| absent | couplet                                        | numérotés dans l'ordre d'apparition               |
+| `1`    | refrain                                        | observé répété plusieurs fois                     |
+| `2`    | pré-refrain **(hypothèse)**                    | avant un refrain (« Majesté »)                    |
+| `3`    | pont **(hypothèse)**                           | section distincte en fin de chant                 |
+| `5`    | intro instrumentale **(hypothèse)**            | accords seuls, en tête de chant (2e agenda)       |
+| `6`    | tag / phrase finale **(hypothèse)**            | courte phrase répétée en fin de chant (2e agenda) |
+| `8`    | intro / interlude instrumental **(hypothèse)** | accords seuls                                     |
+| `9`    | fin **(hypothèse)**                            | accords seuls, dernière section                   |
+
+Un même tag peut couvrir **plusieurs textes différents** dans un chant (deux ponts, deux refrains).
+À l'import, les homonymes sont numérotés (« Refrain 2 », « Pont 2 »), sinon la bibliothèque
+refuserait deux sections de même nom au contenu différent.
 
 ### Texte des sections
 
@@ -74,6 +83,16 @@ Le texte brut avec accords est conservé en source (future fonction grille d'acc
 
 - `packages/songs/test/fixtures/videopsalm/culte-synthetique.vpagd` : fichier **synthétique** (paroles originales, libres) reproduisant toutes les particularités ci-dessus. Versionné.
 - `packages/songs/test/fixtures/videopsalm/local/` : fichiers réels (paroles sous droits). **Non versionné** (`.gitignore`).
+
+## Observations du second agenda
+
+- Deux éléments peuvent porter **le même `Guid`** : même chant dans deux tonalités (`Key` différente).
+  À l'import, le chant n'est créé qu'une fois et le projet le reprend deux fois, dans l'ordre.
+  La tonalité n'est pas encore conservée.
+- Une clé littérale `null` apparaît (`null:"Holy Forever"`, titre d'origine) : le lecteur tolérant
+  l'accepte comme une clé ordinaire.
+- Les chaînes contiennent des guillemets échappés (`\"Tu es saint\"`).
+- L'agenda ne contenait, là encore, **que des chants** : aucun élément Bible, texte ou image.
 
 ## Échantillons encore nécessaires
 

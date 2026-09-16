@@ -3,6 +3,8 @@ import { parseLyrics } from "@projection/songs/domain";
 import { Effect } from "effect";
 import { readFileSync } from "node:fs";
 
+import { zipSync } from "fflate";
+
 import { cleanVerseText, parseVideoPsalmAgenda } from "../src/domain/VideoPsalm";
 import { parseVideoPsalmValue } from "../src/domain/VideoPsalmValue";
 
@@ -79,4 +81,52 @@ describe("parseVideoPsalmAgenda", () => {
     const notZip = parseVideoPsalmAgenda(new TextEncoder().encode("bonjour"));
     expect("reason" in notZip && notZip.reason).toBe("NotAnArchive");
   });
+
+  it.effect("numérote les sections homonymes, lit Composer et les tags 5 et 6", () =>
+    Effect.gen(function* () {
+      const song = [
+        '{Guid:"g1",Text:"Deux refrains",Composer:"NV Junior",Verses:[',
+        '{Tag:5,Text:"[G][D]"}, ',
+        '{Text:"[G]Couplet un"}, ',
+        '{Tag:1,Text:"Premier refrain"}, ',
+        '{Tag:1,Text:"Premier refrain"}, ',
+        '{Tag:1,Text:"Second refrain"}, ',
+        '{Tag:3,Text:"Premier pont"}, ',
+        '{Tag:3,Text:"Second pont"}, ',
+        '{Tag:6,Text:"Phrase finale"}]}',
+      ].join("");
+      const archive = zipSync({
+        "Version.json": new TextEncoder().encode("2"),
+        "Song_0.json": new TextEncoder().encode(song),
+      });
+
+      const agenda = parseVideoPsalmAgenda(archive);
+      if ("_tag" in agenda) throw new Error(`import refusé : ${agenda.reason}`);
+      const imported = agenda.songs[0];
+      expect(imported?.authors).toBe("NV Junior");
+      expect(imported?.lyrics).toBe(
+        [
+          "[Couplet 1]\nCouplet un",
+          "[Refrain]\nPremier refrain",
+          "[Refrain]",
+          "[Refrain 2]\nSecond refrain",
+          "[Pont]\nPremier pont",
+          "[Pont 2]\nSecond pont",
+          "[Tag]\nPhrase finale",
+        ].join("\n\n"),
+      );
+
+      // Deux sections de même tag mais de texte différent restent acceptées.
+      const parsed = yield* parseLyrics(imported?.lyrics ?? "");
+      expect(parsed.arrangement).toEqual([
+        "verse-1",
+        "chorus",
+        "chorus",
+        "chorus-2",
+        "bridge",
+        "bridge-2",
+        "tag",
+      ]);
+    }),
+  );
 });

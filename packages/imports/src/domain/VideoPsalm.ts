@@ -41,6 +41,8 @@ const tagNames: Record<number, string> = {
   1: "Refrain",
   2: "Pré-refrain",
   3: "Pont",
+  5: "Intro",
+  6: "Tag",
   8: "Intro",
   9: "Fin",
 };
@@ -88,6 +90,11 @@ const toLyrics = (verses: ReadonlyArray<VideoPsalmValue>): string => {
   const order: Array<string> = [];
   let verseNumber = 0;
 
+  // Un même tag peut couvrir plusieurs textes (deux ponts, deux refrains) :
+  // les suivants sont numérotés, sinon la bibliothèque refuserait des sections
+  // homonymes au contenu différent.
+  const usedLabels = new Map<string, number>();
+
   for (const verse of verses) {
     const record = asRecord(verse);
     if (record === null) continue;
@@ -96,8 +103,7 @@ const toLyrics = (verses: ReadonlyArray<VideoPsalmValue>): string => {
 
     const tag = asNumber(record.Tag);
     const key = `${tag ?? "verse"}|${lines.join("\n")}`;
-    const existing = sections.get(key);
-    if (existing !== undefined) {
+    if (sections.has(key)) {
       order.push(key);
       continue;
     }
@@ -107,7 +113,10 @@ const toLyrics = (verses: ReadonlyArray<VideoPsalmValue>): string => {
       verseNumber += 1;
       label = `Couplet ${verseNumber}`;
     } else {
-      label = tagNames[tag] ?? `Section ${tag}`;
+      const base = tagNames[tag] ?? `Section ${tag}`;
+      const seen = (usedLabels.get(base) ?? 0) + 1;
+      usedLabels.set(base, seen);
+      label = seen === 1 ? base : `${base} ${seen}`;
     }
     sections.set(key, { label, lines });
     order.push(key);
@@ -137,7 +146,7 @@ const toSong = (source: string): ImportedVideoPsalmSong | null => {
   return {
     externalId,
     title,
-    authors: cleanAuthors(asText(record.Author)),
+    authors: cleanAuthors(asText(record.Author) ?? asText(record.Composer)),
     copyright: cleanText(asText(record.Copyright)),
     key: cleanText(asText(record.Key)),
     reference: cleanText(asText(record.Reference)),
