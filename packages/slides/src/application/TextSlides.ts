@@ -56,6 +56,7 @@ export class TextSlides extends Context.Service<
           organizationId: actor.organizationId,
           title: input.title,
           source: input.source.trim(),
+          layout: input.layout,
           createdAt: now,
           updatedAt: now,
         });
@@ -74,6 +75,7 @@ export class TextSlides extends Context.Service<
           ...existing,
           title: input.title,
           source: input.source.trim(),
+          layout: input.layout,
           updatedAt: now,
         });
         yield* repository.save(slide);

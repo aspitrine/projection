@@ -48,10 +48,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API slides (Postgres)", () => {
       const created = yield* client.SlidesCreate({
         title: "Annonces",
         source: "# Annonces\n- Repas *12 h*",
+        layout: "free",
       });
       expect(yield* client.SlidesGet({ id: created.id })).toEqual(created);
 
-      yield* client.SlidesCreate({ title: "Bienvenue", source: "Bienvenue à tous" });
+      yield* client.SlidesCreate({
+        title: "Bienvenue",
+        source: "Bienvenue à tous",
+        layout: "quote",
+      });
       expect((yield* client.SlidesList({ search: null })).map((slide) => slide.title)).toEqual([
         "Annonces",
         "Bienvenue",
@@ -62,13 +67,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API slides (Postgres)", () => {
 
       const updated = yield* client.SlidesUpdate({
         id: created.id,
-        input: { title: "Annonces du dimanche", source: "Culte à **10 h**" },
+        input: { title: "Annonces du dimanche", source: "Culte à **10 h**", layout: "titleBody" },
       });
       expect(updated.createdAt).toBe(created.createdAt);
+      expect(updated.layout).toBe("titleBody");
       expect(yield* client.SlidesGet({ id: created.id })).toEqual(updated);
 
       const empty = yield* client
-        .SlidesUpdate({ id: created.id, input: { title: "Vide", source: "  " } })
+        .SlidesUpdate({ id: created.id, input: { title: "Vide", source: "  ", layout: "free" } })
         .pipe(Effect.flip);
       expect(empty._tag).toBe("EmptyTextSlide");
 

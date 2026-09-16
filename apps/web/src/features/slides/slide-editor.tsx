@@ -1,3 +1,4 @@
+import type { SlideLayout } from "@projection/presentation/domain";
 import { hasVisibleContent, parseRichText } from "@projection/slides/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
@@ -14,14 +15,23 @@ import { RichTextEditor } from "./rich-text-editor";
 export interface SlideFormValues {
   readonly title: string;
   readonly source: string;
+  readonly layout: SlideLayout;
 }
 
-export const emptySlideForm: SlideFormValues = { title: "", source: "" };
+export const emptySlideForm: SlideFormValues = { title: "", source: "", layout: "free" };
 
 export const toSlideInput = (values: SlideFormValues) => ({
   title: values.title.trim(),
   source: values.source,
+  layout: values.layout,
 });
+
+const layouts: ReadonlyArray<{ readonly value: SlideLayout; readonly label: () => string }> = [
+  { value: "free", label: m.slide_layout_free },
+  { value: "title", label: m.slide_layout_title },
+  { value: "titleBody", label: m.slide_layout_titleBody },
+  { value: "quote", label: m.slide_layout_quote },
+];
 
 export function SlideEditor({
   heading,
@@ -91,6 +101,31 @@ export function SlideEditor({
             </p>
           </div>
 
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">{m.slide_field_layout()}</legend>
+            <div
+              className="flex flex-wrap gap-2"
+              role="radiogroup"
+              aria-label={m.slide_field_layout()}
+            >
+              {layouts.map((layout) => (
+                <Button
+                  key={layout.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={values.layout === layout.value}
+                  data-testid={`slide-layout-${layout.value}`}
+                  variant={values.layout === layout.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setValues((current) => ({ ...current, layout: layout.value }))}
+                >
+                  {layout.label()}
+                </Button>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">{m.slide_layout_help()}</p>
+          </fieldset>
+
           <Button type="submit" disabled={!canSubmit}>
             {submitting ? m.slide_saving() : m.slide_save()}
           </Button>
@@ -102,7 +137,7 @@ export function SlideEditor({
             <SlideRenderer
               data-testid="text-slide-preview"
               className="ring-1 ring-foreground/10"
-              slide={{ kind: "rich", blocks }}
+              slide={{ kind: "rich", blocks, layout: values.layout }}
             />
           ) : (
             <p className="text-muted-foreground text-sm">{m.slide_content_hint()}</p>

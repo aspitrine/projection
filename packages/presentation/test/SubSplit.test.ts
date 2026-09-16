@@ -23,7 +23,7 @@ describe("subSplit", () => {
 
   it("garde entiers le texte court, le texte enrichi et l'écran vide", () => {
     expect(subSplit(lines(["a", "b"]), songSplitRules(2))).toEqual([lines(["a", "b"])]);
-    const rich: FrameContent = { _tag: "Rich", source: "# Titre", caption: null };
+    const rich: FrameContent = { _tag: "Rich", source: "# Titre", layout: "free", caption: null };
     expect(subSplit(rich, songSplitRules(1))).toEqual([rich]);
     expect(subSplit({ _tag: "Blank" }, songSplitRules(1))).toEqual([{ _tag: "Blank" }]);
     expect(subSplit(lines([]), songSplitRules(1))).toEqual([lines([])]);

@@ -1,4 +1,5 @@
-import type { Block, Inline } from "@projection/slides/domain";
+import type { SlideLayout } from "@projection/presentation/domain";
+import { type Block, type Inline, applyLayout } from "@projection/slides/domain";
 import { cn } from "@projection/ui/lib/utils";
 import { Fragment, type ReactNode } from "react";
 
@@ -14,13 +15,43 @@ function Inlines({ content }: { content: ReadonlyArray<Inline> }) {
 /** Rendu du texte enrichi léger ; les tailles sont relatives à la police du parent. */
 export function RichTextView({
   blocks,
+  layout = "free",
   className,
 }: {
   blocks: ReadonlyArray<Block>;
+  layout?: SlideLayout;
   className?: string;
 }) {
+  const { heading, body, attribution, quoted } = applyLayout(layout, blocks);
+
   return (
     <div className={cn("space-y-[0.6em]", className)}>
+      {heading !== null && (
+        <p
+          data-slot="slide-heading"
+          className={cn(
+            "leading-tight font-bold",
+            layout === "title" ? "text-[1.8em]" : "text-[1.5em]",
+          )}
+        >
+          <Inlines content={heading} />
+        </p>
+      )}
+      <Blocks blocks={body} quoted={quoted} />
+      {attribution !== null && (
+        <p data-slot="slide-attribution" className="text-[0.7em] opacity-80">
+          — <Inlines content={attribution} />
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Blocs du corps ; `quoted` encadre le texte de guillemets français. */
+function Blocks({ blocks, quoted = false }: { blocks: ReadonlyArray<Block>; quoted?: boolean }) {
+  const last = blocks.length - 1;
+  return (
+    <div className={cn("space-y-[0.6em]", quoted && "italic")}>
       {blocks.map((block, index) => {
         switch (block._tag) {
           case "Heading":
@@ -36,12 +67,14 @@ export function RichTextView({
           case "Paragraph":
             return (
               <p key={index}>
+                {quoted && index === 0 && "« "}
                 {block.lines.map((line, lineIndex) => (
                   <Fragment key={lineIndex}>
                     {lineIndex > 0 && <br />}
                     <Inlines content={line} />
                   </Fragment>
                 ))}
+                {quoted && index === last && " »"}
               </p>
             );
           case "List":

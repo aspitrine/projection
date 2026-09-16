@@ -117,7 +117,7 @@ describe("DeckSourceLive", () => {
         }),
       );
       const textSlide = yield* slides.create(
-        new TextSlideInput({ title: "Annonces", source: "# Annonces" }),
+        new TextSlideInput({ title: "Annonces", source: "# Annonces", layout: "free" }),
       );
       const project = yield* projects.create(new ProjectInput({ name: "Culte", date: null }));
       for (const draft of [
@@ -182,6 +182,7 @@ describe("DeckSourceLive", () => {
       expect(textItem?.slides[0]?.content).toEqual({
         _tag: "Rich",
         source: "# Annonces",
+        layout: "free",
         caption: "Annonces",
       });
       expect(blank?.slides[0]?.content).toEqual({ _tag: "Blank" });

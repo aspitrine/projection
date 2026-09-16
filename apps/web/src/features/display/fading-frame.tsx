@@ -14,7 +14,7 @@ const contentKey = (frame: Frame) => {
     content._tag === "Lines"
       ? content.lines.join("\n")
       : content._tag === "Rich"
-        ? content.source
+        ? `${content.layout}|${content.source}`
         : content._tag === "Image" || content._tag === "Video"
           ? content.url
           : "";

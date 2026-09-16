@@ -31,7 +31,7 @@ export const SqlTextSlideRepository = Layer.effect(
       Request: Schema.Struct({ organizationId: OrganizationId, id: TextSlideId }),
       Result: TextSlide,
       execute: ({ organizationId, id }) => sql`
-        SELECT id::text AS "id", organization_id AS "organizationId", title, source,
+        SELECT id::text AS "id", organization_id AS "organizationId", title, source, layout,
           ${sql.literal(epochMs("created_at"))} AS "createdAt",
           ${sql.literal(epochMs("updated_at"))} AS "updatedAt"
         FROM text_slide
@@ -52,11 +52,11 @@ export const SqlTextSlideRepository = Layer.effect(
         ),
       save: (slide) =>
         sql`
-          INSERT INTO text_slide (id, organization_id, title, source, created_at, updated_at)
+          INSERT INTO text_slide (id, organization_id, title, source, layout, created_at, updated_at)
           VALUES (${slide.id}::uuid, ${slide.organizationId}, ${slide.title}, ${slide.source},
-                  ${new Date(slide.createdAt)}, ${new Date(slide.updatedAt)})
+                  ${slide.layout}, ${new Date(slide.createdAt)}, ${new Date(slide.updatedAt)})
           ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, source = EXCLUDED.source,
-            updated_at = EXCLUDED.updated_at
+            layout = EXCLUDED.layout, updated_at = EXCLUDED.updated_at
           WHERE text_slide.organization_id = EXCLUDED.organization_id
         `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlTextSlideRepository.save")),
       delete: (organizationId, id) =>

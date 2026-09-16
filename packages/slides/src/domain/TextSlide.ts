@@ -1,3 +1,4 @@
+import { SlideLayout } from "@projection/presentation/domain";
 import { OrganizationId, TextSlideId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
@@ -8,6 +9,8 @@ export class TextSlide extends Schema.Class<TextSlide>("TextSlide")({
   title: Schema.NonEmptyString,
   /** Contenu au format texte enrichi léger (voir `parseRichText`). */
   source: Schema.String,
+  /** Mise en page appliquée à l'affichage. */
+  layout: SlideLayout,
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 }) {}
@@ -15,6 +18,7 @@ export class TextSlide extends Schema.Class<TextSlide>("TextSlide")({
 export class TextSlideInput extends Schema.Class<TextSlideInput>("TextSlideInput")({
   title: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty()),
   source: Schema.String,
+  layout: SlideLayout,
 }) {}
 
 export class TextSlideSummary extends Schema.Class<TextSlideSummary>("TextSlideSummary")({

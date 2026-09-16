@@ -147,7 +147,12 @@ export const DeckSourceLive = Layer.effect(
                   missing: false,
                   slides: [
                     wholeSlide(
-                      { _tag: "Rich", source: slide.source, caption: slide.title },
+                      {
+                        _tag: "Rich",
+                        source: slide.source,
+                        layout: slide.layout,
+                        caption: slide.title,
+                      },
                       slide.title,
                     ),
                   ],

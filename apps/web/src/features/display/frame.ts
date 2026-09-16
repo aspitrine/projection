@@ -9,7 +9,12 @@ export const contentToSlide = (content: FrameContent): RenderableSlide => {
     case "Lines":
       return { kind: "lines", lines: content.lines, caption: content.caption };
     case "Rich":
-      return { kind: "rich", blocks: parseRichText(content.source), caption: content.caption };
+      return {
+        kind: "rich",
+        blocks: parseRichText(content.source),
+        layout: content.layout,
+        caption: content.caption,
+      };
     case "Image":
       return { kind: "media", url: content.url, video: false, caption: content.caption };
     case "Video":

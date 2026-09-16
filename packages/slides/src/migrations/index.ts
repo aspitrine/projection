@@ -19,5 +19,10 @@ export const slidesMigrations = {
       `;
       yield* sql`CREATE INDEX text_slide_organization_title_idx ON text_slide (organization_id, lower(title))`;
     }),
+
+    "0002_add_layout": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE text_slide ADD COLUMN layout text NOT NULL DEFAULT 'free'`;
+    }),
   },
 };

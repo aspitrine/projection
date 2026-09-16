@@ -35,6 +35,51 @@ describe("SlideRenderer", () => {
     expect(container.querySelector("strong")?.textContent).toBe("10 h");
   });
 
+  it("centre la mise en page « titre » et met le titre en avant", () => {
+    const { container } = render(
+      <SlideRenderer
+        theme={new SlideTheme({ ...defaultTheme, textAlign: "left", verticalAlign: "bottom" })}
+        slide={{ kind: "rich", blocks: parseRichText("Bienvenue\n\nAu culte"), layout: "title" }}
+      />,
+    );
+    expect(container.querySelector('[data-slot="slide-heading"]')?.textContent).toBe("Bienvenue");
+    const box = container.querySelector<HTMLElement>('[data-slot="slide-content"]')?.parentElement;
+    expect(box?.style.textAlign).toBe("center");
+    expect(box?.style.justifyContent).toBe("center");
+  });
+
+  it("aligne la mise en page « titre + corps » en haut à gauche", () => {
+    const { container } = render(
+      <SlideRenderer
+        slide={{
+          kind: "rich",
+          blocks: parseRichText("# Ordre du culte\n- Chant"),
+          layout: "titleBody",
+        }}
+      />,
+    );
+    const box = container.querySelector<HTMLElement>('[data-slot="slide-content"]')?.parentElement;
+    expect(box?.style.textAlign).toBe("left");
+    expect(box?.style.justifyContent).toBe("flex-start");
+  });
+
+  it("encadre une citation et détache son attribution", () => {
+    const { container } = render(
+      <SlideRenderer
+        slide={{
+          kind: "rich",
+          blocks: parseRichText("Tout est grâce.\n\n— Bernanos"),
+          layout: "quote",
+        }}
+      />,
+    );
+    const content = container.querySelector('[data-slot="slide-content"]');
+    expect(content?.textContent).toContain("« Tout est grâce. »");
+    expect(container.querySelector('[data-slot="slide-attribution"]')?.textContent).toBe(
+      "— Bernanos",
+    );
+  });
+
   it("n'affiche rien pour un écran vide", () => {
     const { container } = render(<SlideRenderer slide={{ kind: "blank" }} />);
     expect(container.querySelector('[data-slot="slide-content"]')).toBeNull();

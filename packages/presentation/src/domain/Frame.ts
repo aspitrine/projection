@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { SlideLayout } from "./Layout";
+
 /** Lecture d'une vidéo, pilotée depuis la régie et suivie par tous les écrans. */
 export const VideoPlayback = Schema.Struct({
   playing: Schema.Boolean,
@@ -39,6 +41,7 @@ export const FrameContent = Schema.Union([
   /** Texte enrichi léger (source), analysé par l'écran. */
   Schema.TaggedStruct("Rich", {
     source: Schema.String,
+    layout: SlideLayout,
     caption: Schema.NullOr(Schema.String),
   }),
   /** Image de la médiathèque, servie par URL signée. */

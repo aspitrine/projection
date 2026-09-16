@@ -1,4 +1,10 @@
-import { type SlideTheme, defaultTheme, fitFontSize } from "@projection/presentation/domain";
+import {
+  type SlideLayout,
+  type SlideTheme,
+  defaultTheme,
+  fitFontSize,
+  layoutTheme,
+} from "@projection/presentation/domain";
 import type { Block } from "@projection/slides/domain";
 import { cn } from "@projection/ui/lib/utils";
 import { type ComponentProps, useLayoutEffect, useRef } from "react";
@@ -15,6 +21,7 @@ export type RenderableSlide =
   | {
       readonly kind: "rich";
       readonly blocks: ReadonlyArray<Block>;
+      readonly layout?: SlideLayout;
       readonly caption?: string | null;
     }
   | {
@@ -34,11 +41,14 @@ const justify = { top: "flex-start", center: "center", bottom: "flex-end" } as c
  */
 export function SlideRenderer({
   slide,
-  theme = defaultTheme,
+  theme: outputTheme = defaultTheme,
   className,
   style,
   ...props
 }: ComponentProps<"div"> & { slide: RenderableSlide; theme?: SlideTheme }) {
+  // La mise en page de la diapo impose son cadrage par-dessus le thème de la sortie.
+  const theme =
+    slide.kind === "rich" ? layoutTheme(slide.layout ?? "free", outputTheme) : outputTheme;
   const box = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
 
@@ -127,7 +137,7 @@ export function SlideRenderer({
             {slide.kind === "lines" ? (
               slide.lines.map((line, index) => <p key={index}>{line}</p>)
             ) : slide.kind === "rich" ? (
-              <RichTextView blocks={slide.blocks} />
+              <RichTextView blocks={slide.blocks} layout={slide.layout} />
             ) : null}
           </div>
         </div>

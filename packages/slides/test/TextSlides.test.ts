@@ -28,6 +28,7 @@ const input = (overrides: Partial<TextSlideInput> = {}) =>
   new TextSlideInput({
     title: "Annonces",
     source: "  # Annonces\nCulte à **10 h**  ",
+    layout: "free",
     ...overrides,
   });
 

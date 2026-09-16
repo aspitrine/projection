@@ -278,11 +278,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Inventaire mis à jour dans [docs/bibles.md](docs/bibles.md) : pistes de sources et points à vérifier pour Darby, Martin, Ostervald, Crampon et Lausanne.
 - [ ] Distribuer d'autres traductions avec l'application : chaque édition numérique doit encore être vérifiée.
 
-### T2.13 Diapos texte — mises en page [slides]
+### T2.13 Diapos texte — mises en page [slides] ✅
 
 **Dépend de** : T1.4, T2.5
 
-- [ ] Mises en page prédéfinies (titre, titre + corps, citation).
+- [x] `SlideLayout` dans `presentation` (`free`, `title`, `titleBody`, `quote`) : la mise en page impose son cadrage (alignements) par-dessus le thème de la sortie, sans le remplacer.
+- [x] `applyLayout` dans `slides` : promotion du premier titre (ou d'une première ligne seule), détachement d'une attribution « — Auteur » pour les citations. Aucun bloc n'est perdu, quelle que soit la mise en page.
+- [x] Migration `0002_add_layout` (défaut `free`), champ dans le contrat RPC et sélecteur dans l'éditeur avec aperçu en direct.
+- [x] Rendu partagé (miniatures, aperçus régie, écrans) : titre mis en avant, citation entre guillemets « », attribution détachée.
+- [x] Tests unitaires (`applyLayout`, rendu jsdom des trois mises en page) et fonctionnels (mise en page conservée à la création et à la mise à jour).
 
 ### T2.14 Régie responsive [web]
 

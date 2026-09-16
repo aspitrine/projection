@@ -87,7 +87,7 @@ function EditSlide({ slide }: { slide: TextSlide }) {
   return (
     <SlideEditor
       heading={slide.title}
-      initial={{ title: slide.title, source: slide.source }}
+      initial={{ title: slide.title, source: slide.source, layout: slide.layout }}
       submitting={submitting}
       actions={
         <Button variant="destructive" onClick={deleteSlide} disabled={submitting}>
