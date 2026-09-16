@@ -1,5 +1,6 @@
 import {
   Frame,
+  SlideTheme,
   Splitting,
   type Track,
   roomSplitting,
@@ -41,6 +42,8 @@ export class Output extends Schema.Class<Output>("Output")({
   name: Schema.NonEmptyString,
   type: OutputType,
   token: DisplayToken,
+  /** Thème propre à la sortie ; `null` : thème par défaut de son type. */
+  theme: Schema.NullOr(SlideTheme),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 }) {}
@@ -65,6 +68,8 @@ export type Branding = typeof Branding.Type;
 export class DisplayFrame extends Schema.Class<DisplayFrame>("DisplayFrame")({
   outputName: Schema.String,
   outputType: OutputType,
+  /** Thème résolu (personnalisé ou par défaut) : l'écran n'a rien à décider. */
+  theme: SlideTheme,
   branding: Branding,
   frame: Frame,
 }) {}

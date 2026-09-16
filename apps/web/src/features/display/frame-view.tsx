@@ -11,14 +11,13 @@ import { useEffect, useRef, useState } from "react";
 import { m } from "../../paraglide/messages";
 
 import { SlideRenderer } from "../presentation/slide-renderer";
-import { contentToSlide, roomTheme, stageTheme, streamTheme, themeFor } from "./frame";
+import { defaultThemeFor } from "@projection/outputs/domain";
+
+import { contentToSlide } from "./frame";
 
 /** Écran noir : noir franc en salle et au retour, rien du tout sur le stream (transparent). */
-const blackThemes = {
-  room: new SlideTheme({ ...roomTheme, background: "#000000" }),
-  stage: new SlideTheme({ ...stageTheme, background: "#000000" }),
-  stream: new SlideTheme({ ...streamTheme, background: "transparent" }),
-} as const;
+const blackTheme = (theme: SlideTheme, type: OutputType) =>
+  new SlideTheme({ ...theme, background: type === "stream" ? "transparent" : "#000000" });
 
 /** Seules les URL http(s) ou relatives sont chargées sur les écrans publics. */
 export const safeLogoUrl = (url: string | null) =>
@@ -35,12 +34,15 @@ export function FrameView({
   branding,
   className,
   sound = false,
+  theme = defaultThemeFor(type),
 }: {
   content: FrameContent;
   cover: Cover;
   type: OutputType;
   branding: Branding;
   className?: string;
+  /** Thème de la sortie ; par défaut celui de son type. */
+  theme?: SlideTheme;
   /** Vrai sur les écrans qui doivent restituer le son des vidéos. */
   sound?: boolean;
 }) {
@@ -49,7 +51,7 @@ export function FrameView({
       return (
         <SlideRenderer
           className={className}
-          theme={blackThemes[type]}
+          theme={blackTheme(theme, type)}
           slide={{ kind: "blank" }}
           data-cover="black"
         />
@@ -58,13 +60,13 @@ export function FrameView({
       return (
         <SlideRenderer
           className={className}
-          theme={themeFor(type)}
+          theme={theme}
           slide={{ kind: "blank" }}
           data-cover="hideText"
         />
       );
     case "logo":
-      return <LogoSlide type={type} branding={branding} className={className} />;
+      return <LogoSlide type={type} branding={branding} theme={theme} className={className} />;
     case "none":
       if (content._tag === "Video") {
         return <VideoSlide content={content} sound={sound} className={className} />;
@@ -72,7 +74,7 @@ export function FrameView({
       return (
         <SlideRenderer
           className={className}
-          theme={themeFor(type)}
+          theme={theme}
           slide={contentToSlide(content)}
           data-cover="none"
         />
@@ -83,13 +85,14 @@ export function FrameView({
 function LogoSlide({
   type,
   branding,
+  theme,
   className,
 }: {
   type: OutputType;
   branding: Branding;
+  theme: SlideTheme;
   className?: string;
 }) {
-  const theme = themeFor(type);
   const logo = safeLogoUrl(branding.logoUrl);
   const stream = type === "stream";
 

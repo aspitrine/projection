@@ -23,6 +23,8 @@ export class SlideTheme extends Schema.Class<SlideTheme>("SlideTheme")({
   showCaption: Schema.Boolean,
   /** Bandeau derrière le texte (lower third), ou `null`. */
   textBackground: Schema.NullOr(Schema.String),
+  /** Durée du fondu entre deux diapos, en millisecondes (0 : changement net). */
+  transitionMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 2000 })),
 }) {}
 
 export const defaultTheme = new SlideTheme({
@@ -39,4 +41,5 @@ export const defaultTheme = new SlideTheme({
   textShadow: true,
   showCaption: true,
   textBackground: null,
+  transitionMs: 300,
 });

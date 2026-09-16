@@ -1,5 +1,5 @@
 import { ActorMiddleware } from "@projection/identity/contract";
-import { Splitting } from "@projection/presentation/domain";
+import { SlideTheme, Splitting } from "@projection/presentation/domain";
 import { Forbidden, OutputId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
@@ -31,6 +31,12 @@ export const OutputsRpcs = RpcGroup.make(
   Rpc.make("OutputsRemove", {
     payload: { id: OutputId },
     error: Schema.Union([OutputNotFound, LastOutput, Forbidden]),
+  }),
+  /** Thème de la sortie ; `null` remet celui par défaut de son type. */
+  Rpc.make("OutputsSetTheme", {
+    payload: { id: OutputId, theme: Schema.NullOr(SlideTheme) },
+    success: Output,
+    error: Schema.Union([OutputNotFound, Forbidden]),
   }),
   Rpc.make("OutputsRegenerateToken", {
     payload: { id: OutputId },

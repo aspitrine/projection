@@ -1,5 +1,5 @@
 import type { Branding } from "@projection/outputs/domain";
-import { type Frame, remainingMs } from "@projection/presentation/domain";
+import { type Frame, type SlideTheme, remainingMs } from "@projection/presentation/domain";
 import { cn } from "@projection/ui/lib/utils";
 
 import { m } from "@/paraglide/messages";
@@ -9,7 +9,15 @@ import { FrameView } from "./frame-view";
 import { formatClock, formatDuration, useNow } from "./time";
 
 /** Écran retour scène : diapo courante, diapo suivante, horloge, minuteur et notes. */
-export function StageScreen({ frame, branding }: { frame: Frame; branding: Branding }) {
+export function StageScreen({
+  frame,
+  branding,
+  theme,
+}: {
+  frame: Frame;
+  branding: Branding;
+  theme: SlideTheme;
+}) {
   const now = useNow();
   const stage = frame.stage;
   const remaining = stage === null ? 0 : remainingMs(stage.timer, now);
@@ -27,6 +35,7 @@ export function StageScreen({ frame, branding }: { frame: Frame; branding: Brand
             cover={frame.cover}
             type="stage"
             branding={branding}
+            theme={theme}
             className="ring-1 ring-white/10"
           />
         </div>
@@ -56,6 +65,7 @@ export function StageScreen({ frame, branding }: { frame: Frame; branding: Brand
             cover="none"
             type="stage"
             branding={branding}
+            theme={theme}
             className="opacity-80 ring-1 ring-white/10"
           />
         </section>

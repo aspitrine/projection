@@ -8,3 +8,13 @@
   pointer-events: none;
   color: var(--muted-foreground);
 }
+
+/* Fondu d'enchaînement des diapos sur les écrans (durée pilotée par le thème). */
+@keyframes projection-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

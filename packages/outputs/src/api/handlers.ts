@@ -10,6 +10,7 @@ const OutputsHandlersLive = OutputsRpcs.toLayer(
       OutputsList: () => outputs.list,
       OutputsCreate: (input) => outputs.create(input),
       OutputsRename: ({ id, name }) => outputs.rename(id, name),
+      OutputsSetTheme: ({ id, theme }) => outputs.setTheme(id, theme),
       OutputsRemove: ({ id }) => outputs.remove(id),
       OutputsSplitting: () => outputs.splitting,
       OutputsUpdateSplitting: (settings) => outputs.updateSplitting(settings),

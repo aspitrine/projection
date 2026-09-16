@@ -1,4 +1,5 @@
 import { CurrentActor, type Forbidden, OutputId, requireRole } from "@projection/shared-kernel";
+import type { SlideTheme } from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Stream } from "effect";
 
 import {
@@ -14,6 +15,7 @@ import {
   isDisplayToken,
   trackOf,
 } from "../domain/Output";
+import { defaultThemeFor } from "../domain/Themes";
 import { BrandingSource, FrameGateway, OutputRepository } from "./ports";
 
 /** Nom de la sortie créée par défaut pour chaque organisation. */
@@ -31,6 +33,11 @@ export class Outputs extends Context.Service<
     rename(
       id: OutputId,
       name: string,
+    ): Effect.Effect<Output, OutputNotFound | Forbidden, CurrentActor>;
+    /** Thème de la sortie ; `null` revient au thème par défaut de son type. */
+    setTheme(
+      id: OutputId,
+      theme: SlideTheme | null,
     ): Effect.Effect<Output, OutputNotFound | Forbidden, CurrentActor>;
     remove(
       id: OutputId,
@@ -71,6 +78,7 @@ export class Outputs extends Context.Service<
           name,
           type,
           token: yield* generateDisplayToken,
+          theme: null,
           createdAt: now,
           updatedAt: now,
         });
@@ -94,6 +102,14 @@ export class Outputs extends Context.Service<
           const actor = yield* requireRole("owner", "admin");
           const now = yield* Clock.currentTimeMillis;
           return yield* repository.rename(actor.organizationId, id, name, now).pipe(orNotFound(id));
+        }),
+
+        setTheme: Effect.fn("Outputs.setTheme")(function* (id: OutputId, theme: SlideTheme | null) {
+          const actor = yield* requireRole("owner", "admin");
+          const now = yield* Clock.currentTimeMillis;
+          return yield* repository
+            .updateTheme(actor.organizationId, id, theme, now)
+            .pipe(orNotFound(id));
         }),
 
         remove: Effect.fn("Outputs.remove")(function* (id: OutputId) {
@@ -146,16 +162,26 @@ export class Outputs extends Context.Service<
               if (Option.isNone(output)) {
                 return yield* new InvalidDisplayToken();
               }
-              const { name, type, organizationId } = output.value;
-              const branding = yield* brandingSource.get(organizationId);
-              return gateway
-                .watch(organizationId, trackOf(type))
-                .pipe(
-                  Stream.map(
-                    (frame) =>
-                      new DisplayFrame({ outputName: name, outputType: type, branding, frame }),
+              const connected = output.value;
+              const branding = yield* brandingSource.get(connected.organizationId);
+              return gateway.watch(connected.organizationId, trackOf(connected.type)).pipe(
+                // Nom et thème sont relus à chaque image : une sortie renommée ou
+                // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
+                Stream.mapEffect((frame) =>
+                  repository.findByToken(connected.token).pipe(
+                    Effect.map((latest) => {
+                      const current = Option.getOrElse(latest, () => connected);
+                      return new DisplayFrame({
+                        outputName: current.name,
+                        outputType: current.type,
+                        theme: current.theme ?? defaultThemeFor(current.type),
+                        branding,
+                        frame,
+                      });
+                    }),
                   ),
-                );
+                ),
+              );
             }),
           ),
       });

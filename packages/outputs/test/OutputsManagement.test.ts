@@ -3,7 +3,10 @@ import { Effect, Layer, Stream } from "effect";
 
 import { Outputs } from "../src/application/Outputs";
 import { OutputRepository } from "../src/application/ports";
+import { SlideTheme } from "@projection/presentation/domain";
+
 import { defaultSplittingSettings, trackOf } from "../src/domain/Output";
+import { defaultThemeFor } from "../src/domain/Themes";
 import { BrandingSourceMemory, FrameGatewayMemory, asActor } from "./support";
 
 const TestLayer = Outputs.layer.pipe(
@@ -97,5 +100,45 @@ describe("Gestion des sorties", () => {
       expect(yield* outputs.splitting.pipe(asActor("org-a"))).toEqual(settings);
       expect(yield* outputs.splitting.pipe(asActor("org-b"))).toEqual(defaultSplittingSettings);
     }).pipe(Effect.provide(TestLayer)),
+  );
+
+  it.effect(
+    "thème par sortie : personnalisation, refus aux opérateurs, retour aux valeurs par défaut",
+    () =>
+      Effect.gen(function* () {
+        const outputs = yield* Outputs;
+        const [room] = yield* outputs.list.pipe(asActor("org-a"));
+        if (room === undefined) throw new Error("sortie manquante");
+        expect(room.theme).toBeNull();
+
+        const forbidden = yield* outputs
+          .setTheme(room.id, defaultThemeFor("room"))
+          .pipe(asActor("org-a", "operator"), Effect.flip);
+        expect(forbidden._tag).toBe("Forbidden");
+
+        const custom = new SlideTheme({
+          ...defaultThemeFor("room"),
+          background: "#102030",
+          transitionMs: 0,
+        });
+        const themed = yield* outputs.setTheme(room.id, custom).pipe(asActor("org-a", "admin"));
+        expect(themed.theme).toEqual(custom);
+
+        // L'écran reçoit le thème résolu, sans avoir à connaître les valeurs par défaut.
+        const display = yield* outputs.watchDisplay(room.token).pipe(Stream.runHead);
+        expect(display._tag === "Some" && display.value.theme.background).toBe("#102030");
+
+        const reset = yield* outputs.setTheme(room.id, null).pipe(asActor("org-a", "owner"));
+        expect(reset.theme).toBeNull();
+        const afterReset = yield* outputs.watchDisplay(room.token).pipe(Stream.runHead);
+        expect(afterReset._tag === "Some" && afterReset.value.theme).toEqual(
+          defaultThemeFor("room"),
+        );
+
+        const missing = yield* outputs
+          .setTheme(room.id, custom)
+          .pipe(asActor("org-b", "owner"), Effect.flip);
+        expect(missing._tag).toBe("OutputNotFound");
+      }).pipe(Effect.provide(TestLayer)),
   );
 });

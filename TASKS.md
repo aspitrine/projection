@@ -198,12 +198,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Diapos texte : éditeur visuel (gras, italique, titre, sous-titre, liste, annuler/rétablir, raccourcis Markdown) ; la source légère reste le format enregistré (conversion testée dans les deux sens).
 - [x] Paroles : étiquettes de section mises en évidence, insertion par boutons (couplets numérotés) ou en tapant `[Refrain]`, collage multi-lignes fidèle ; le texte à balises reste le format enregistré.
 
-### T2.5 Thèmes personnalisables [presentation, outputs]
+### T2.5 Thèmes personnalisables [presentation, outputs] ✅
 
 **Dépend de** : T2.1, T2.8
 
-- [ ] Éditeur de thème avec aperçu live ; bouton « Réinitialiser aux valeurs par défaut ».
-- [ ] Transition fondu (durée configurable).
+- [x] Thème par sortie (colonne `theme`) ; thèmes par défaut par type dans le domaine `outputs`, source unique pour les écrans et la régie.
+- [x] L'image envoyée à un écran porte son thème résolu, relu à chaque diapo : un thème modifié s'applique sans recharger l'écran.
+- [x] Éditeur sur la page Sorties (fond, couleur, police, tailles, interligne, marges, alignements, ombre, libellé, bandeau, fondu) avec aperçu en direct et bouton « Réinitialiser ».
+- [x] Transition fondu configurable (0 à 2000 ms), en fondu croisé sur les écrans ; la lecture vidéo n'est pas interrompue par le fondu.
+- [ ] Fond image ou vidéo (médiathèque) : à ajouter, le thème ne gère aujourd'hui qu'une couleur ou la transparence.
 
 ### T2.6 Sortie retour scène [outputs, live] ✅
 

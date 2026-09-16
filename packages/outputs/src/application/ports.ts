@@ -1,4 +1,4 @@
-import type { Frame, FrameContent, Track } from "@projection/presentation/domain";
+import type { Frame, FrameContent, SlideTheme, Track } from "@projection/presentation/domain";
 import type { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref, type Stream } from "effect";
 
@@ -26,6 +26,13 @@ export class OutputRepository extends Context.Service<
       organizationId: OrganizationId,
       id: OutputId,
       name: string,
+      now: number,
+    ): Effect.Effect<Option.Option<Output>>;
+    /** `null` remet le thème par défaut du type de sortie. */
+    updateTheme(
+      organizationId: OrganizationId,
+      id: OutputId,
+      theme: SlideTheme | null,
       now: number,
     ): Effect.Effect<Option.Option<Output>>;
     /** Supprime la sortie, sauf si c'est la dernière de l'organisation (atomique). */
@@ -84,6 +91,8 @@ export class OutputRepository extends Context.Service<
           update(organizationId, id, (output) => new Output({ ...output, token, updatedAt: now })),
         rename: (organizationId, id, name, now) =>
           update(organizationId, id, (output) => new Output({ ...output, name, updatedAt: now })),
+        updateTheme: (organizationId, id, theme, now) =>
+          update(organizationId, id, (output) => new Output({ ...output, theme, updatedAt: now })),
         remove: (organizationId, id) =>
           Ref.modify(store, (outputs): readonly [RemoveResult, ReadonlyArray<Output>] => {
             const own = outputs.filter((output) => output.organizationId === organizationId);

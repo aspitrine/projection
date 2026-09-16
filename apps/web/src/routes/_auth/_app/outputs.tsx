@@ -21,6 +21,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
+import { ThemeEditor } from "@/features/outputs/theme-editor";
 import { liveRefreshAtom } from "@/features/live/atoms";
 import {
   createOutputAtom,
@@ -320,6 +321,12 @@ function OutputCard({ output, canManage }: { output: Output; canManage: boolean 
           </>
         )}
       </div>
+      {canManage && (
+        <details>
+          <summary className="cursor-pointer text-sm select-none">{m.theme_title()}</summary>
+          <ThemeEditor output={output} />
+        </details>
+      )}
     </li>
   );
 }

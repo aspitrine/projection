@@ -20,6 +20,10 @@ export const outputsMigrations = {
       `;
       yield* sql`CREATE INDEX output_organization_idx ON output (organization_id)`;
     }),
+    "0003_add_output_theme": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE output ADD COLUMN theme jsonb`;
+    }),
     "0002_create_output_splitting": Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`

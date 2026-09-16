@@ -17,3 +17,4 @@ export const removeOutputAtom = ApiClient.mutation("OutputsRemove");
 export const regenerateTokenAtom = ApiClient.mutation("OutputsRegenerateToken");
 export const identifyOutputAtom = ApiClient.mutation("OutputsIdentify");
 export const updateSplittingAtom = ApiClient.mutation("OutputsUpdateSplitting");
+export const setOutputThemeAtom = ApiClient.mutation("OutputsSetTheme");

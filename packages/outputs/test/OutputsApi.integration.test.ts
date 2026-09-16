@@ -7,6 +7,7 @@ import { Config, Effect, Exit, Layer, Queue } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 
 import { DisplayRpcs, OutputsRpcs } from "../src/api/contract";
+import { defaultThemeFor } from "../src/domain/Themes";
 import { OutputsLive, outputsMigrations } from "../src/server";
 import { BrandingSourceMemory, FrameGatewayMemory } from "./support";
 
@@ -124,6 +125,25 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
         )
         .pipe(Effect.exit);
       expect(Exit.isFailure(outOfRange)).toBe(true);
+    }).pipe(Effect.provide(ApiLive)),
+  );
+
+  it.effect("enregistre le thème d'une sortie et le remet par défaut", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(OutputsRpcs);
+      const organization = { headers: { "x-test-organization": "org-theme" } };
+      const [room] = yield* client.OutputsList(undefined, organization);
+      if (room === undefined) throw new Error("sortie manquante");
+
+      const custom = { ...defaultThemeFor("room"), background: "#123456", transitionMs: 0 };
+      const themed = yield* client.OutputsSetTheme({ id: room.id, theme: custom }, organization);
+      expect(themed.theme).toMatchObject({ background: "#123456", transitionMs: 0 });
+
+      const reloaded = yield* client.OutputsList(undefined, organization);
+      expect(reloaded[0]?.theme?.background).toBe("#123456");
+
+      const reset = yield* client.OutputsSetTheme({ id: room.id, theme: null }, organization);
+      expect(reset.theme).toBeNull();
     }).pipe(Effect.provide(ApiLive)),
   );
 });

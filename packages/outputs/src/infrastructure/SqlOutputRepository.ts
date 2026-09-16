@@ -12,7 +12,7 @@ export const SqlOutputRepository = Layer.effect(
     const sql = yield* PgClient.PgClient;
 
     const columns = sql`
-      id::text AS "id", organization_id AS "organizationId", name, type, token,
+      id::text AS "id", organization_id AS "organizationId", name, type, token, theme,
       (extract(epoch FROM created_at) * 1000)::float8 AS "createdAt",
       (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
     `;
@@ -51,6 +51,21 @@ export const SqlOutputRepository = Layer.effect(
       Result: Output,
       execute: ({ organizationId, id, token, now }) => sql`
         UPDATE output SET token = ${token}, updated_at = ${new Date(now)}
+        WHERE id = ${id}::uuid AND organization_id = ${organizationId}
+        RETURNING ${columns}
+      `,
+    });
+
+    const updateTheme = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        organizationId: OrganizationId,
+        id: OutputId,
+        theme: Schema.NullOr(Schema.String),
+        now: Schema.Number,
+      }),
+      Result: Output,
+      execute: ({ organizationId, id, theme, now }) => sql`
+        UPDATE output SET theme = ${theme}::jsonb, updated_at = ${new Date(now)}
         WHERE id = ${id}::uuid AND organization_id = ${organizationId}
         RETURNING ${columns}
       `,
@@ -118,6 +133,14 @@ export const SqlOutputRepository = Layer.effect(
           Effect.orDie,
           Effect.withSpan("SqlOutputRepository.updateToken"),
         ),
+
+      updateTheme: (organizationId, id, theme, now) =>
+        updateTheme({
+          organizationId,
+          id,
+          theme: theme === null ? null : JSON.stringify(theme),
+          now,
+        }).pipe(Effect.orDie, Effect.withSpan("SqlOutputRepository.updateTheme")),
 
       rename: (organizationId, id, name, now) =>
         rename({ organizationId, id, name, now }).pipe(
