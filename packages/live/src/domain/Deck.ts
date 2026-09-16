@@ -18,6 +18,8 @@ export class DeckItem extends Schema.Class<DeckItem>("DeckItem")({
   itemId: ProjectItemId,
   kind: DeckItemKind,
   title: Schema.String,
+  /** Notes de l'élément, affichées sur le retour scène. */
+  notes: Schema.NullOr(Schema.String),
   /** Contenu supprimé de la bibliothèque ou introuvable : aucune diapo. */
   missing: Schema.Boolean,
   slides: Schema.Array(DeckSlide),

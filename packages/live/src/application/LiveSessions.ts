@@ -4,7 +4,12 @@ import {
   type ProjectId,
   type ProjectItemId,
 } from "@projection/shared-kernel";
-import type { Cover, Track } from "@projection/presentation/domain";
+import {
+  type Cover,
+  type StageTimer,
+  type Track,
+  idleTimer,
+} from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Semaphore, Stream, SubscriptionRef } from "effect";
 
 import type { Deck } from "../domain/Deck";
@@ -31,9 +36,11 @@ import {
   previousCursor,
   previousStreamCursor,
   reconcileStream,
+  stageInfoAt,
   streamFrameContent,
   streamPositions,
 } from "../domain/Navigation";
+import { pauseTimer, resetTimer, setDuration, startTimer } from "../domain/Timer";
 import { LiveFrames } from "./LiveFrames";
 import { DeckSource, LiveSessionRepository } from "./ports";
 
@@ -46,6 +53,7 @@ interface Draft {
   readonly streamLinked: boolean;
   readonly streamCursor: StreamCursor | null;
   readonly streamOverride: StreamOverride | null;
+  readonly timer: StageTimer;
 }
 
 interface OrganizationState {
@@ -64,6 +72,7 @@ const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover):
   streamLinked,
   streamCursor: null,
   streamOverride: null,
+  timer: idleTimer,
 });
 
 /**
@@ -95,6 +104,11 @@ export class LiveSessions extends Context.Service<
     readonly streamResume: Command;
     /** Lier recale le stream sur la diapo de la salle. */
     setStreamLinked(linked: boolean): Command;
+    /** Minuteur du retour scène : durée, démarrage, pause, remise à zéro. */
+    setTimer(durationMs: number): Command;
+    readonly startTimer: Command;
+    readonly pauseTimer: Command;
+    readonly resetTimer: Command;
     /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant les positions. */
     readonly refresh: Command;
     readonly stop: Command;
@@ -112,14 +126,22 @@ export class LiveSessions extends Context.Service<
       const publish = (snapshot: LiveSnapshot) => {
         const { organizationId, cursor, streamCursor, streamOverride, roomCover, streamCover } =
           snapshot.session;
+        const stage = stageInfoAt(snapshot.deck, cursor, snapshot.session.timer);
         return Effect.all(
           [
-            frames.publish(organizationId, "room", contentAt(snapshot.deck, cursor), roomCover),
+            frames.publish(
+              organizationId,
+              "room",
+              contentAt(snapshot.deck, cursor),
+              roomCover,
+              stage,
+            ),
             frames.publish(
               organizationId,
               "stream",
               streamFrameContent(snapshot.deck, streamCursor, streamOverride),
               streamCover,
+              null,
             ),
           ],
           { discard: true },
@@ -144,6 +166,7 @@ export class LiveSessions extends Context.Service<
           | "streamOverride"
           | "roomCover"
           | "streamCover"
+          | "timer"
         >,
       ): Draft =>
         Option.match(deck, {
@@ -159,6 +182,7 @@ export class LiveSessions extends Context.Service<
               streamLinked: from.streamLinked,
               streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
               streamOverride: from.streamOverride,
+              timer: from.timer,
             };
           },
         });
@@ -180,6 +204,7 @@ export class LiveSessions extends Context.Service<
             streamLinked: draft.streamLinked,
             streamCursor: draft.streamCursor,
             streamOverride: draft.streamOverride,
+            timer: draft.timer,
             version,
             updatedAt,
           }),
@@ -258,6 +283,7 @@ export class LiveSessions extends Context.Service<
         streamLinked: current.session.streamLinked,
         streamCursor: current.session.streamCursor,
         streamOverride: current.session.streamOverride,
+        timer: current.session.timer,
       });
 
       /** Nouvelle position de la salle ; en mode lié, le stream suit. */
@@ -294,7 +320,7 @@ export class LiveSessions extends Context.Service<
           command((current) =>
             decks.resolve(projectId).pipe(
               Effect.map((deck): Draft => {
-                const { streamLinked, roomCover, streamCover } = current.session;
+                const { streamLinked, roomCover, streamCover, timer } = current.session;
                 const cursor = firstCursor(deck);
                 return {
                   deck,
@@ -307,6 +333,7 @@ export class LiveSessions extends Context.Service<
                     ? followRoom(cursor)
                     : (streamPositions(deck)[0] ?? null),
                   streamOverride: null,
+                  timer,
                 };
               }),
             ),
@@ -390,6 +417,29 @@ export class LiveSessions extends Context.Service<
         streamResume: command((current) =>
           Effect.succeed({ ...keep(current), streamOverride: null }),
         ).pipe(Effect.withSpan("LiveSessions.streamResume")),
+
+        setTimer: (durationMs) =>
+          command((current) =>
+            Effect.succeed({ ...keep(current), timer: setDuration(durationMs) }),
+          ).pipe(Effect.withSpan("LiveSessions.setTimer")),
+
+        startTimer: command((current) =>
+          Effect.map(Clock.currentTimeMillis, (now) => ({
+            ...keep(current),
+            timer: startTimer(current.session.timer, now),
+          })),
+        ).pipe(Effect.withSpan("LiveSessions.startTimer")),
+
+        pauseTimer: command((current) =>
+          Effect.map(Clock.currentTimeMillis, (now) => ({
+            ...keep(current),
+            timer: pauseTimer(current.session.timer, now),
+          })),
+        ).pipe(Effect.withSpan("LiveSessions.pauseTimer")),
+
+        resetTimer: command((current) =>
+          Effect.succeed({ ...keep(current), timer: resetTimer(current.session.timer) }),
+        ).pipe(Effect.withSpan("LiveSessions.resetTimer")),
 
         refresh: command((current) => {
           const { projectId } = current.session;

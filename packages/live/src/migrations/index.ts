@@ -43,5 +43,13 @@ export const liveMigrations = {
       yield* sql`UPDATE live_session SET room_cover = 'black', stream_cover = 'black' WHERE blackout`;
       yield* sql`ALTER TABLE live_session DROP COLUMN blackout`;
     }),
+    "0005_add_stage_timer": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        ALTER TABLE live_session
+          ADD COLUMN stage_timer jsonb NOT NULL
+          DEFAULT '{"durationMs":0,"elapsedMs":0,"runningSince":null}'
+      `;
+    }),
   },
 };

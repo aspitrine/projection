@@ -55,8 +55,11 @@ const songSlides = (song: Song, splitting: SplittingSettings) => {
   );
 };
 
+/** Notes de conduite saisies sur l'élément de projet. */
+const notesOf = (item: ProjectItem) => item.notes ?? null;
+
 const missingItem = (item: ProjectItem, kind: DeckItemKind, title = "") =>
-  new DeckItem({ itemId: item.id, kind, title, missing: true, slides: [] });
+  new DeckItem({ itemId: item.id, kind, title, notes: notesOf(item), missing: true, slides: [] });
 
 /**
  * Résout un projet en diapos à partir des contextes songs, bible et slides, avec le
@@ -82,6 +85,7 @@ export const DeckSourceLive = Layer.effect(
                   itemId: item.id,
                   kind: "Song",
                   title: song.title,
+                  notes: notesOf(item),
                   missing: false,
                   slides: songSlides(song, splitting),
                 }),
@@ -103,6 +107,7 @@ export const DeckSourceLive = Layer.effect(
                 itemId: item.id,
                 kind: "Scripture",
                 title: `${passage.label} (${passage.translation.code})`,
+                notes: notesOf(item),
                 missing: false,
                 slides: split(
                   blocks,
@@ -120,6 +125,7 @@ export const DeckSourceLive = Layer.effect(
                   itemId: item.id,
                   kind: "TextSlide",
                   title: slide.title,
+                  notes: notesOf(item),
                   missing: false,
                   slides: [
                     wholeSlide(
@@ -139,6 +145,7 @@ export const DeckSourceLive = Layer.effect(
               itemId: item.id,
               kind: "Blank",
               title: "",
+              notes: notesOf(item),
               missing: false,
               slides: [wholeSlide({ _tag: "Blank" }, null)],
             }),

@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { ProjectItemId } from "@projection/shared-kernel";
 import { Effect, Schema } from "effect";
 
-import { createItem, insertItem, moveItem, removeItem } from "../src/domain/Items";
+import { createItem, insertItem, moveItem, removeItem, setItemNotes } from "../src/domain/Items";
 import type { ProjectItem } from "../src/domain/Project";
 
 const itemId = (index: number) =>
@@ -77,5 +77,22 @@ describe("moveItem / removeItem", () => {
       expect([...ids(moved)].sort((a, b) => a - b)).toEqual(ids(items));
       expect(moved[Math.min(Math.max(to, 0), count - 1)]?.id).toBe(source.id);
     },
+  );
+});
+
+describe("setItemNotes", () => {
+  it.effect("attache, remplace et efface les notes d'un élément", () =>
+    Effect.gen(function* () {
+      const items = blanks(2);
+      const withNotes = yield* setItemNotes(items, itemId(1), "  Tonalité : Sol  ");
+      expect(withNotes[1]).toMatchObject({ _tag: "Blank", notes: "Tonalité : Sol" });
+      expect(withNotes[0]?.notes).toBeUndefined();
+
+      const cleared = yield* setItemNotes(withNotes, itemId(1), "   ");
+      expect(cleared[1]?.notes).toBeUndefined();
+
+      const error = yield* setItemNotes(items, itemId(9), "x").pipe(Effect.flip);
+      expect(error._tag).toBe("ProjectItemNotFound");
+    }),
   );
 });

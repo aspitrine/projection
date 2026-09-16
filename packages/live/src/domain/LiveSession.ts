@@ -1,4 +1,4 @@
-import { Cover } from "@projection/presentation/domain";
+import { Cover, StageTimer, idleTimer } from "@projection/presentation/domain";
 import { OrganizationId, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
@@ -41,6 +41,8 @@ export class LiveSession extends Schema.Class<LiveSession>("LiveSession")({
   streamLinked: Schema.Boolean,
   streamCursor: Schema.NullOr(StreamCursor),
   streamOverride: Schema.NullOr(StreamOverride),
+  /** Minuteur affiché sur le retour scène. */
+  timer: StageTimer,
   version: Schema.Int,
   updatedAt: Schema.Number,
 }) {}
@@ -55,6 +57,7 @@ export const idleSession = (organizationId: OrganizationId) =>
     streamLinked: true,
     streamCursor: null,
     streamOverride: null,
+    timer: idleTimer,
     version: 0,
     updatedAt: 0,
   });

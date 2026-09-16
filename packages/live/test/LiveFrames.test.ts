@@ -21,12 +21,14 @@ describe("LiveFrames", () => {
         "room",
         { _tag: "Lines", lines: ["Gloire"], caption: "Refrain" },
         "none",
+        null,
       );
       yield* frames.publish(
         orgA,
         "room",
         { _tag: "Lines", lines: ["Gloire"], caption: "Refrain" },
         "black",
+        null,
       );
 
       const [initial, shown, blackout] = yield* Fiber.join(received);
@@ -46,6 +48,7 @@ describe("LiveFrames", () => {
           "stream",
           { _tag: "Lines", lines: ["Gloire"], caption: null },
           "black",
+          null,
         );
         expect((yield* frames.current(orgA, "room")).version).toBe(0);
         expect((yield* frames.current(orgA, "stream")).version).toBe(1);

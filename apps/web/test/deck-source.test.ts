@@ -118,11 +118,23 @@ describe("DeckSourceLive", () => {
         yield* projects.addItem(project.id, draft, null);
       }
 
+      const noted = yield* projects.setItemNotes(
+        project.id,
+        (yield* projects.get(project.id)).items[0]!.id,
+        "Tonalité : Sol",
+      );
+      expect(noted.items[0]?.notes).toBe("Tonalité : Sol");
+
       const deck = yield* decks.resolve(project.id);
       expect(deck.projectName).toBe("Culte");
       const [songItem, scripture, textItem, blank, missing] = deck.items;
 
-      expect(songItem).toMatchObject({ kind: "Song", title: "Il est bon", missing: false });
+      expect(songItem).toMatchObject({
+        kind: "Song",
+        title: "Il est bon",
+        missing: false,
+        notes: "Tonalité : Sol",
+      });
       expect(songItem?.slides.map((slide) => slide.label)).toEqual([
         "Couplet 1 (1/2)",
         "Couplet 1 (2/2)",

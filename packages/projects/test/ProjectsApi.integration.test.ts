@@ -146,4 +146,33 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API projects (Postgres)", () =>
       expect(error._tag).toBe("ProjectNotFound");
     }).pipe(Effect.provide(ApiLive)),
   );
+
+  it.effect("enregistre les notes d'un élément et les relit", () =>
+    Effect.gen(function* () {
+      const client = yield* RpcTest.makeClient(ProjectsRpcs);
+      const created = yield* client.ProjectsCreate({ name: "Notes", date: null });
+      const withItem = yield* client.ProjectsAddItem({
+        projectId: created.id,
+        item: { _tag: "Song", songId },
+        position: null,
+      });
+      const itemId = withItem.items[0]!.id;
+
+      const noted = yield* client.ProjectsSetItemNotes({
+        projectId: created.id,
+        itemId,
+        notes: "Tonalité : Sol",
+      });
+      expect(noted.items[0]).toMatchObject({ notes: "Tonalité : Sol" });
+      const reloaded = yield* client.ProjectsGet({ id: created.id });
+      expect(reloaded.items[0]).toMatchObject({ notes: "Tonalité : Sol" });
+
+      const cleared = yield* client.ProjectsSetItemNotes({
+        projectId: created.id,
+        itemId,
+        notes: null,
+      });
+      expect(cleared.items[0]?.notes).toBeUndefined();
+    }).pipe(Effect.provide(ApiLive)),
+  );
 });

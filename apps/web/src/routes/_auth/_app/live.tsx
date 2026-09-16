@@ -3,6 +3,7 @@ import {
   type Deck,
   type DeckItem,
   type LiveCursor,
+  type LiveSession,
   type LiveSnapshot,
   type StreamCursor,
   type StreamOverride,
@@ -10,9 +11,15 @@ import {
   nextCursor,
   streamFrameContent,
 } from "@projection/live/domain";
-import type { Cover, FrameContent, Track } from "@projection/presentation/domain";
+import {
+  type Cover,
+  type FrameContent,
+  type Track,
+  remainingMs,
+} from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
 import { Button } from "@projection/ui/components/button";
+import { Input } from "@projection/ui/components/input";
 import { cn } from "@projection/ui/lib/utils";
 import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
 import { Exit } from "effect";
@@ -23,6 +30,9 @@ import {
   ImageIcon,
   MonitorOff,
   Radio,
+  Pause,
+  Play,
+  RotateCcw,
   Square,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,6 +41,7 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { contentToSlide, roomTheme } from "@/features/display/frame";
 import { FrameView } from "@/features/display/frame-view";
+import { formatDuration, useNow } from "@/features/display/time";
 import {
   liveAtom,
   liveGoToAtom,
@@ -46,6 +57,10 @@ import {
   liveStreamResumeAtom,
   liveStreamSetLinkedAtom,
   liveStreamShowLinesAtom,
+  liveTimerPauseAtom,
+  liveTimerResetAtom,
+  liveTimerSetAtom,
+  liveTimerStartAtom,
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
@@ -273,12 +288,108 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             <p className="text-muted-foreground text-xs">{m.live_end()}</p>
           )}
         </section>
+        <StagePanel session={session} deck={deck} />
         <StreamPanel snapshot={snapshot} deck={deck} />
         <Link to="/outputs" className="text-muted-foreground block text-xs underline">
           {m.live_outputs_link()}
         </Link>
       </aside>
     </div>
+  );
+}
+
+/** Retour scène : notes de l'élément en cours et minuteur piloté depuis la régie. */
+function StagePanel({ session, deck }: { session: LiveSession; deck: Deck }) {
+  const run = useRun();
+  const now = useNow();
+  const setTimer = useAtomSet(liveTimerSetAtom, { mode: "promiseExit" });
+  const startTimer = useAtomSet(liveTimerStartAtom, { mode: "promiseExit" });
+  const pauseTimer = useAtomSet(liveTimerPauseAtom, { mode: "promiseExit" });
+  const resetTimer = useAtomSet(liveTimerResetAtom, { mode: "promiseExit" });
+  const [minutes, setMinutes] = useState(5);
+
+  const notes =
+    session.cursor === null
+      ? null
+      : (deck.items.find((item) => item.itemId === session.cursor?.itemId)?.notes ?? null);
+  const remaining = remainingMs(session.timer, now);
+  const running = session.timer.runningSince !== null;
+
+  return (
+    <section className="space-y-2" data-testid="live-stage">
+      <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_stage()}</h2>
+
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            "flex-1 text-2xl font-semibold tabular-nums",
+            session.timer.durationMs === 0 && "text-muted-foreground",
+            remaining < 0 && "text-red-500",
+          )}
+          data-testid="live-timer"
+        >
+          {formatDuration(remaining)}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          aria-label={running ? m.live_timer_pause() : m.live_timer_start()}
+          disabled={session.timer.durationMs === 0}
+          onClick={() =>
+            run(running ? pauseTimer({ payload: undefined }) : startTimer({ payload: undefined }))
+          }
+        >
+          {running ? (
+            <Pause className="size-4" aria-hidden />
+          ) : (
+            <Play className="size-4" aria-hidden />
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={m.live_timer_reset()}
+          onClick={() => run(resetTimer({ payload: undefined }))}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+        </Button>
+      </div>
+
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void run(setTimer({ payload: { durationMs: Math.round(minutes * 60_000) } }));
+        }}
+      >
+        <Input
+          type="number"
+          min={0}
+          max={180}
+          step={1}
+          className="h-8 w-20"
+          aria-label={m.live_timer_minutes()}
+          value={minutes}
+          onChange={(event) => setMinutes(event.target.valueAsNumber || 0)}
+        />
+        <Button type="submit" size="sm" variant="outline">
+          {m.live_timer_set()}
+        </Button>
+      </form>
+
+      <div className="space-y-1">
+        <h3 className="text-muted-foreground text-xs font-medium uppercase">
+          {m.live_item_notes()}
+        </h3>
+        {notes === null ? (
+          <p className="text-muted-foreground text-xs">{m.live_no_notes()}</p>
+        ) : (
+          <p className="text-xs whitespace-pre-wrap" data-testid="live-notes">
+            {notes}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

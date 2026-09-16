@@ -324,5 +324,20 @@
   "songs_import_reason_undefined_repeat": "une section est rejouée sans avoir été écrite",
   "songs_import_reason_too_large": "fichier trop volumineux (200 Ko au plus)",
   "songs_import_too_many": "{max} fichiers au plus par import.",
-  "songs_import_failed": "Import impossible."
+  "songs_import_failed": "Import impossible.",
+  "stage_next": "Suivante",
+  "stage_notes": "Notes",
+  "live_stage": "Retour scène",
+  "live_timer_minutes": "Minutes",
+  "live_timer_set": "Définir",
+  "live_timer_start": "Démarrer",
+  "live_timer_pause": "Pause",
+  "live_timer_reset": "Réinitialiser",
+  "live_item_notes": "Notes de l'élément",
+  "live_no_notes": "Aucune note pour cet élément.",
+  "project_item_notes": "Notes",
+  "project_item_notes_placeholder": "Notes pour le retour scène : tonalité, consignes, enchaînement…",
+  "project_item_notes_save": "Enregistrer",
+  "project_item_notes_cancel": "Annuler",
+  "project_item_notes_saved": "Notes enregistrées"
 }

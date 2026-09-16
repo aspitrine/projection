@@ -1,7 +1,7 @@
 import { CurrentActor, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Option } from "effect";
 
-import { createItem, insertItem, moveItem, removeItem } from "../domain/Items";
+import { createItem, insertItem, moveItem, removeItem, setItemNotes } from "../domain/Items";
 import {
   Project,
   type ProjectInput,
@@ -26,6 +26,12 @@ export class Projects extends Context.Service<
     addItem(id: ProjectId, draft: ProjectItemDraft, position: number | null): Result;
     removeItem(id: ProjectId, itemId: ProjectItemId): Result<ProjectItemNotFound>;
     moveItem(id: ProjectId, itemId: ProjectItemId, toIndex: number): Result<ProjectItemNotFound>;
+    /** Notes d'un élément, affichées sur le retour scène. */
+    setItemNotes(
+      id: ProjectId,
+      itemId: ProjectItemId,
+      notes: string | null,
+    ): Result<ProjectItemNotFound>;
   }
 >()("@projection/projects/Projects") {
   static readonly layer = Layer.effect(
@@ -116,6 +122,13 @@ export class Projects extends Context.Service<
               Effect.map((items) => withItems(project, items)),
             ),
           ).pipe(Effect.withSpan("Projects.removeItem")),
+
+        setItemNotes: (id, itemId, notes) =>
+          modify(id, (project) =>
+            setItemNotes(project.items, itemId, notes).pipe(
+              Effect.map((items) => withItems(project, items)),
+            ),
+          ).pipe(Effect.withSpan("Projects.setItemNotes")),
 
         moveItem: (id, itemId, toIndex) =>
           modify(id, (project) =>

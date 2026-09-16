@@ -40,6 +40,7 @@ export const item = (index: number, texts: ReadonlyArray<string>, parts = 1) =>
     itemId: itemId(index),
     kind: "Song",
     title: `Élément ${index}`,
+    notes: null,
     missing: false,
     slides: texts.map(
       (text) =>

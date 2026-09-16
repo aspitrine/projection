@@ -39,6 +39,15 @@ export const ProjectsRpcs = RpcGroup.make(
     success: Project,
     error: ItemError,
   }),
+  Rpc.make("ProjectsSetItemNotes", {
+    payload: {
+      projectId: ProjectId,
+      itemId: ProjectItemId,
+      notes: Schema.NullOr(Schema.String.check(Schema.isMaxLength(2000))),
+    },
+    success: Project,
+    error: ItemError,
+  }),
   Rpc.make("ProjectsMoveItem", {
     payload: { projectId: ProjectId, itemId: ProjectItemId, toIndex: Schema.Int },
     success: Project,

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { displayAtom } from "@/features/display/atoms";
 import { FrameView } from "@/features/display/frame-view";
+import { StageScreen } from "@/features/display/stage-view";
 import { m } from "@/paraglide/messages";
 
 /** Écran de sortie public : aucune session, accès par token. */
@@ -63,15 +64,21 @@ function DisplayScreen() {
 
   return (
     <div
-      className="w-[min(100vw,calc(100vh*16/9))] cursor-none"
+      className={
+        type === "stage" ? "h-screen w-screen" : "w-[min(100vw,calc(100vh*16/9))] cursor-none"
+      }
       onDoubleClick={toggleFullscreen}
       data-testid="display-screen"
       data-version={frame.version}
       data-output-type={type}
       data-cover={frame.cover}
     >
-      <FrameView content={frame.content} cover={frame.cover} type={type} branding={branding} />
-      {hintVisible && type !== "stream" && (
+      {type === "stage" ? (
+        <StageScreen frame={frame} branding={branding} />
+      ) : (
+        <FrameView content={frame.content} cover={frame.cover} type={type} branding={branding} />
+      )}
+      {hintVisible && type === "room" && (
         <p className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/40">
           {m.display_fullscreen_hint()}
         </p>

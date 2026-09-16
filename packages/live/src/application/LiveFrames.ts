@@ -2,6 +2,7 @@ import {
   type Cover,
   Frame,
   type FrameContent,
+  type StageInfo,
   type Track,
   initialFrame,
 } from "@projection/presentation/domain";
@@ -26,6 +27,8 @@ export class LiveFrames extends Context.Service<
       track: Track,
       content: FrameContent,
       cover: Cover,
+      /** Infos du retour scène (piste Salle), ou `null`. */
+      stage: StageInfo | null,
     ): Effect.Effect<Frame>;
     /** Affiche un contenu sur toutes les pistes, bouton d'urgence inchangé (test d'affichage). */
     show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
@@ -53,7 +56,7 @@ export class LiveFrames extends Context.Service<
       const update = (
         organizationId: OrganizationId,
         track: Track,
-        transition: (frame: Frame) => Pick<Frame, "cover" | "content">,
+        transition: (frame: Frame) => Pick<Frame, "cover" | "content" | "stage">,
       ) =>
         Effect.gen(function* () {
           const ref = yield* refFor(organizationId, track);
@@ -70,14 +73,19 @@ export class LiveFrames extends Context.Service<
           Stream.unwrap(Effect.map(refFor(organizationId, track), SubscriptionRef.changes)),
         current: (organizationId, track) =>
           Effect.flatMap(refFor(organizationId, track), SubscriptionRef.get),
-        publish: (organizationId, track, content, cover) =>
-          update(organizationId, track, () => ({ cover, content })).pipe(
+        publish: (organizationId, track, content, cover, stage) =>
+          update(organizationId, track, () => ({ cover, content, stage })).pipe(
             Effect.withSpan("LiveFrames.publish"),
           ),
         show: (organizationId, content) =>
           Effect.forEach(
             tracks,
-            (track) => update(organizationId, track, (frame) => ({ cover: frame.cover, content })),
+            (track) =>
+              update(organizationId, track, (frame) => ({
+                cover: frame.cover,
+                content,
+                stage: frame.stage,
+              })),
             { discard: true },
           ).pipe(Effect.withSpan("LiveFrames.show")),
       });

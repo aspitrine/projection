@@ -205,11 +205,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [ ] Éditeur de thème avec aperçu live ; bouton « Réinitialiser aux valeurs par défaut ».
 - [ ] Transition fondu (durée configurable).
 
-### T2.6 Sortie retour scène [outputs, live]
+### T2.6 Sortie retour scène [outputs, live] ✅
 
 **Dépend de** : T2.1
 
-- [ ] Diapo courante + suivante, horloge, minuteur piloté depuis la régie, notes par élément.
+- [x] Notes par élément de projet (`ProjectsSetItemNotes`), éditées sur la page projet et reprises dans le deck.
+- [x] Minuteur (`StageTimer`) piloté depuis la régie : durée, démarrage, pause, remise à zéro, persisté ; dépassement affiché en négatif.
+- [x] L'image de la piste Salle transporte les infos du retour (diapo suivante, notes, minuteur) ; la piste Stream non.
+- [x] Écran retour : diapo courante, diapo suivante, horloge locale, minuteur, notes.
+- [x] Tests unitaires (minuteur, infos retour, notes) et fonctionnels sur Postgres.
 
 ### T2.7 Édition des paroles en live [songs, live]
 

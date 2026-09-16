@@ -7,10 +7,14 @@ import {
 } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
+/** Notes de conduite affichées sur le retour scène. */
+const ItemNotes = Schema.optionalKey(Schema.String.check(Schema.isMaxLength(2000)));
+
 /** Éléments d'un projet : uniquement des références vers la bibliothèque (pas de copie). */
 export class SongItem extends Schema.TaggedClass<SongItem>()("Song", {
   id: ProjectItemId,
   songId: SongId,
+  notes: ItemNotes,
 }) {}
 
 export class ScriptureItem extends Schema.TaggedClass<ScriptureItem>()("Scripture", {
@@ -18,15 +22,18 @@ export class ScriptureItem extends Schema.TaggedClass<ScriptureItem>()("Scriptur
   translationId: Schema.NonEmptyString,
   /** Référence canonique (« Jean 3.16-18 »), résolue par le contexte bible. */
   reference: Schema.NonEmptyString,
+  notes: ItemNotes,
 }) {}
 
 export class TextSlideItem extends Schema.TaggedClass<TextSlideItem>()("TextSlide", {
   id: ProjectItemId,
   textSlideId: TextSlideId,
+  notes: ItemNotes,
 }) {}
 
 export class BlankItem extends Schema.TaggedClass<BlankItem>()("Blank", {
   id: ProjectItemId,
+  notes: ItemNotes,
 }) {}
 
 export const ProjectItem = Schema.Union([SongItem, ScriptureItem, TextSlideItem, BlankItem]);

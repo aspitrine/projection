@@ -43,6 +43,15 @@ export const LiveRpcs = RpcGroup.make(
     error: NoLiveProject,
   }),
   Rpc.make("LiveStreamResume", { success: LiveSnapshot }),
+  Rpc.make("LiveTimerSet", {
+    payload: {
+      durationMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 86_400_000 })),
+    },
+    success: LiveSnapshot,
+  }),
+  Rpc.make("LiveTimerStart", { success: LiveSnapshot }),
+  Rpc.make("LiveTimerPause", { success: LiveSnapshot }),
+  Rpc.make("LiveTimerReset", { success: LiveSnapshot }),
   Rpc.make("LiveRefresh", { success: LiveSnapshot }),
   Rpc.make("LiveStop", { success: LiveSnapshot }),
 ).middleware(ActorMiddleware);

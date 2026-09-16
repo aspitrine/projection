@@ -13,6 +13,38 @@ import {
 
 const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), max);
 
+/** Recopie l'élément avec ses notes (chaîne vide ou espaces → aucune note). */
+const withNotes = (item: ProjectItem, notes: string | null): ProjectItem => {
+  const trimmed = notes?.trim() ?? "";
+  const extra = trimmed === "" ? {} : { notes: trimmed };
+  switch (item._tag) {
+    case "Song":
+      return new SongItem({ id: item.id, songId: item.songId, ...extra });
+    case "Scripture":
+      return new ScriptureItem({
+        id: item.id,
+        translationId: item.translationId,
+        reference: item.reference,
+        ...extra,
+      });
+    case "TextSlide":
+      return new TextSlideItem({ id: item.id, textSlideId: item.textSlideId, ...extra });
+    case "Blank":
+      return new BlankItem({ id: item.id, ...extra });
+  }
+};
+
+export const setItemNotes = Effect.fnUntraced(function* (
+  items: ReadonlyArray<ProjectItem>,
+  itemId: ProjectItemId,
+  notes: string | null,
+) {
+  if (!items.some((item) => item.id === itemId)) {
+    return yield* new ProjectItemNotFound({ itemId });
+  }
+  return items.map((item) => (item.id === itemId ? withNotes(item, notes) : item));
+});
+
 export const createItem = (draft: ProjectItemDraft, id: ProjectItemId): ProjectItem => {
   switch (draft._tag) {
     case "Song":
