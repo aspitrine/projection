@@ -26,7 +26,9 @@ const MigratedDatabase = Layer.effectDiscard(
   Effect.gen(function* () {
     yield* runMigrations([liveMigrations]);
     const sql = yield* PgClient.PgClient;
-    yield* sql`TRUNCATE live_session`;
+    // Nettoyage ciblé : les fichiers de test tournent en parallèle sur la même base.
+    yield* sql`DELETE FROM live_session WHERE organization_id = ${organizationId}`;
+    yield* sql`DELETE FROM live_frame WHERE organization_id = ${organizationId}`;
   }),
 ).pipe(Layer.provideMerge(DatabaseLive));
 

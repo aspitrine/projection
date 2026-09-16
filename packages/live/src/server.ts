@@ -5,6 +5,7 @@ import { LiveSessions } from "./application/LiveSessions";
 import { SqlLiveSessionRepository } from "./infrastructure/SqlLiveSessionRepository";
 
 export { LiveFrames } from "./application/LiveFrames";
+export { SqlLiveFrames } from "./infrastructure/SqlLiveFrames";
 export { DeckSource, SongEditing } from "./application/ports";
 export { liveMigrations } from "./migrations";
 

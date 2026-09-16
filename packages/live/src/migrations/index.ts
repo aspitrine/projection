@@ -51,5 +51,28 @@ export const liveMigrations = {
           DEFAULT '{"durationMs":0,"elapsedMs":0,"runningSince":null}'
       `;
     }),
+
+    "0006_create_live_frame": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // Image courante de chaque piste : partagée par toutes les instances, donc en base.
+      yield* sql`
+        CREATE TABLE live_frame (
+          organization_id text NOT NULL,
+          track text NOT NULL,
+          frame jsonb NOT NULL,
+          updated_at timestamptz NOT NULL,
+          PRIMARY KEY (organization_id, track)
+        )
+      `;
+    }),
+
+    "0007_add_session_video": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // La lecture vidéo devient partagée : une régie d'une autre instance la reprend.
+      yield* sql`
+        ALTER TABLE live_session ADD COLUMN video jsonb NOT NULL
+          DEFAULT '{"playing": false, "positionMs": 0, "since": null, "durationMs": 0}'::jsonb
+      `;
+    }),
   },
 };

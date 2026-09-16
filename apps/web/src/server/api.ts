@@ -2,7 +2,7 @@ import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/
 import { layerIdentity } from "@projection/identity/server";
 import { ImportsLive } from "@projection/imports/server";
 import { MediaLive, MediaServiceLive, mediaMigrations } from "@projection/media/server";
-import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
+import { LiveFrames, LiveLive, SqlLiveFrames, liveMigrations } from "@projection/live/server";
 import {
   FrameGateway,
   OutputsLive,
@@ -86,7 +86,8 @@ const HandlersLive = Layer.mergeAll(
   Layer.provide(MediaStorageLive.pipe(Layer.provide(ObjectStorage.layerConfig))),
   Layer.provide(FrameGatewayLive),
   Layer.provide(BrandingSourceLive),
-  Layer.provide(LiveFrames.layerMemory),
+  // Images partagées entre instances (table `live_frame` + LISTEN/NOTIFY).
+  Layer.provide(SqlLiveFrames),
 );
 
 const ApiLive = RpcServer.layerHttp({

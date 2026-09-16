@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import type { Frame } from "@projection/presentation/domain";
-import { idleTimer } from "@projection/presentation/domain";
+import { idleTimer, idleVideo } from "@projection/presentation/domain";
 import { Effect, Layer, Queue, Stream } from "effect";
 
 import { LiveFrames } from "../src/application/LiveFrames";
@@ -123,6 +123,7 @@ describe("LiveSessions", () => {
           streamCursor: null,
           streamOverride: null,
           timer: idleTimer,
+          video: idleVideo,
           version: 7,
           updatedAt: 1,
         }),

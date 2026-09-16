@@ -84,9 +84,11 @@ qu'à la fin, ou si les lignes arrivent par salves, le tampon est encore actif q
 
 ## Reste à surveiller
 
-- **Une seule instance** : l'état de la régie vit en mémoire du processus. Ne pas répliquer
-  l'application tant que la diffusion inter-instances (`LISTEN/NOTIFY`, T3.3) n'est pas faite.
-- **Collant par session** : si un répartiteur est déjà en place, l'épingler sur une instance.
+- **Plusieurs instances** : l'image de chaque piste et la session de régie vivent en base, et
+  les instances se réveillent par `LISTEN/NOTIFY` (canaux `projection_frames` et
+  `projection_live_session`). Répliquer l'application est donc possible, à deux conditions :
+  toutes les instances pointent sur la **même base**, et le pool laisse une connexion libre par
+  instance pour l'écoute (`LISTEN` en retient une). Aucune affinité de session n'est requise.
 - **Stockage des médias** : Garage (ou tout S3) doit être joignable **depuis le navigateur**,
   pas seulement depuis le serveur — les téléversements et les lectures passent par des URL
   signées. Voir [docs/medias.md](medias.md).

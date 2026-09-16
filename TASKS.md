@@ -148,7 +148,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Tests unitaires (navigation, sessions, DeckSource) et fonctionnels API sur Postgres.
 - [x] Battement de cœur des flux (`withHeartbeat`, 10 s) : la dernière image est réémise, et le client abandonne un flux muet depuis 35 s pour se réabonner. Une connexion morte en silence (bascule Wi-Fi/4G) ne laisse plus un écran figé.
 - [x] Commandes émises pendant une coupure : celles qui décrivent un état visé (position, écran noir, minuteur, vidéo, stream) sont mises en file et rejouées au retour du réseau — une seule par clé, abandonnées au-delà de 20 s ; les commandes relatives (« suivante ») ne sont jamais rejouées. Bandeau « serveur injoignable » en régie.
-- [ ] Limite connue : état en mémoire par instance (multi-instance en T3.3).
+- [x] Multi-instance (T3.3) : l'image de chaque piste est en base (`live_frame`) et la session porte aussi la lecture vidéo ; `LISTEN/NOTIFY` réveille les autres instances (canaux `projection_frames` et `projection_live_session`), avec relecture de sûreté toutes les 30 s.
 
 **🎯 Jalon MVP** : un culte complet projeté depuis le navigateur, piloté par deux opérateurs.
 
@@ -313,7 +313,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 
 - [ ] T3.1 Modèles de culte réutilisables [projects].
 - [ ] T3.2 Autres langues d'interface.
-- [ ] T3.3 Multi-instance (`LISTEN/NOTIFY` Postgres) [live, platform].
+- [x] T3.3 Multi-instance (`LISTEN/NOTIFY` Postgres) [live, platform] : images et session partagées par la base, régies et écrans de toutes les instances synchronisés (tests d'intégration à deux instances).
 - [ ] T3.4 Montée en Effect 4.0 final.
 
 ---

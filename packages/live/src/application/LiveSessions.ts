@@ -1,4 +1,5 @@
 import {
+  type Actor,
   CurrentActor,
   type OrganizationId,
   type ProjectId,
@@ -70,9 +71,18 @@ interface Draft {
 interface OrganizationState {
   readonly ref: SubscriptionRef.SubscriptionRef<LiveSnapshot>;
   readonly lock: Semaphore.Semaphore;
+  /**
+   * Acteur ayant ouvert la session sur cette instance. Une notification venue d'une autre
+   * instance n'a pas d'acteur : celui-ci sert uniquement à relire le projet de sa propre
+   * organisation quand la régie distante en a changé.
+   */
+  readonly actor: Actor;
 }
 
 type Command<E = never> = Effect.Effect<LiveSnapshot, E, CurrentActor>;
+
+/** Relecture de sûreté de la session, en plus des notifications. */
+const RESYNC_INTERVAL = "30 seconds";
 
 const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover): Draft => ({
   deck: null,
@@ -235,6 +245,7 @@ export class LiveSessions extends Context.Service<
             streamCursor: draft.streamCursor,
             streamOverride: draft.streamOverride,
             timer: draft.timer,
+            video: draft.video,
             version,
             updatedAt,
           }),
@@ -242,7 +253,8 @@ export class LiveSessions extends Context.Service<
 
       /** État de l'organisation, chargé depuis la base au premier accès (et republié). */
       const stateFor = Effect.gen(function* () {
-        const { organizationId } = yield* CurrentActor;
+        const actor = yield* CurrentActor;
+        const { organizationId } = actor;
         const cached = states.get(organizationId);
         if (cached !== undefined) return cached;
 
@@ -269,6 +281,7 @@ export class LiveSessions extends Context.Service<
             const state: OrganizationState = {
               ref: yield* SubscriptionRef.make(snapshot),
               lock: yield* Semaphore.make(1),
+              actor,
             };
             states.set(organizationId, state);
             yield* publish(snapshot);
@@ -276,6 +289,57 @@ export class LiveSessions extends Context.Service<
           }),
         );
       });
+
+      /**
+       * Une autre instance a piloté : on relit la session enregistrée et on la sert aux
+       * régies branchées ici. Ni enregistrement ni republication — l'instance qui a agi
+       * s'en est chargée, et la base fait autorité pour les images.
+       */
+      const reload = Effect.fnUntraced(function* (organizationId: OrganizationId) {
+        const state = states.get(organizationId);
+        // Organisation qu'aucune régie de cette instance ne suit : rien à rafraîchir.
+        if (state === undefined) return;
+
+        yield* Semaphore.withPermits(
+          state.lock,
+          1,
+        )(
+          Effect.gen(function* () {
+            const stored = Option.getOrElse(yield* repository.load(organizationId), () =>
+              idleSession(organizationId),
+            );
+            const current = yield* SubscriptionRef.get(state.ref);
+            const sameProject =
+              current.deck !== null && current.session.projectId === stored.projectId;
+            // Projet inchangé : le déroulé local reste valable, inutile de le relire.
+            const deck = sameProject
+              ? Option.fromNullishOr(current.deck)
+              : stored.projectId === null
+                ? Option.none<Deck>()
+                : yield* tryResolve(stored.projectId).pipe(
+                    Effect.provideService(CurrentActor, state.actor),
+                  );
+            const draft = reconcile(deck, stored.projectId, stored);
+            const snapshot = toSnapshot(
+              { ...draft, video: stored.video },
+              organizationId,
+              stored.version,
+              stored.updatedAt,
+            );
+            yield* SubscriptionRef.set(state.ref, snapshot);
+          }),
+        );
+      });
+
+      // Réveils venus des autres instances (`LISTEN/NOTIFY` en Postgres, rien en mémoire).
+      yield* repository.changed.pipe(Stream.runForEach(reload), Effect.forkScoped);
+
+      // Ceinture de sécurité : une notification peut se perdre (connexion d'écoute coupée).
+      // Une relecture périodique rattrape alors les régies de cette instance.
+      yield* Stream.tick(RESYNC_INTERVAL).pipe(
+        Stream.runForEach(() => Effect.forEach([...states.keys()], reload, { discard: true })),
+        Effect.forkScoped,
+      );
 
       const command = <E>(
         transform: (current: LiveSnapshot) => Effect.Effect<Draft, E, CurrentActor>,
@@ -299,6 +363,8 @@ export class LiveSessions extends Context.Service<
               yield* repository.save(snapshot.session);
               yield* SubscriptionRef.set(state.ref, snapshot);
               yield* publish(snapshot);
+              // Les régies des autres instances relisent la session ainsi enregistrée.
+              yield* repository.announce(snapshot.session.organizationId);
               return snapshot;
             }),
           );
