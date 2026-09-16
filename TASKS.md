@@ -237,7 +237,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Bibliothèque médias : ajout multi-fichiers, aperçus image et vidéo, suppression.
 - [x] Élément de projet « média » (onglet Médias du panneau d'ajout) ; images et vidéos projetées plein écran.
 - [x] Lecture vidéo pilotée depuis la régie (lecture, pause, retour au début) : tous les écrans se calent sur la position diffusée ; changer de diapo arrête la vidéo. Le son est coupé automatiquement si le navigateur le refuse, avec invite à cliquer.
-- [ ] Limite connue : le serveur ignore la durée des vidéos, donc la position affichée en régie continue d'avancer après la fin du fichier.
+- [x] Barre de progression en régie : la durée du fichier est mesurée par la régie et diffusée, la position est bornée par cette durée, le curseur est déplaçable (clic ou clavier) et la lecture se met en pause d'elle-même à la fin. Les aperçus de la régie suivent la lecture comme les écrans.
 
 ### T2.9 Import VideoPsalm [songs, projects]
 

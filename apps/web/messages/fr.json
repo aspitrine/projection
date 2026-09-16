@@ -437,5 +437,7 @@
   "bible_default_translation": "Traduction par défaut",
   "bible_default_saved": "Traduction par défaut enregistrée",
   "bible_default_clear": "Aucune",
-  "bible_default_cleared": "Traduction par défaut retirée"
+  "bible_default_cleared": "Traduction par défaut retirée",
+  "live_video_stop": "Arrêter et revenir au début",
+  "live_video_progress": "Position dans la vidéo"
 }

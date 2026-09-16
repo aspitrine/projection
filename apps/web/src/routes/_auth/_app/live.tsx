@@ -10,12 +10,14 @@ import {
   contentAt,
   nextCursor,
   streamFrameContent,
+  withPlayback,
 } from "@projection/live/domain";
 import {
   type Cover,
   type FrameContent,
   remainingMs,
   type Track,
+  videoEnded,
   type VideoPlayback,
   videoPositionMs,
 } from "@projection/presentation/domain";
@@ -37,7 +39,6 @@ import {
   Pause,
   Pencil,
   Play,
-  RotateCcw as RotateIcon,
   RotateCcw,
   Square,
 } from "lucide-react";
@@ -68,9 +69,11 @@ import {
   liveTimerResetAtom,
   liveTimerSetAtom,
   liveTimerStartAtom,
+  liveVideoDurationAtom,
   liveVideoPauseAtom,
   liveVideoPlayAtom,
   liveVideoRestartAtom,
+  liveVideoSeekAtom,
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
@@ -243,7 +246,8 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
       ? null
       : (currentItem.slides[session.cursor.slideIndex]?.sectionId ?? null);
 
-  const current = contentAt(deck, session.cursor);
+  // Les aperçus suivent la lecture vidéo, comme les écrans.
+  const current = withPlayback(contentAt(deck, session.cursor), snapshot.video);
   const upcomingCursor = session.cursor === null ? null : nextCursor(deck, session.cursor);
   const hasUpcoming =
     upcomingCursor !== null &&
@@ -325,7 +329,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             sectionId={currentSection}
           />
         )}
-        {current._tag === "Video" && <VideoPanel playback={snapshot.video} />}
+        {current._tag === "Video" && <VideoPanel playback={snapshot.video} url={current.url} />}
         <StagePanel session={session} deck={deck} />
         <StreamPanel snapshot={snapshot} deck={deck} />
         <Link to="/outputs" className="text-muted-foreground block text-xs underline">
@@ -408,22 +412,71 @@ function LyricsPanel({
 }
 
 /** Lecture de la vidéo projetée : tous les écrans suivent ces commandes. */
-function VideoPanel({ playback }: { playback: VideoPlayback }) {
+function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string }) {
   const run = useRun();
+  // Rafraîchi plus souvent que l'horloge : la barre doit avancer sans à-coups.
+  const now = useNow(250);
   const play = useAtomSet(liveVideoPlayAtom, { mode: "promiseExit" });
   const pause = useAtomSet(liveVideoPauseAtom, { mode: "promiseExit" });
   const restart = useAtomSet(liveVideoRestartAtom, { mode: "promiseExit" });
-  const now = useNow();
+  const seek = useAtomSet(liveVideoSeekAtom, { mode: "promiseExit" });
+  const setDuration = useAtomSet(liveVideoDurationAtom, { mode: "promiseExit" });
+  const [scrubbing, setScrubbing] = useState<number | null>(null);
+
+  const position = videoPositionMs(playback, now);
+  const ended = videoEnded(playback, now);
+  const known = playback.durationMs > 0;
+
+  // Arrivée en fin de fichier : la régie arrête la lecture, les écrans suivent.
+  useEffect(() => {
+    if (playback.playing && ended) void run(pause({ payload: undefined }));
+  }, [playback.playing, ended, pause, run]);
+
+  const commitSeek = () => {
+    if (scrubbing === null) return;
+    void run(seek({ payload: { positionMs: Math.round(scrubbing) } }));
+    setScrubbing(null);
+  };
 
   return (
     <section className="space-y-2" data-testid="live-video">
+      {/* Mesure la durée du fichier : le serveur ne la connaît pas. */}
+      <video
+        src={url}
+        preload="metadata"
+        muted
+        className="hidden"
+        onLoadedMetadata={(event) => {
+          const durationMs = Math.round(event.currentTarget.duration * 1000);
+          if (!Number.isFinite(durationMs) || durationMs <= 0) return;
+          if (Math.abs(durationMs - playback.durationMs) < 500) return;
+          void run(setDuration({ payload: { durationMs } }));
+        }}
+      />
+
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_video()}</h2>
         <span className="text-xs tabular-nums" data-testid="live-video-position">
-          {playback.playing ? m.live_video_playing() : m.live_video_paused()} ·{" "}
-          {formatDuration(videoPositionMs(playback, now))}
+          {formatDuration(scrubbing ?? position)}
+          {known && ` / ${formatDuration(playback.durationMs)}`}
         </span>
       </div>
+
+      <input
+        type="range"
+        className="w-full"
+        aria-label={m.live_video_progress()}
+        min={0}
+        max={known ? playback.durationMs : 1}
+        step={100}
+        disabled={!known}
+        value={scrubbing ?? Math.min(position, playback.durationMs || 1)}
+        onChange={(event) => setScrubbing(event.target.valueAsNumber)}
+        onPointerUp={commitSeek}
+        onKeyUp={commitSeek}
+        onBlur={commitSeek}
+      />
+
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -444,9 +497,10 @@ function VideoPanel({ playback }: { playback: VideoPlayback }) {
           size="sm"
           variant="ghost"
           onClick={() => run(restart({ payload: undefined }))}
-          aria-label={m.live_video_restart()}
+          aria-label={m.live_video_stop()}
+          title={m.live_video_stop()}
         >
-          <RotateIcon className="size-4" aria-hidden />
+          <Square className="size-4" aria-hidden />
         </Button>
       </div>
     </section>
@@ -580,7 +634,10 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
       <CoverPreview
         track="stream"
         cover={session.streamCover}
-        content={streamFrameContent(deck, streamCursor, session.streamOverride)}
+        content={withPlayback(
+          streamFrameContent(deck, streamCursor, session.streamOverride),
+          snapshot.video,
+        )}
         ringClassName="ring-sky-500"
       />
       <CoverButtons track="stream" cover={session.streamCover} size="sm" />

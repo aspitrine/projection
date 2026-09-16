@@ -33,3 +33,5 @@ export const liveEditSectionAtom = ApiClient.mutation("LiveEditSection");
 export const liveVideoPlayAtom = ApiClient.mutation("LiveVideoPlay");
 export const liveVideoPauseAtom = ApiClient.mutation("LiveVideoPause");
 export const liveVideoRestartAtom = ApiClient.mutation("LiveVideoRestart");
+export const liveVideoSeekAtom = ApiClient.mutation("LiveVideoSeek");
+export const liveVideoDurationAtom = ApiClient.mutation("LiveVideoDuration");

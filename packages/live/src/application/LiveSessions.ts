@@ -46,7 +46,7 @@ import {
   withPlayback,
 } from "../domain/Navigation";
 import { pauseTimer, resetTimer, setDuration, startTimer } from "../domain/Timer";
-import { pauseVideo, playVideo, restartVideo } from "../domain/Video";
+import { pauseVideo, playVideo, restartVideo, seekVideo, withVideoDuration } from "../domain/Video";
 import { LiveFrames } from "./LiveFrames";
 import { DeckSource, LiveSessionRepository, SongEditing } from "./ports";
 
@@ -126,6 +126,10 @@ export class LiveSessions extends Context.Service<
     readonly playVideo: Command<NoLiveProject>;
     readonly pauseVideo: Command<NoLiveProject>;
     readonly restartVideo: Command<NoLiveProject>;
+    /** Déplacement dans la vidéo, en millisecondes depuis le début. */
+    seekVideo(positionMs: number): Command<NoLiveProject>;
+    /** Durée du fichier, mesurée par la régie et partagée avec les écrans. */
+    setVideoDuration(durationMs: number): Command<NoLiveProject>;
     /** Minuteur du retour scène : durée, démarrage, pause, remise à zéro. */
     setTimer(durationMs: number): Command;
     readonly startTimer: Command;
@@ -488,8 +492,24 @@ export class LiveSessions extends Context.Service<
         ).pipe(Effect.withSpan("LiveSessions.pauseVideo")),
 
         restartVideo: command((current) =>
-          Effect.succeed({ ...keep(current), video: restartVideo() }),
+          Effect.succeed({ ...keep(current), video: restartVideo(current.video) }),
         ).pipe(Effect.withSpan("LiveSessions.restartVideo")),
+
+        seekVideo: (positionMs) =>
+          command((current) =>
+            Effect.map(Clock.currentTimeMillis, (now) => ({
+              ...keep(current),
+              video: seekVideo(current.video, positionMs, now),
+            })),
+          ).pipe(Effect.withSpan("LiveSessions.seekVideo")),
+
+        setVideoDuration: (durationMs) =>
+          command((current) =>
+            Effect.succeed({
+              ...keep(current),
+              video: withVideoDuration(current.video, durationMs),
+            }),
+          ).pipe(Effect.withSpan("LiveSessions.setVideoDuration")),
 
         setTimer: (durationMs) =>
           command((current) =>

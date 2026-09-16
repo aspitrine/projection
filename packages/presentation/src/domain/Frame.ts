@@ -7,14 +7,28 @@ export const VideoPlayback = Schema.Struct({
   positionMs: Schema.Int,
   /** Heure serveur du début de la lecture en cours, ou `null` à l'arrêt. */
   since: Schema.NullOr(Schema.Number),
+  /** Durée du fichier, signalée par la régie ; 0 tant qu'elle est inconnue. */
+  durationMs: Schema.Int,
 });
 export type VideoPlayback = typeof VideoPlayback.Type;
 
-export const idleVideo: VideoPlayback = { playing: false, positionMs: 0, since: null };
+export const idleVideo: VideoPlayback = {
+  playing: false,
+  positionMs: 0,
+  since: null,
+  durationMs: 0,
+};
 
-/** Position attendue à l'instant `now` (les écrans s'y recalent). */
-export const videoPositionMs = (playback: VideoPlayback, now: number) =>
-  playback.positionMs + (playback.since === null ? 0 : Math.max(0, now - playback.since));
+/** Position attendue à l'instant `now` (les écrans s'y recalent), bornée par la durée connue. */
+export const videoPositionMs = (playback: VideoPlayback, now: number) => {
+  const elapsed =
+    playback.positionMs + (playback.since === null ? 0 : Math.max(0, now - playback.since));
+  return playback.durationMs > 0 ? Math.min(elapsed, playback.durationMs) : elapsed;
+};
+
+/** Vrai quand la lecture a atteint la fin du fichier (durée connue). */
+export const videoEnded = (playback: VideoPlayback, now: number) =>
+  playback.durationMs > 0 && videoPositionMs(playback, now) >= playback.durationMs;
 
 /** Contenu prêt à afficher sur un écran, indépendant du type d'élément d'origine. */
 export const FrameContent = Schema.Union([

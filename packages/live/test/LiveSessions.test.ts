@@ -366,7 +366,19 @@ describe("LiveSessions", () => {
 
       yield* sessions.playVideo.pipe(asActor());
       const restarted = yield* sessions.restartVideo.pipe(asActor());
-      expect(restarted.video).toEqual({ playing: false, positionMs: 0, since: null });
+      expect(restarted.video).toEqual({
+        playing: false,
+        positionMs: 0,
+        since: null,
+        durationMs: 0,
+      });
+
+      // Durée signalée par la régie, puis déplacement dans la vidéo.
+      yield* sessions.setVideoDuration(30_000).pipe(asActor());
+      const seeked = yield* sessions.seekVideo(12_000).pipe(asActor());
+      expect(seeked.video).toMatchObject({ positionMs: 12_000, durationMs: 30_000 });
+      // Un déplacement au-delà de la fin est ramené à la durée.
+      expect((yield* sessions.seekVideo(99_000).pipe(asActor())).video.positionMs).toBe(30_000);
 
       // Changer de diapo arrête la vidéo.
       yield* sessions.playVideo.pipe(asActor());

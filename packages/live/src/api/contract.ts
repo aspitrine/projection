@@ -60,6 +60,16 @@ export const LiveRpcs = RpcGroup.make(
   Rpc.make("LiveVideoPlay", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LiveVideoPause", { success: LiveSnapshot, error: NoLiveProject }),
   Rpc.make("LiveVideoRestart", { success: LiveSnapshot, error: NoLiveProject }),
+  Rpc.make("LiveVideoSeek", {
+    payload: { positionMs: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
+    success: LiveSnapshot,
+    error: NoLiveProject,
+  }),
+  Rpc.make("LiveVideoDuration", {
+    payload: { durationMs: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
+    success: LiveSnapshot,
+    error: NoLiveProject,
+  }),
   Rpc.make("LiveTimerSet", {
     payload: {
       durationMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 86_400_000 })),
