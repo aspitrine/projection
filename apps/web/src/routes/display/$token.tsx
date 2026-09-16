@@ -60,7 +60,7 @@ function DisplayScreen() {
     return <StatusMessage>{m.display_invalid_token()}</StatusMessage>;
   }
 
-  const { frame, outputType: type, branding, theme } = result.value.display;
+  const { frame, outputType: type, branding, theme, background } = result.value.display;
 
   return (
     <div
@@ -76,7 +76,14 @@ function DisplayScreen() {
       {type === "stage" ? (
         <StageScreen frame={frame} branding={branding} theme={theme} />
       ) : (
-        <FadingFrame frame={frame} type={type} branding={branding} theme={theme} sound />
+        <FadingFrame
+          frame={frame}
+          type={type}
+          branding={branding}
+          theme={theme}
+          background={background}
+          sound
+        />
       )}
       {hintVisible && type === "room" && (
         <p className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/40">

@@ -15,6 +15,7 @@ import {
   Output,
   OutputNotFound,
   type OutputType,
+  type SlideBackground,
   type SplittingSettings,
   defaultSplittingSettings,
   generateDisplayToken,
@@ -22,7 +23,7 @@ import {
   trackOf,
 } from "../domain/Output";
 import { defaultThemeFor } from "../domain/Themes";
-import { BrandingSource, FrameGateway, OutputRepository } from "./ports";
+import { BrandingSource, FrameGateway, OutputRepository, ThemeBackgrounds } from "./ports";
 
 /** Nom de la sortie créée par défaut pour chaque organisation. */
 export const DEFAULT_OUTPUT_NAME = "Salle";
@@ -66,6 +67,7 @@ export class Outputs extends Context.Service<
       const repository = yield* OutputRepository;
       const gateway = yield* FrameGateway;
       const brandingSource = yield* BrandingSource;
+      const backgrounds = yield* ThemeBackgrounds;
 
       const orNotFound = (id: OutputId) =>
         Effect.flatMap(
@@ -174,18 +176,26 @@ export class Outputs extends Context.Service<
                 // Nom et thème sont relus à chaque image : une sortie renommée ou
                 // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
                 Stream.mapEffect((frame) =>
-                  repository.findByToken(connected.token).pipe(
-                    Effect.map((latest) => {
-                      const current = Option.getOrElse(latest, () => connected);
-                      return new DisplayFrame({
-                        outputName: current.name,
-                        outputType: current.type,
-                        theme: current.theme ?? defaultThemeFor(current.type),
-                        branding,
-                        frame,
-                      });
-                    }),
-                  ),
+                  Effect.gen(function* () {
+                    const latest = yield* repository.findByToken(connected.token);
+                    const current = Option.getOrElse(latest, () => connected);
+                    const theme = current.theme ?? defaultThemeFor(current.type);
+                    const background =
+                      theme.backgroundMediaId === null
+                        ? Option.none<SlideBackground>()
+                        : yield* backgrounds.resolve(
+                            current.organizationId,
+                            theme.backgroundMediaId,
+                          );
+                    return new DisplayFrame({
+                      outputName: current.name,
+                      outputType: current.type,
+                      theme,
+                      background: Option.getOrElse(background, () => null),
+                      branding,
+                      frame,
+                    });
+                  }),
                 ),
               );
               // Battement de cœur : un écran silencieux se réabonne plutôt que de rester figé.

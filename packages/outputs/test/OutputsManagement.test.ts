@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { Effect, Layer, Stream } from "effect";
 
 import { Outputs } from "../src/application/Outputs";
-import { OutputRepository } from "../src/application/ports";
+import { OutputRepository, ThemeBackgrounds } from "../src/application/ports";
 import { SlideTheme } from "@projection/presentation/domain";
 
 import { defaultSplittingSettings, trackOf } from "../src/domain/Output";
@@ -11,7 +11,12 @@ import { BrandingSourceMemory, FrameGatewayMemory, asActor } from "./support";
 
 const TestLayer = Outputs.layer.pipe(
   Layer.provideMerge(
-    Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayMemory, BrandingSourceMemory),
+    Layer.mergeAll(
+      OutputRepository.layerMemory,
+      FrameGatewayMemory,
+      BrandingSourceMemory,
+      ThemeBackgrounds.layerNone,
+    ),
   ),
 );
 

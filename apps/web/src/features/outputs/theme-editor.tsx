@@ -1,4 +1,4 @@
-import { useAtomSet } from "@effect/atom-react";
+import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { type Output, defaultThemeFor } from "@projection/outputs/domain";
 import { SlideTheme } from "@projection/presentation/domain";
 import { Button } from "@projection/ui/components/button";
@@ -9,7 +9,10 @@ import { RotateCcw } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
+import { MediaId } from "@projection/shared-kernel";
+
 import { contentToSlide } from "@/features/display/frame";
+import { mediaListAtom, mediaUrlAtom } from "@/features/media/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { m } from "@/paraglide/messages";
 
@@ -21,6 +24,29 @@ const sample = contentToSlide({
   lines: ["Il est bon de louer le Seigneur", "Et de chanter le nom du Dieu le plus haut"],
   caption: "Refrain",
 });
+
+/** Piles sûres : disponibles sur les postes de projection sans téléchargement. */
+const fontStacks: ReadonlyArray<{ readonly label: string; readonly value: string }> = [
+  { label: "Inter / système", value: "Inter, ui-sans-serif, system-ui, sans-serif" },
+  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
+  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+  { label: "Trebuchet MS", value: "'Trebuchet MS', Tahoma, sans-serif" },
+  { label: "Georgia", value: "Georgia, 'Times New Roman', serif" },
+  { label: "Times New Roman", value: "'Times New Roman', Times, serif" },
+  { label: "Courier New", value: "'Courier New', Courier, monospace" },
+];
+
+const weights: ReadonlyArray<{ readonly value: number; readonly label: () => string }> = [
+  { value: 400, label: m.theme_weight_regular },
+  { value: 500, label: m.theme_weight_medium },
+  { value: 600, label: m.theme_weight_semibold },
+  { value: 700, label: m.theme_weight_bold },
+];
+
+/** Un sélecteur de couleur ne comprend que `#rrggbb` ; « transparent » reste au clavier. */
+const hexOrNull = (value: string) => (/^#[0-9a-f]{6}$/i.test(value) ? value : null);
+
+const selectClassName = "border-input bg-background h-8 w-full border px-2 text-sm";
 
 type NumberField = "paddingPercent" | "minFontSize" | "maxFontSize" | "lineHeight" | "transitionMs";
 
@@ -45,6 +71,9 @@ export function ThemeEditor({ output }: { output: Output }) {
   const [theme, setTheme] = useState<SlideTheme>(output.theme ?? defaultThemeFor(output.type));
   const [pending, setPending] = useState(false);
 
+  const library = useAtomValue(mediaListAtom);
+  const backgroundChoices = library._tag === "Success" ? library.value : [];
+
   const set = <K extends keyof SlideTheme>(name: K, value: SlideTheme[K]) =>
     setTheme((current) => new SlideTheme({ ...current, [name]: value }));
 
@@ -67,26 +96,57 @@ export function ThemeEditor({ output }: { output: Output }) {
     <div className="grid gap-4 border-t pt-3 lg:grid-cols-[1fr_16rem]">
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
+          <ColorField
+            id={`${fieldId}-background`}
+            label={m.theme_background()}
+            value={theme.background}
+            onChange={(value) => set("background", value)}
+          />
+          <ColorField
+            id={`${fieldId}-color`}
+            label={m.theme_color()}
+            value={theme.color}
+            onChange={(value) => set("color", value)}
+          />
           <div className="space-y-1">
-            <Label htmlFor={`${fieldId}-background`}>{m.theme_background()}</Label>
-            <Input
-              id={`${fieldId}-background`}
-              value={theme.background}
-              onChange={(event) => set("background", event.target.value)}
-            />
+            <Label htmlFor={`${fieldId}-font`}>{m.theme_font()}</Label>
+            <select
+              id={`${fieldId}-font`}
+              className={selectClassName}
+              value={
+                fontStacks.some((font) => font.value === theme.fontFamily) ? theme.fontFamily : ""
+              }
+              onChange={(event) => set("fontFamily", event.target.value)}
+            >
+              {!fontStacks.some((font) => font.value === theme.fontFamily) && (
+                <option value="">{m.theme_font_custom()}</option>
+              )}
+              {fontStacks.map((font) => (
+                <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor={`${fieldId}-color`}>{m.theme_color()}</Label>
-            <Input
-              id={`${fieldId}-color`}
-              value={theme.color}
-              onChange={(event) => set("color", event.target.value)}
-            />
+            <Label htmlFor={`${fieldId}-weight`}>{m.theme_weight()}</Label>
+            <select
+              id={`${fieldId}-weight`}
+              className={selectClassName}
+              value={theme.fontWeight}
+              onChange={(event) => set("fontWeight", Number(event.target.value))}
+            >
+              {weights.map((weight) => (
+                <option key={weight.value} value={weight.value}>
+                  {weight.label()}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor={`${fieldId}-font`}>{m.theme_font()}</Label>
+            <Label htmlFor={`${fieldId}-font-custom`}>{m.theme_font_custom()}</Label>
             <Input
-              id={`${fieldId}-font`}
+              id={`${fieldId}-font-custom`}
               value={theme.fontFamily}
               onChange={(event) => set("fontFamily", event.target.value)}
             />
@@ -142,6 +202,45 @@ export function ThemeEditor({ output }: { output: Output }) {
           </div>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor={`${fieldId}-media`}>{m.theme_background_media()}</Label>
+            <select
+              id={`${fieldId}-media`}
+              className={selectClassName}
+              value={theme.backgroundMediaId ?? ""}
+              onChange={(event) =>
+                set("backgroundMediaId", event.target.value === "" ? null : event.target.value)
+              }
+            >
+              <option value="">{m.theme_background_media_none()}</option>
+              {backgroundChoices.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-muted-foreground text-xs">{m.theme_background_media_hint()}</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`${fieldId}-dim`}>{m.theme_background_dim()}</Label>
+            <Input
+              id={`${fieldId}-dim`}
+              type="number"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(theme.backgroundDim * 100)}
+              onChange={(event) =>
+                set(
+                  "backgroundDim",
+                  Math.min(100, Math.max(0, event.target.valueAsNumber || 0)) / 100,
+                )
+              }
+            />
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-3 text-sm">
           <label className="flex items-center gap-1.5">
             <input
@@ -187,13 +286,87 @@ export function ThemeEditor({ output }: { output: Output }) {
 
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">{m.theme_preview()}</p>
-        <SlideRenderer
-          theme={theme}
-          slide={sample}
-          className="ring-1 ring-foreground/10"
-          data-testid="theme-preview"
+        <ThemePreview theme={theme} />
+      </div>
+    </div>
+  );
+}
+
+/** Champ couleur : sélecteur graphique quand la valeur est un hexadécimal, texte sinon. */
+function ColorField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const hex = hexOrNull(value);
+
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex gap-2">
+        <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} />
+        <input
+          type="color"
+          aria-label={m.theme_color_pick()}
+          className="border-input size-8 shrink-0 border bg-transparent"
+          value={hex ?? "#000000"}
+          onChange={(event) => onChange(event.target.value)}
         />
       </div>
     </div>
+  );
+}
+
+/** Aperçu de la diapo d'exemple, fond du thème compris. */
+function ThemePreview({ theme }: { theme: SlideTheme }) {
+  return theme.backgroundMediaId === null ? (
+    <PreviewSlide theme={theme} background={null} />
+  ) : (
+    // Sous-composant : l'URL signée n'est demandée que lorsqu'un média est choisi.
+    <PreviewWithBackground theme={theme} mediaId={MediaId.make(theme.backgroundMediaId)} />
+  );
+}
+
+function PreviewWithBackground({ theme, mediaId }: { theme: SlideTheme; mediaId: MediaId }) {
+  const url = useAtomValue(mediaUrlAtom(mediaId));
+  const library = useAtomValue(mediaListAtom);
+  const asset =
+    library._tag === "Success"
+      ? library.value.find((candidate) => candidate.id === mediaId)
+      : undefined;
+
+  return (
+    <PreviewSlide
+      theme={theme}
+      background={
+        url._tag === "Success" && asset !== undefined
+          ? { url: url.value, video: asset.kind === "video" }
+          : null
+      }
+    />
+  );
+}
+
+function PreviewSlide({
+  theme,
+  background,
+}: {
+  theme: SlideTheme;
+  background: { readonly url: string; readonly video: boolean } | null;
+}) {
+  return (
+    <SlideRenderer
+      theme={theme}
+      slide={sample}
+      background={background}
+      className="ring-1 ring-foreground/10"
+      data-testid="theme-preview"
+    />
   );
 }

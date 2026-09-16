@@ -80,6 +80,35 @@ describe("SlideRenderer", () => {
     );
   });
 
+  it("dessine le fond du thème et son voile", () => {
+    const theme = new SlideTheme({ ...defaultTheme, backgroundDim: 0.4 });
+    const { container } = render(
+      <SlideRenderer
+        theme={theme}
+        slide={{ kind: "lines", lines: ["Texte"] }}
+        background={{ url: "https://exemple.test/fond.jpg", video: false }}
+      />,
+    );
+    const image = container.querySelector<HTMLImageElement>('img[data-slot="slide-background"]');
+    expect(image?.getAttribute("src")).toBe("https://exemple.test/fond.jpg");
+    expect(container.querySelector<HTMLElement>('[data-slot="slide-dim"]')?.style.background).toBe(
+      "rgba(0, 0, 0, 0.4)",
+    );
+  });
+
+  it("lit une vidéo de fond en boucle et sans son", () => {
+    const { container } = render(
+      <SlideRenderer
+        slide={{ kind: "lines", lines: ["Texte"] }}
+        background={{ url: "https://exemple.test/fond.webm", video: true }}
+      />,
+    );
+    const video = container.querySelector<HTMLVideoElement>('video[data-slot="slide-background"]');
+    expect(video?.loop).toBe(true);
+    expect(video?.muted).toBe(true);
+    expect(container.querySelector('[data-slot="slide-dim"]')).toBeNull();
+  });
+
   it("n'affiche rien pour un écran vide", () => {
     const { container } = render(<SlideRenderer slide={{ kind: "blank" }} />);
     expect(container.querySelector('[data-slot="slide-content"]')).toBeNull();

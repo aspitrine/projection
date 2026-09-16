@@ -6,6 +6,7 @@ import { Actor, CurrentActor, OrganizationId, UserId } from "@projection/shared-
 import { Config, Effect, Exit, Layer, Queue } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 
+import { ThemeBackgrounds } from "../src/application/ports";
 import { DisplayRpcs, OutputsRpcs } from "../src/api/contract";
 import { defaultThemeFor } from "../src/domain/Themes";
 import { OutputsLive, outputsMigrations } from "../src/server";
@@ -39,7 +40,9 @@ const FakeActorMiddleware = Layer.succeed(
 );
 
 const ApiLive = Layer.mergeAll(OutputsLive, FakeActorMiddleware).pipe(
-  Layer.provide(Layer.mergeAll(FrameGatewayMemory, BrandingSourceMemory)),
+  Layer.provide(
+    Layer.mergeAll(FrameGatewayMemory, BrandingSourceMemory, ThemeBackgrounds.layerNone),
+  ),
   Layer.provideMerge(MigratedDatabase),
 );
 

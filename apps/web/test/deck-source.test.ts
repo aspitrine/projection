@@ -7,6 +7,7 @@ import {
   FrameGateway,
   OutputRepository,
   Outputs,
+  ThemeBackgrounds,
 } from "@projection/outputs/server";
 import { initialFrame } from "@projection/presentation/domain";
 import { DeckSource } from "@projection/live/server";
@@ -66,7 +67,14 @@ const MediaStorageStub = Layer.succeed(
 const ServicesLive = Layer.mergeAll(
   Media.layer.pipe(Layer.provide(Layer.mergeAll(MediaRepository.layerMemory, MediaStorageStub))),
   Outputs.layer.pipe(
-    Layer.provide(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayStub, BrandingStub)),
+    Layer.provide(
+      Layer.mergeAll(
+        OutputRepository.layerMemory,
+        FrameGatewayStub,
+        BrandingStub,
+        ThemeBackgrounds.layerNone,
+      ),
+    ),
   ),
   Songs.layer.pipe(Layer.provide(SongRepository.layerMemory)),
   Projects.layer.pipe(Layer.provide(ProjectRepository.layerMemory)),

@@ -4,13 +4,18 @@ import { Effect, Layer, Queue, Stream } from "effect";
 import { TestClock } from "effect/testing";
 
 import { Outputs } from "../src/application/Outputs";
-import { OutputRepository } from "../src/application/ports";
+import { OutputRepository, ThemeBackgrounds } from "../src/application/ports";
 import { generateDisplayToken, isDisplayToken } from "../src/domain/Output";
 import { BrandingSourceMemory, FrameGatewayMemory, asActor } from "./support";
 
 const TestLayer = Outputs.layer.pipe(
   Layer.provideMerge(
-    Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayMemory, BrandingSourceMemory),
+    Layer.mergeAll(
+      OutputRepository.layerMemory,
+      FrameGatewayMemory,
+      BrandingSourceMemory,
+      ThemeBackgrounds.layerNone,
+    ),
   ),
 );
 

@@ -64,12 +64,21 @@ export const Branding = Schema.Struct({
 });
 export type Branding = typeof Branding.Type;
 
+/** Fond de diapo résolu : URL signée du média et nature du fichier. */
+export const SlideBackground = Schema.Struct({
+  url: Schema.String,
+  video: Schema.Boolean,
+});
+export type SlideBackground = typeof SlideBackground.Type;
+
 /** Ce que reçoit un écran : l'image courante et l'identité de la sortie. */
 export class DisplayFrame extends Schema.Class<DisplayFrame>("DisplayFrame")({
   outputName: Schema.String,
   outputType: OutputType,
   /** Thème résolu (personnalisé ou par défaut) : l'écran n'a rien à décider. */
   theme: SlideTheme,
+  /** Fond du thème, déjà signé ; `null` si le thème n'en a pas ou si le média a disparu. */
+  background: Schema.NullOr(SlideBackground),
   branding: Branding,
   frame: Frame,
 }) {}

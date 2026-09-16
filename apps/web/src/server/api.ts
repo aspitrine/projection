@@ -31,6 +31,7 @@ import { DeckSourceLive } from "./deck-source";
 import { ProjectLibraryLive, SongLibraryLive } from "./imports";
 import { MediaStorageLive } from "./media-storage";
 import { SongEditingLive } from "./song-editing";
+import { ThemeBackgroundsLive } from "./theme-backgrounds";
 
 const AuthMigrationsLive = Layer.effectDiscard(
   Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
@@ -80,6 +81,8 @@ const HandlersLive = Layer.mergeAll(
       ProjectLibraryLive.pipe(Layer.provide(ProjectsServiceLive)),
     ),
   ),
+  // Le fond des thèmes est résolu en URL signée par la médiathèque.
+  Layer.provide(ThemeBackgroundsLive.pipe(Layer.provide(MediaServiceLive))),
   Layer.provide(MediaStorageLive.pipe(Layer.provide(ObjectStorage.layerConfig))),
   Layer.provide(FrameGatewayLive),
   Layer.provide(BrandingSourceLive),

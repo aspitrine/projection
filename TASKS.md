@@ -207,7 +207,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] L'image envoyée à un écran porte son thème résolu, relu à chaque diapo : un thème modifié s'applique sans recharger l'écran.
 - [x] Éditeur sur la page Sorties (fond, couleur, police, tailles, interligne, marges, alignements, ombre, libellé, bandeau, fondu) avec aperçu en direct et bouton « Réinitialiser ».
 - [x] Transition fondu configurable (0 à 2000 ms), en fondu croisé sur les écrans ; la lecture vidéo n'est pas interrompue par le fondu.
-- [ ] Fond image ou vidéo (médiathèque) : à ajouter, le thème ne gère aujourd'hui qu'une couleur ou la transparence.
+- [x] Fond image ou vidéo (médiathèque) dans le thème, avec voile réglable : le serveur signe l'URL pour l'écran (port `ThemeBackgrounds`, URL mémorisée la moitié de sa durée de vie pour ne pas recharger le fond), la vidéo tourne en boucle sans son et n'est pas relancée par les changements de diapo. L'écran noir masque aussi le fond.
+- [x] Éditeur enrichi : police au choix parmi des piles sûres (plus champ libre), graisse, sélecteurs de couleur, fond et voile — le tout avec aperçu en direct.
 
 ### T2.6 Sortie retour scène [outputs, live] ✅
 

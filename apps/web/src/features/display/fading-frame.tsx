@@ -1,5 +1,5 @@
-import type { Branding, OutputType } from "@projection/outputs/domain";
-import type { Frame, SlideTheme } from "@projection/presentation/domain";
+import type { Branding, OutputType, SlideBackground } from "@projection/outputs/domain";
+import { type Frame, SlideTheme } from "@projection/presentation/domain";
 import { useEffect, useRef, useState } from "react";
 
 import { FrameView } from "./frame-view";
@@ -27,12 +27,15 @@ export function FadingFrame({
   type,
   branding,
   theme,
+  background = null,
   sound,
 }: {
   frame: Frame;
   type: OutputType;
   branding: Branding;
   theme: SlideTheme;
+  /** Fond du thème : rendu une fois sous les images, pour qu'une vidéo ne reparte pas à zéro. */
+  background?: SlideBackground | null;
   sound?: boolean;
 }) {
   const [previous, setPrevious] = useState<Frame | null>(null);
@@ -54,8 +57,44 @@ export function FadingFrame({
     };
   }, [frame, theme.transitionMs]);
 
+  // L'écran noir masque tout, fond compris ; les autres couvertures le laissent voir.
+  const media = frame.cover === "black" ? null : background;
+  // Le fond étant derrière, les images se dessinent par-dessus sans couleur opaque.
+  const layerTheme =
+    media === null ? theme : new SlideTheme({ ...theme, background: "transparent" });
+
   return (
     <div className="relative size-full">
+      {media !== null && (
+        // Dans le flux : le fond donne sa hauteur au bloc, les images se posent par-dessus.
+        <div className="relative aspect-video w-full overflow-hidden" aria-hidden>
+          {media.video ? (
+            <video
+              src={media.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              data-slot="slide-background"
+              className="size-full object-cover"
+            />
+          ) : (
+            <img
+              src={media.url}
+              alt=""
+              data-slot="slide-background"
+              className="size-full object-cover"
+            />
+          )}
+          {theme.backgroundDim > 0 && (
+            <div
+              data-slot="slide-dim"
+              className="absolute inset-0"
+              style={{ background: `rgb(0 0 0 / ${theme.backgroundDim})` }}
+            />
+          )}
+        </div>
+      )}
       {previous !== null && (
         <div className="absolute inset-0" aria-hidden>
           <FrameView
@@ -63,7 +102,7 @@ export function FadingFrame({
             cover={previous.cover}
             type={type}
             branding={branding}
-            theme={theme}
+            theme={layerTheme}
           />
         </div>
       )}
@@ -81,7 +120,7 @@ export function FadingFrame({
           cover={frame.cover}
           type={type}
           branding={branding}
-          theme={theme}
+          theme={layerTheme}
           sound={sound}
         />
       </div>

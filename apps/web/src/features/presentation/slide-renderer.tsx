@@ -5,6 +5,7 @@ import {
   fitFontSize,
   layoutTheme,
 } from "@projection/presentation/domain";
+import type { SlideBackground } from "@projection/outputs/domain";
 import type { Block } from "@projection/slides/domain";
 import { cn } from "@projection/ui/lib/utils";
 import { type ComponentProps, useLayoutEffect, useRef } from "react";
@@ -42,10 +43,16 @@ const justify = { top: "flex-start", center: "center", bottom: "flex-end" } as c
 export function SlideRenderer({
   slide,
   theme: outputTheme = defaultTheme,
+  background = null,
   className,
   style,
   ...props
-}: ComponentProps<"div"> & { slide: RenderableSlide; theme?: SlideTheme }) {
+}: ComponentProps<"div"> & {
+  slide: RenderableSlide;
+  theme?: SlideTheme;
+  /** Fond du thème, déjà résolu en URL ; le voile vient de `theme.backgroundDim`. */
+  background?: SlideBackground | null;
+}) {
   // La mise en page de la diapo impose son cadrage par-dessus le thème de la sortie.
   const theme =
     slide.kind === "rich" ? layoutTheme(slide.layout ?? "free", outputTheme) : outputTheme;
@@ -100,6 +107,35 @@ export function SlideRenderer({
       }}
       {...props}
     >
+      {background !== null && (
+        <>
+          {background.video ? (
+            <video
+              src={background.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              data-slot="slide-background"
+              className="absolute inset-0 size-full object-cover"
+            />
+          ) : (
+            <img
+              src={background.url}
+              alt=""
+              data-slot="slide-background"
+              className="absolute inset-0 size-full object-cover"
+            />
+          )}
+          {theme.backgroundDim > 0 && (
+            <div
+              data-slot="slide-dim"
+              className="absolute inset-0"
+              style={{ background: `rgb(0 0 0 / ${theme.backgroundDim})` }}
+            />
+          )}
+        </>
+      )}
       {slide.kind === "media" &&
         (slide.video ? (
           <video

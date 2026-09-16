@@ -23,6 +23,10 @@ export class SlideTheme extends Schema.Class<SlideTheme>("SlideTheme")({
   showCaption: Schema.Boolean,
   /** Bandeau derrière le texte (lower third), ou `null`. */
   textBackground: Schema.NullOr(Schema.String),
+  /** Fond de diapo : média de la bibliothèque (image ou vidéo), ou `null` pour la couleur seule. */
+  backgroundMediaId: Schema.NullOr(Schema.String),
+  /** Voile noir posé sur le fond (0 à 1) : le texte reste lisible sur une image claire. */
+  backgroundDim: Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 })),
   /** Durée du fondu entre deux diapos, en millisecondes (0 : changement net). */
   transitionMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 2000 })),
 }) {}
@@ -41,5 +45,7 @@ export const defaultTheme = new SlideTheme({
   textShadow: true,
   showCaption: true,
   textBackground: null,
+  backgroundMediaId: null,
+  backgroundDim: 0,
   transitionMs: 300,
 });

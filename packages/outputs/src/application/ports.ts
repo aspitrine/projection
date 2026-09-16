@@ -2,7 +2,13 @@ import type { Frame, FrameContent, SlideTheme, Track } from "@projection/present
 import type { OrganizationId, OutputId } from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref, type Stream } from "effect";
 
-import { type Branding, type DisplayToken, Output, type SplittingSettings } from "../domain/Output";
+import {
+  type Branding,
+  type DisplayToken,
+  Output,
+  type SlideBackground,
+  type SplittingSettings,
+} from "../domain/Output";
 
 export type RemoveResult = "Removed" | "NotFound" | "Last";
 
@@ -129,3 +135,23 @@ export class BrandingSource extends Context.Service<
     get(organizationId: OrganizationId): Effect.Effect<Branding>;
   }
 >()("@projection/outputs/BrandingSource") {}
+
+/**
+ * Port : résolution du fond d'un thème (implémenté dans la composition root, contexte media).
+ * L'URL doit rester stable un moment — un écran qui la recevrait différente à chaque image
+ * rechargerait son fond en boucle.
+ */
+export class ThemeBackgrounds extends Context.Service<
+  ThemeBackgrounds,
+  {
+    resolve(
+      organizationId: OrganizationId,
+      mediaId: string,
+    ): Effect.Effect<Option.Option<SlideBackground>>;
+  }
+>()("@projection/outputs/ThemeBackgrounds") {
+  static readonly layerNone = Layer.succeed(
+    ThemeBackgrounds,
+    ThemeBackgrounds.of({ resolve: () => Effect.succeed(Option.none()) }),
+  );
+}

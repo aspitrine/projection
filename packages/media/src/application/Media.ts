@@ -1,4 +1,4 @@
-import { CurrentActor, MediaId } from "@projection/shared-kernel";
+import { CurrentActor, MediaId, type OrganizationId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Option } from "effect";
 
 import {
@@ -30,6 +30,15 @@ export class Media extends Context.Service<
     url(id: MediaId, ttlSeconds?: number): Effect.Effect<string, MediaNotFound, CurrentActor>;
     /** Média de l'organisation courante, pour composer un projet. */
     get(id: MediaId): Effect.Effect<MediaAsset, MediaNotFound, CurrentActor>;
+    /**
+     * Média d'une organisation nommée, avec son URL signée : usage serveur sans acteur
+     * (un écran connecté n'a pas de session). L'organisation reste le filtre.
+     */
+    resolveFor(
+      organizationId: OrganizationId,
+      id: MediaId,
+      ttlSeconds?: number,
+    ): Effect.Effect<Option.Option<{ readonly asset: MediaAsset; readonly url: string }>>;
     remove(id: MediaId): Effect.Effect<void, MediaNotFound, CurrentActor>;
   }
 >()("@projection/media/Media") {
@@ -102,6 +111,19 @@ export class Media extends Context.Service<
 
         get: Effect.fn("Media.get")(function* (id: MediaId) {
           return yield* find(id);
+        }),
+
+        resolveFor: Effect.fn("Media.resolveFor")(function* (
+          organizationId: OrganizationId,
+          id: MediaId,
+          ttlSeconds?: number,
+        ) {
+          const asset = yield* repository.findById(organizationId, id);
+          if (Option.isNone(asset) || !asset.value.ready) {
+            return Option.none<{ asset: MediaAsset; url: string }>();
+          }
+          const url = yield* storage.presignDownload(asset.value.storageKey, ttlSeconds);
+          return Option.some({ asset: asset.value, url });
         }),
 
         remove: Effect.fn("Media.remove")(function* (id: MediaId) {

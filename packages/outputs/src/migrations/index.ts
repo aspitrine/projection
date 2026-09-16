@@ -24,6 +24,15 @@ export const outputsMigrations = {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`ALTER TABLE output ADD COLUMN theme jsonb`;
     }),
+    "0004_add_theme_background": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // Les thèmes déjà enregistrés reçoivent les nouvelles clés : le décodage reste strict.
+      yield* sql`
+        UPDATE output
+        SET theme = theme || '{"backgroundMediaId": null, "backgroundDim": 0}'::jsonb
+        WHERE theme IS NOT NULL
+      `;
+    }),
     "0002_create_output_splitting": Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`
