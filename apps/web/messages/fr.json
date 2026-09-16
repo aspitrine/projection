@@ -133,7 +133,7 @@
   "bible_reference_placeholder": "Jean 3.16-18, Ps 23, 1 Co 13…",
   "bible_examples": "Exemples :",
   "bible_hint": "Saisissez une référence pour afficher le passage.",
-  "bible_no_translation": "Aucune traduction n'est encore importée. Un administrateur du serveur peut lancer « bun run bible:import ».",
+  "bible_no_translation": "Les traductions bibliques sont momentanément indisponibles.",
   "bible_error_unknown_book": "Livre inconnu : « {input} ».",
   "bible_error_malformed": "Référence incomplète : précisez au moins un chapitre (ex. « Jean 3 »).",
   "bible_error_invalid_range": "La fin du passage précède son début.",

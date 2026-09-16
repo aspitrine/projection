@@ -13,21 +13,12 @@ import { PgClient } from "@effect/sql-pg";
 import { runMigrations } from "@projection/platform";
 import { Config, Effect, Layer } from "effect";
 
-import { Translation } from "../src/domain/Scripture";
+import { lsg1910 } from "../src/infrastructure/BuiltInTranslations";
 import { importTranslation } from "../src/infrastructure/ImportTranslation";
 import { bibleMigrations } from "../src/migrations";
 
 const directory = process.argv.slice(2).find((argument) => !argument.startsWith("--"));
 const databaseVariable = process.argv.includes("--test") ? "TEST_DATABASE_URL" : "DATABASE_URL";
-
-const lsg1910 = new Translation({
-  id: "lsg1910",
-  code: "LSG",
-  name: "Louis Segond 1910",
-  language: "fr",
-  license: "Domaine public",
-  organizationId: null,
-});
 
 const program = Effect.gen(function* () {
   if (directory === undefined) {

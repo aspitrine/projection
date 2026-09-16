@@ -27,9 +27,13 @@ automatiquement ; un fichier d'un autre type est refusé avec un message clair.
 La **traduction par défaut** de l'organisation se choisit au même endroit : elle est présélectionnée
 sur la page Bible et dans la recherche.
 
-## Importer par script (traductions livrées)
+## Traductions livrées avec l'application
 
-Le fichier source n'est pas versionné. Télécharger et décompresser l'archive USFM, puis :
+La Louis Segond 1910 est importée automatiquement par les migrations lors de l'initialisation
+ou de la mise à jour de la base. Son archive USFM officielle est embarquée dans l'application :
+le démarrage ne dépend donc ni du réseau, ni d'une intervention manuelle.
+
+Le script reste disponible pour réimporter explicitement une archive locale :
 
 ```bash
 bun run bible:import -- /chemin/vers/fraLSG_usfm          # base de développement

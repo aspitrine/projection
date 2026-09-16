@@ -1,6 +1,9 @@
 import { Effect } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { loadLsg1910, lsg1910 } from "../infrastructure/BuiltInTranslations";
+import { importTranslation } from "../infrastructure/ImportTranslation";
+
 /** Migrations du contexte bible (table de suivi `bible_migrations`). */
 export const bibleMigrations = {
   context: "bible",
@@ -56,6 +59,17 @@ export const bibleMigrations = {
           default_translation_id text REFERENCES bible_translation (id) ON DELETE SET NULL
         )
       `;
+    }),
+    "0004_import_lsg1910": Effect.gen(function* () {
+      const files = yield* loadLsg1910();
+      const imported = yield* importTranslation(lsg1910, files);
+      if (imported.books !== 66 || imported.verses !== 31_170) {
+        return yield* Effect.fail(
+          new Error(
+            `Archive Louis Segond 1910 incomplète : ${imported.books} livres, ${imported.verses} versets`,
+          ),
+        );
+      }
     }),
   },
 };

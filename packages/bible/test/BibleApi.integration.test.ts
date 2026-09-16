@@ -57,6 +57,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API bible (Postgres)", () => {
       const client = yield* RpcTest.makeClient(BibleRpcs);
 
       const translations = yield* client.BibleTranslations();
+      expect(translations.map((translation) => translation.id)).toContain("lsg1910");
       expect(translations.map((translation) => translation.id)).toContain("test-lsg");
 
       const passage = yield* client.BibleLookup({
