@@ -8,7 +8,9 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Config, Context, Effect, Layer, Redacted, Schema } from "effect";
+import { Config, Context, Effect, Layer, Option, Redacted, Schema } from "effect";
+
+import { bootstrapGarage } from "./GarageBootstrap";
 
 /** Durées de vie des URL signées : assez courtes pour ne pas circuler. */
 export const UPLOAD_URL_TTL_SECONDS = 600;
@@ -57,7 +59,25 @@ export class ObjectStorage extends Context.Service<
        * L'opération est idempotente, et son échec ne doit pas empêcher le serveur de
        * démarrer : un stockage momentanément absent ne coûte que la médiathèque.
        */
+      // Garage auto-hébergé : son API d'administration permet d'initialiser un cluster
+      // neuf (disposition, clé, bucket). Absente pour un S3 externe, qui est déjà prêt.
+      const garageAdminUrl = yield* Config.option(Config.String("GARAGE_ADMIN_URL"));
+      const garageAdminToken = yield* Config.option(Config.Redacted("GARAGE_ADMIN_TOKEN"));
+      const garageCapacityGb = yield* Config.Number("GARAGE_CAPACITY_GB").pipe(
+        Config.withDefault(20),
+      );
+
       const prepareBucket = Effect.gen(function* () {
+        if (Option.isSome(garageAdminUrl) && Option.isSome(garageAdminToken)) {
+          yield* bootstrapGarage({
+            adminUrl: garageAdminUrl.value,
+            adminToken: garageAdminToken.value,
+            bucket,
+            accessKeyId,
+            secretAccessKey,
+            capacityBytes: garageCapacityGb * 1_000_000_000,
+          });
+        }
         const origin = yield* Config.String("BETTER_AUTH_URL");
         const exists = yield* Effect.tryPromise(() =>
           client.send(new HeadBucketCommand({ Bucket: bucket })),
@@ -89,7 +109,10 @@ export class ObjectStorage extends Context.Service<
         );
       }).pipe(
         Effect.catch((error) =>
-          Effect.logWarning("Stockage des médias non préparé (bucket ou règles CORS)", error),
+          Effect.logWarning(
+            "Stockage des médias non préparé (Garage, bucket ou règles CORS)",
+            error,
+          ),
         ),
         Effect.withSpan("ObjectStorage.prepareBucket"),
       );

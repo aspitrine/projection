@@ -32,6 +32,29 @@ Copiez les variables affichées dans `apps/web/.env` (jamais versionné) :
 
 ## Production
 
-Utilisez un bucket dédié, une clé n'ayant accès qu'à ce bucket, et un secret RPC Garage propre à
-l'installation (`openssl rand -hex 32`, jamais versionné). Les règles CORS doivent lister l'origine
-publique de l'application.
+Au démarrage, le serveur prépare lui-même le stockage, sans commande manuelle :
+
+1. **Garage** (si `GARAGE_ADMIN_URL` et `GARAGE_ADMIN_TOKEN` sont renseignés) : disposition du
+   cluster, import de la clé `S3_ACCESS_KEY_ID`, création du bucket et droits de la clé dessus.
+   Garage est attendu jusqu'à une minute s'il démarre après le serveur ; un jeton refusé échoue
+   aussitôt.
+2. **Bucket et règles CORS** (tout S3) : création du bucket s'il manque, puis autorisation de
+   l'origine `BETTER_AUTH_URL`.
+
+Chaque étape vérifie l'état avant d'agir : redémarrer ne modifie rien. Si le stockage est
+injoignable, le serveur démarre quand même et consigne un avertissement — seule la médiathèque
+est alors indisponible.
+
+| Variable             | Rôle                                                            |
+| -------------------- | --------------------------------------------------------------- |
+| `GARAGE_ADMIN_URL`   | API d'administration, réseau interne (ex. `http://garage:3903`) |
+| `GARAGE_ADMIN_TOKEN` | Jeton d'administration de Garage                                |
+| `GARAGE_CAPACITY_GB` | Capacité annoncée pour le nœud (20 par défaut)                  |
+
+Contraintes propres à Garage :
+
+- le secret RPC (`GARAGE_RPC_SECRET`) doit faire **32 octets en hexadécimal**
+  (`openssl rand -hex 32`) — un mot de passe alphanumérique est refusé au démarrage ;
+- l'identifiant de clé commence par `GK` suivi de 24 caractères hexadécimaux, le secret en fait 64 ;
+- l'API S3 doit être joignable **depuis le navigateur** (domaine public en HTTPS), l'API
+  d'administration surtout pas.

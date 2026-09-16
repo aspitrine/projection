@@ -26,6 +26,10 @@ services:
       - S3_BUCKET=projection
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      # Le serveur initialise Garage au démarrage (disposition, clé, bucket) : aucune
+      # commande à lancer à la main sur une installation neuve.
+      - GARAGE_ADMIN_URL=http://garage:3903
+      - GARAGE_ADMIN_TOKEN=${SERVICE_PASSWORD_GARAGEADMIN}
     depends_on:
       postgres:
         condition: service_healthy
