@@ -60,6 +60,9 @@ services:
 
   garage:
     image: dxflrs/garage:v1.0.1
+    # Le proxy route le domaine public vers ce port : sans `expose`, il ne le connaît pas.
+    expose:
+      - "3900"
     environment:
       # Domaine public du stockage : les URL signées sont ouvertes par le navigateur.
       - SERVICE_FQDN_GARAGE_3900
