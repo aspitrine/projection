@@ -42,10 +42,16 @@ import {
   RotateCcw,
   Square,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
+import {
+  PendingBanner,
+  PendingCommands,
+  useRun,
+  usePendingCommands,
+} from "@/features/live/commands";
 import { contentToSlide, roomTheme } from "@/features/display/frame";
 import { FrameView } from "@/features/display/frame-view";
 import { formatDuration, useNow } from "@/features/display/time";
@@ -99,14 +105,18 @@ const transparencyBackground = {
 const partSummary = (content: FrameContent) =>
   content._tag === "Lines" ? content.lines.join(" / ") : content._tag === "Rich" ? "…" : "—";
 
-/** Lance une commande et signale un échec (l'état arrive par le flux de la régie). */
-function useRun() {
-  return useCallback(async (action: Promise<Exit.Exit<unknown, unknown>>) => {
-    if (Exit.isFailure(await action)) toast.error(m.live_action_error());
-  }, []);
+function LivePage() {
+  const commands = usePendingCommands();
+
+  return (
+    <PendingCommands.Provider value={commands}>
+      <PendingBanner pending={commands.pending} />
+      <LiveContent />
+    </PendingCommands.Provider>
+  );
 }
 
-function LivePage() {
+function LiveContent() {
   const result = useAtomValue(liveAtom);
   if (result._tag === "Initial") return <Loader />;
   if (result._tag === "Failure") {
@@ -152,7 +162,10 @@ function ProjectPicker() {
                   {m.live_item_count({ count: project.itemCount })}
                 </p>
               </div>
-              <Button size="sm" onClick={() => run(start({ payload: { projectId: project.id } }))}>
+              <Button
+                size="sm"
+                onClick={() => run(() => start({ payload: { projectId: project.id } }))}
+              >
                 <Radio className="size-4" aria-hidden />
                 {m.live_start()}
               </Button>
@@ -193,7 +206,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const project = useAtomValue(projectAtom(deck.projectId));
   const projectVersion = project._tag === "Success" ? project.value.updatedAt : null;
   useEffect(() => {
-    if (projectVersion !== null) void run(refresh({ payload: undefined }));
+    if (projectVersion !== null) void run(() => refresh({ payload: undefined }));
   }, [projectVersion, refresh, run]);
 
   useEffect(() => {
@@ -208,17 +221,17 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
       const forward = ["ArrowRight", "ArrowDown", "PageDown", " "].includes(event.key);
       const backward = ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key);
       if (event.shiftKey && forward) {
-        void run(streamNext({ payload: undefined }));
+        void run(() => streamNext({ payload: undefined }));
       } else if (event.shiftKey && backward) {
-        void run(streamPrevious({ payload: undefined }));
+        void run(() => streamPrevious({ payload: undefined }));
       } else if (forward) {
-        void run(next({ payload: undefined }));
+        void run(() => next({ payload: undefined }));
       } else if (backward) {
-        void run(previous({ payload: undefined }));
+        void run(() => previous({ payload: undefined }));
       } else if (event.key === "b" || event.key === "B") {
         const track: Track = event.shiftKey ? "stream" : "room";
         const cover: Cover = covers.current[track] === "black" ? "none" : "black";
-        void run(setCover({ payload: { track, cover } }));
+        void run(() => setCover({ payload: { track, cover } }), `cover:${track}`);
       } else {
         return;
       }
@@ -266,12 +279,15 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
         <Button
           variant="outline"
           className="hidden lg:inline-flex"
-          onClick={() => run(previous({ payload: undefined }))}
+          onClick={() => run(() => previous({ payload: undefined }))}
         >
           <ChevronLeft className="size-4" aria-hidden />
           {m.live_previous()}
         </Button>
-        <Button className="hidden lg:inline-flex" onClick={() => run(next({ payload: undefined }))}>
+        <Button
+          className="hidden lg:inline-flex"
+          onClick={() => run(() => next({ payload: undefined }))}
+        >
           {m.live_next()}
           <ChevronRight className="size-4" aria-hidden />
         </Button>
@@ -281,7 +297,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
         <Button
           variant="ghost"
           onClick={() => {
-            if (window.confirm(m.live_stop_confirm())) void run(stop({ payload: undefined }));
+            if (window.confirm(m.live_stop_confirm())) void run(() => stop({ payload: undefined }));
           }}
         >
           <Square className="size-4" aria-hidden />
@@ -296,9 +312,11 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             deck={deck}
             cursor={session.cursor}
             streamCursor={session.streamCursor}
-            onPick={(itemId, slideIndex) => run(goTo({ payload: { itemId, slideIndex } }))}
+            onPick={(itemId, slideIndex) =>
+              run(() => goTo({ payload: { itemId, slideIndex } }), "cursor")
+            }
             onPickStream={(itemId, slideIndex) =>
-              run(streamGoTo({ payload: { itemId, slideIndex, part: 0 } }))
+              run(() => streamGoTo({ payload: { itemId, slideIndex, part: 0 } }), "streamCursor")
             }
           />
         </div>
@@ -442,12 +460,12 @@ function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string })
 
   // Arrivée en fin de fichier : la régie arrête la lecture, les écrans suivent.
   useEffect(() => {
-    if (playback.playing && ended) void run(pause({ payload: undefined }));
+    if (playback.playing && ended) void run(() => pause({ payload: undefined }));
   }, [playback.playing, ended, pause, run]);
 
   const commitSeek = () => {
     if (scrubbing === null) return;
-    void run(seek({ payload: { positionMs: Math.round(scrubbing) } }));
+    void run(() => seek({ payload: { positionMs: Math.round(scrubbing) } }), "video");
     setScrubbing(null);
   };
 
@@ -463,7 +481,7 @@ function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string })
           const durationMs = Math.round(event.currentTarget.duration * 1000);
           if (!Number.isFinite(durationMs) || durationMs <= 0) return;
           if (Math.abs(durationMs - playback.durationMs) < 500) return;
-          void run(setDuration({ payload: { durationMs } }));
+          void run(() => setDuration({ payload: { durationMs } }));
         }}
       />
 
@@ -496,7 +514,11 @@ function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string })
           variant="outline"
           className="flex-1"
           onClick={() =>
-            run(playback.playing ? pause({ payload: undefined }) : play({ payload: undefined }))
+            run(
+              () =>
+                playback.playing ? pause({ payload: undefined }) : play({ payload: undefined }),
+              "video",
+            )
           }
         >
           {playback.playing ? (
@@ -509,7 +531,7 @@ function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string })
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => run(restart({ payload: undefined }))}
+          onClick={() => run(() => restart({ payload: undefined }), "video")}
           aria-label={m.live_video_stop()}
           title={m.live_video_stop()}
         >
@@ -558,7 +580,11 @@ function StagePanel({ session, deck }: { session: LiveSession; deck: Deck }) {
           aria-label={running ? m.live_timer_pause() : m.live_timer_start()}
           disabled={session.timer.durationMs === 0}
           onClick={() =>
-            run(running ? pauseTimer({ payload: undefined }) : startTimer({ payload: undefined }))
+            run(
+              () =>
+                running ? pauseTimer({ payload: undefined }) : startTimer({ payload: undefined }),
+              "timer",
+            )
           }
         >
           {running ? (
@@ -571,7 +597,7 @@ function StagePanel({ session, deck }: { session: LiveSession; deck: Deck }) {
           size="sm"
           variant="ghost"
           aria-label={m.live_timer_reset()}
-          onClick={() => run(resetTimer({ payload: undefined }))}
+          onClick={() => run(() => resetTimer({ payload: undefined }), "timer")}
         >
           <RotateCcw className="size-4" aria-hidden />
         </Button>
@@ -581,7 +607,10 @@ function StagePanel({ session, deck }: { session: LiveSession; deck: Deck }) {
         className="flex items-center gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void run(setTimer({ payload: { durationMs: Math.round(minutes * 60_000) } }));
+          void run(
+            () => setTimer({ payload: { durationMs: Math.round(minutes * 60_000) } }),
+            "timer",
+          );
         }}
       >
         <Input
@@ -639,7 +668,9 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           <input
             type="checkbox"
             checked={session.streamLinked}
-            onChange={(event) => run(setLinked({ payload: { linked: event.target.checked } }))}
+            onChange={(event) =>
+              run(() => setLinked({ payload: { linked: event.target.checked } }), "streamLinked")
+            }
           />
           {m.live_stream_linked()}
         </label>
@@ -659,7 +690,7 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           size="sm"
           variant="outline"
           className="flex-1"
-          onClick={() => run(streamPrevious({ payload: undefined }))}
+          onClick={() => run(() => streamPrevious({ payload: undefined }))}
         >
           <ChevronLeft className="size-4" aria-hidden />
           {m.live_stream_previous()}
@@ -668,7 +699,7 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
           size="sm"
           variant="outline"
           className="flex-1"
-          onClick={() => run(streamNext({ payload: undefined }))}
+          onClick={() => run(() => streamNext({ payload: undefined }))}
         >
           {m.live_stream_next()}
           <ChevronRight className="size-4" aria-hidden />
@@ -682,7 +713,7 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
                 type="button"
                 aria-current={index === streamCursor.part ? "true" : undefined}
                 onClick={() =>
-                  run(
+                  run(() =>
                     streamGoTo({
                       payload: {
                         itemId: streamCursor.itemId,
@@ -743,7 +774,11 @@ function LinePicker({
       {override !== null && (
         <div className="flex items-center justify-between gap-2 border border-amber-500/60 bg-amber-500/10 px-2 py-1 text-xs">
           <span>{m.live_stream_manual()}</span>
-          <Button size="sm" variant="outline" onClick={() => run(resume({ payload: undefined }))}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => run(() => resume({ payload: undefined }), "streamOverride")}
+          >
             {m.live_stream_resume()}
           </Button>
         </div>
@@ -781,14 +816,16 @@ function LinePicker({
             disabled={selected.size === 0}
             onClick={() =>
               run(
-                showLines({
-                  payload: {
-                    lines: [...selected]
-                      .sort((a, b) => a - b)
-                      .flatMap((index) => lines[index] ?? []),
-                    caption: content?._tag === "Lines" ? content.caption : null,
-                  },
-                }),
+                () =>
+                  showLines({
+                    payload: {
+                      lines: [...selected]
+                        .sort((a, b) => a - b)
+                        .flatMap((index) => lines[index] ?? []),
+                      caption: content?._tag === "Lines" ? content.caption : null,
+                    },
+                  }),
+                "streamOverride",
               )
             }
           >
@@ -817,7 +854,7 @@ function LiveBar({ cover }: { cover: Cover }) {
       <Button
         variant="outline"
         className="h-12 flex-1"
-        onClick={() => run(previous({ payload: undefined }))}
+        onClick={() => run(() => previous({ payload: undefined }))}
       >
         <ChevronLeft className="size-5" aria-hidden />
         {m.live_previous()}
@@ -829,12 +866,15 @@ function LiveBar({ cover }: { cover: Cover }) {
         aria-pressed={black}
         aria-label={m.live_cover_black()}
         onClick={() =>
-          run(setCover({ payload: { track: "room", cover: black ? "none" : "black" } }))
+          run(
+            () => setCover({ payload: { track: "room", cover: black ? "none" : "black" } }),
+            "cover:room",
+          )
         }
       >
         <MonitorOff className="size-5" aria-hidden />
       </Button>
-      <Button className="h-12 flex-1" onClick={() => run(next({ payload: undefined }))}>
+      <Button className="h-12 flex-1" onClick={() => run(() => next({ payload: undefined }))}>
         {m.live_next()}
         <ChevronRight className="size-5" aria-hidden />
       </Button>
@@ -885,7 +925,12 @@ function CoverButtons({
             variant={active ? "destructive" : "outline"}
             className={cn(size === "sm" && "flex-1")}
             aria-pressed={active}
-            onClick={() => run(setCover({ payload: { track, cover: active ? "none" : option } }))}
+            onClick={() =>
+              run(
+                () => setCover({ payload: { track, cover: active ? "none" : option } }),
+                `cover:${track}`,
+              )
+            }
           >
             <Icon className="size-4" aria-hidden />
             {coverLabels[option]()}

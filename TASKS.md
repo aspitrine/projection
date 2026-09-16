@@ -147,6 +147,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Régies synchronisées ; projet modifié pendant le direct : relecture automatique en gardant la position.
 - [x] Tests unitaires (navigation, sessions, DeckSource) et fonctionnels API sur Postgres.
 - [x] Battement de cœur des flux (`withHeartbeat`, 10 s) : la dernière image est réémise, et le client abandonne un flux muet depuis 35 s pour se réabonner. Une connexion morte en silence (bascule Wi-Fi/4G) ne laisse plus un écran figé.
+- [x] Commandes émises pendant une coupure : celles qui décrivent un état visé (position, écran noir, minuteur, vidéo, stream) sont mises en file et rejouées au retour du réseau — une seule par clé, abandonnées au-delà de 20 s ; les commandes relatives (« suivante ») ne sont jamais rejouées. Bandeau « serveur injoignable » en régie.
 - [ ] Limite connue : état en mémoire par instance (multi-instance en T3.3).
 
 **🎯 Jalon MVP** : un culte complet projeté depuis le navigateur, piloté par deux opérateurs.

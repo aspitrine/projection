@@ -262,6 +262,8 @@
   "live_shortcuts": "Raccourcis : → ↓ Espace Page suiv. pour avancer, ← ↑ Page préc. pour reculer, B pour l'écran noir de la salle. Maj + flèches et Maj + B : piste Stream. Maj + clic sur une diapo : l'envoyer au stream (délie les pistes).",
   "live_load_error": "Impossible de joindre la régie.",
   "live_action_error": "Action impossible",
+  "live_queue_pending": "Serveur injoignable : {count} commande(s) en attente, elles partiront dès le retour du réseau.",
+  "live_queue_dropped": "{count} commande(s) abandonnée(s) : la coupure a duré trop longtemps.",
   "live_outputs_link": "Ouvrir la page Sorties (lien de l'écran de salle)",
   "project_broadcast": "Diffuser",
   "output_type_stage": "Retour scène",
