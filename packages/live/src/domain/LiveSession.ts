@@ -1,4 +1,4 @@
-import { Cover, StageTimer, idleTimer } from "@projection/presentation/domain";
+import { Cover, StageTimer, VideoPlayback, idleTimer } from "@projection/presentation/domain";
 import { OrganizationId, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
@@ -74,8 +74,9 @@ export class LiveEdit extends Schema.Class<LiveEdit>("LiveEdit")({
 export class LiveSnapshot extends Schema.Class<LiveSnapshot>("LiveSnapshot")({
   session: LiveSession,
   deck: Schema.NullOr(Deck),
-  /** Non persisté : disparaît au redémarrage. */
+  /** Non persistés : disparaissent au redémarrage. */
   lastEdit: Schema.NullOr(LiveEdit),
+  video: VideoPlayback,
 }) {}
 
 export class LiveProjectNotFound extends Schema.TaggedError<LiveProjectNotFound>()(

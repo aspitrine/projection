@@ -76,7 +76,13 @@ function DisplayScreen() {
       {type === "stage" ? (
         <StageScreen frame={frame} branding={branding} />
       ) : (
-        <FrameView content={frame.content} cover={frame.cover} type={type} branding={branding} />
+        <FrameView
+          content={frame.content}
+          cover={frame.cover}
+          type={type}
+          branding={branding}
+          sound
+        />
       )}
       {hintVisible && type === "room" && (
         <p className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/40">

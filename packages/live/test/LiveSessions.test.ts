@@ -14,6 +14,7 @@ import {
   itemId,
   makeDeckSource,
   makeSongEditing,
+  videoItem,
   organizationId,
   projectId,
 } from "./support";
@@ -343,5 +344,34 @@ describe("LiveSessions", () => {
         .pipe(asActor(), Effect.flip);
       expect(unknown._tag).toBe("LiveEditFailed");
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
+  );
+
+  it.effect("pilote la lecture de la vidéo projetée", () =>
+    Effect.gen(function* () {
+      const sessions = yield* LiveSessions;
+      const frames = yield* LiveFrames;
+      const playbackOf = Effect.map(frames.current(organizationId, "room"), (frame) =>
+        frame.content._tag === "Video" ? frame.content.playback : null,
+      );
+
+      yield* sessions.start(projectId).pipe(asActor());
+      expect(yield* playbackOf).toMatchObject({ playing: false, positionMs: 0 });
+
+      const playing = yield* sessions.playVideo.pipe(asActor());
+      expect(playing.video.playing).toBe(true);
+      expect((yield* playbackOf)?.since).not.toBeNull();
+
+      const paused = yield* sessions.pauseVideo.pipe(asActor());
+      expect(paused.video).toMatchObject({ playing: false, since: null });
+
+      yield* sessions.playVideo.pipe(asActor());
+      const restarted = yield* sessions.restartVideo.pipe(asActor());
+      expect(restarted.video).toEqual({ playing: false, positionMs: 0, since: null });
+
+      // Changer de diapo arrête la vidéo.
+      yield* sessions.playVideo.pipe(asActor());
+      const moved = yield* sessions.next.pipe(asActor());
+      expect(moved.video.playing).toBe(false);
+    }).pipe(Effect.provide(layerWith(makeDeckSource(deckOf([videoItem(1), item(2, ["Suite"])]))))),
   );
 });

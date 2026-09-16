@@ -1,6 +1,6 @@
 import { BibleLive, BibleServiceLive, bibleMigrations } from "@projection/bible/server";
 import { layerIdentity } from "@projection/identity/server";
-import { MediaLive, mediaMigrations } from "@projection/media/server";
+import { MediaLive, MediaServiceLive, mediaMigrations } from "@projection/media/server";
 import { LiveFrames, LiveLive, liveMigrations } from "@projection/live/server";
 import {
   FrameGateway,
@@ -65,6 +65,7 @@ const HandlersLive = Layer.mergeAll(
           TextSlidesServiceLive,
           ProjectsServiceLive,
           OutputsServiceLive,
+          MediaServiceLive,
         ),
       ),
     ),

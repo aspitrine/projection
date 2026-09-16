@@ -75,7 +75,7 @@ export class MediaStorage extends Context.Service<
   MediaStorage,
   {
     presignUpload(storageKey: string, contentType: string): Effect.Effect<string>;
-    presignDownload(storageKey: string): Effect.Effect<string>;
+    presignDownload(storageKey: string, ttlSeconds?: number): Effect.Effect<string>;
     remove(storageKey: string): Effect.Effect<void>;
   }
 >()("@projection/media/MediaStorage") {}

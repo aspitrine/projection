@@ -1,4 +1,4 @@
-import type { FrameContent } from "@projection/presentation/domain";
+import { type FrameContent, idleVideo } from "@projection/presentation/domain";
 import {
   Actor,
   CurrentActor,
@@ -98,3 +98,22 @@ export const makeSongEditing = () => {
     ),
   };
 };
+
+/** Élément média (vidéo) : une seule diapo, pilotée depuis la régie. */
+export const videoItem = (index: number, url = "https://stockage.test/video.webm") =>
+  new DeckItem({
+    itemId: itemId(index),
+    kind: "Media",
+    title: "Vidéo",
+    sourceId: `media-${index}`,
+    notes: null,
+    missing: false,
+    slides: [
+      new DeckSlide({
+        content: { _tag: "Video", url, caption: "Vidéo", playback: idleVideo },
+        label: "Vidéo",
+        sectionId: null,
+        parts: [{ _tag: "Video", url, caption: "Vidéo", playback: idleVideo }],
+      }),
+    ],
+  });

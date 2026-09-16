@@ -8,7 +8,9 @@ import {
   type Cover,
   type StageTimer,
   type Track,
+  type VideoPlayback,
   idleTimer,
+  idleVideo,
 } from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Semaphore, Stream, SubscriptionRef } from "effect";
 
@@ -41,8 +43,10 @@ import {
   stageInfoAt,
   streamFrameContent,
   streamPositions,
+  withPlayback,
 } from "../domain/Navigation";
 import { pauseTimer, resetTimer, setDuration, startTimer } from "../domain/Timer";
+import { pauseVideo, playVideo, restartVideo } from "../domain/Video";
 import { LiveFrames } from "./LiveFrames";
 import { DeckSource, LiveSessionRepository, SongEditing } from "./ports";
 
@@ -58,6 +62,8 @@ interface Draft {
   readonly timer: StageTimer;
   /** Édition de paroles à signaler aux autres régies (non persistée). */
   readonly lastEdit: LiveEdit | null;
+  /** Lecture vidéo en cours (non persistée). */
+  readonly video: VideoPlayback;
 }
 
 interface OrganizationState {
@@ -78,6 +84,7 @@ const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover):
   streamOverride: null,
   timer: idleTimer,
   lastEdit: null,
+  video: idleVideo,
 });
 
 /**
@@ -115,6 +122,10 @@ export class LiveSessions extends Context.Service<
       sectionId: string,
       lines: ReadonlyArray<string>,
     ): Command<NoLiveProject | LiveEditFailed>;
+    /** Lecture de la vidéo projetée, pilotée depuis la régie. */
+    readonly playVideo: Command<NoLiveProject>;
+    readonly pauseVideo: Command<NoLiveProject>;
+    readonly restartVideo: Command<NoLiveProject>;
     /** Minuteur du retour scène : durée, démarrage, pause, remise à zéro. */
     setTimer(durationMs: number): Command;
     readonly startTimer: Command;
@@ -139,19 +150,17 @@ export class LiveSessions extends Context.Service<
         const { organizationId, cursor, streamCursor, streamOverride, roomCover, streamCover } =
           snapshot.session;
         const stage = stageInfoAt(snapshot.deck, cursor, snapshot.session.timer);
+        const roomContent = withPlayback(contentAt(snapshot.deck, cursor), snapshot.video);
         return Effect.all(
           [
-            frames.publish(
-              organizationId,
-              "room",
-              contentAt(snapshot.deck, cursor),
-              roomCover,
-              stage,
-            ),
+            frames.publish(organizationId, "room", roomContent, roomCover, stage),
             frames.publish(
               organizationId,
               "stream",
-              streamFrameContent(snapshot.deck, streamCursor, streamOverride),
+              withPlayback(
+                streamFrameContent(snapshot.deck, streamCursor, streamOverride),
+                snapshot.video,
+              ),
               streamCover,
               null,
             ),
@@ -196,6 +205,7 @@ export class LiveSessions extends Context.Service<
               streamOverride: from.streamOverride,
               timer: from.timer,
               lastEdit: null,
+              video: idleVideo,
             };
           },
         });
@@ -209,6 +219,7 @@ export class LiveSessions extends Context.Service<
         new LiveSnapshot({
           deck: draft.deck,
           lastEdit: draft.lastEdit,
+          video: draft.video,
           session: new LiveSession({
             organizationId,
             projectId: draft.projectId,
@@ -299,12 +310,15 @@ export class LiveSessions extends Context.Service<
         streamOverride: current.session.streamOverride,
         timer: current.session.timer,
         lastEdit: null,
+        video: current.video,
       });
 
       /** Nouvelle position de la salle ; en mode lié, le stream suit. */
       const moveRoom = (current: LiveSnapshot, deck: Deck, cursor: LiveCursor | null): Draft => ({
         ...keep(current),
         cursor,
+        // Changer de diapo arrête la vidéo précédente.
+        video: idleVideo,
         streamCursor: current.session.streamLinked
           ? reconcileStream(deck, cursor, current.session.streamCursor, true)
           : current.session.streamCursor,
@@ -350,6 +364,7 @@ export class LiveSessions extends Context.Service<
                   streamOverride: null,
                   timer,
                   lastEdit: null,
+                  video: idleVideo,
                 };
               }),
             ),
@@ -457,6 +472,24 @@ export class LiveSessions extends Context.Service<
               };
             }),
           ).pipe(Effect.withSpan("LiveSessions.editSection")),
+
+        playVideo: command((current) =>
+          Effect.map(Clock.currentTimeMillis, (now) => ({
+            ...keep(current),
+            video: playVideo(current.video, now),
+          })),
+        ).pipe(Effect.withSpan("LiveSessions.playVideo")),
+
+        pauseVideo: command((current) =>
+          Effect.map(Clock.currentTimeMillis, (now) => ({
+            ...keep(current),
+            video: pauseVideo(current.video, now),
+          })),
+        ).pipe(Effect.withSpan("LiveSessions.pauseVideo")),
+
+        restartVideo: command((current) =>
+          Effect.succeed({ ...keep(current), video: restartVideo() }),
+        ).pipe(Effect.withSpan("LiveSessions.restartVideo")),
 
         setTimer: (durationMs) =>
           command((current) =>

@@ -6,6 +6,7 @@ import {
   type ProjectItem,
   type ProjectItemDraft,
   ProjectItemNotFound,
+  MediaItem,
   ScriptureItem,
   SongItem,
   TextSlideItem,
@@ -29,6 +30,8 @@ const withNotes = (item: ProjectItem, notes: string | null): ProjectItem => {
       });
     case "TextSlide":
       return new TextSlideItem({ id: item.id, textSlideId: item.textSlideId, ...extra });
+    case "Media":
+      return new MediaItem({ id: item.id, mediaId: item.mediaId, ...extra });
     case "Blank":
       return new BlankItem({ id: item.id, ...extra });
   }
@@ -57,6 +60,8 @@ export const createItem = (draft: ProjectItemDraft, id: ProjectItemId): ProjectI
       });
     case "TextSlide":
       return new TextSlideItem({ id, textSlideId: draft.textSlideId });
+    case "Media":
+      return new MediaItem({ id, mediaId: draft.mediaId });
     case "Blank":
       return new BlankItem({ id });
   }

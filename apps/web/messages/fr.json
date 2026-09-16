@@ -364,5 +364,15 @@
   "media_delete": "Supprimer",
   "media_delete_confirm": "Supprimer « {name} » ? Le fichier sera retiré du stockage.",
   "media_deleted": "Média supprimé",
-  "media_action_error": "Action impossible"
+  "media_action_error": "Action impossible",
+  "item_kind_media": "Média",
+  "item_missing_media": "Média supprimé",
+  "project_tab_media": "Médias",
+  "live_video": "Vidéo",
+  "live_video_play": "Lecture",
+  "live_video_pause": "Pause",
+  "live_video_restart": "Reprendre au début",
+  "live_video_playing": "En lecture",
+  "live_video_paused": "En pause",
+  "display_sound_blocked": "Cliquez pour activer le son"
 }

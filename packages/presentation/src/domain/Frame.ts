@@ -1,5 +1,21 @@
 import { Schema } from "effect";
 
+/** Lecture d'une vidéo, pilotée depuis la régie et suivie par tous les écrans. */
+export const VideoPlayback = Schema.Struct({
+  playing: Schema.Boolean,
+  /** Position atteinte lors de la dernière pause. */
+  positionMs: Schema.Int,
+  /** Heure serveur du début de la lecture en cours, ou `null` à l'arrêt. */
+  since: Schema.NullOr(Schema.Number),
+});
+export type VideoPlayback = typeof VideoPlayback.Type;
+
+export const idleVideo: VideoPlayback = { playing: false, positionMs: 0, since: null };
+
+/** Position attendue à l'instant `now` (les écrans s'y recalent). */
+export const videoPositionMs = (playback: VideoPlayback, now: number) =>
+  playback.positionMs + (playback.since === null ? 0 : Math.max(0, now - playback.since));
+
 /** Contenu prêt à afficher sur un écran, indépendant du type d'élément d'origine. */
 export const FrameContent = Schema.Union([
   Schema.TaggedStruct("Lines", {
@@ -10,6 +26,17 @@ export const FrameContent = Schema.Union([
   Schema.TaggedStruct("Rich", {
     source: Schema.String,
     caption: Schema.NullOr(Schema.String),
+  }),
+  /** Image de la médiathèque, servie par URL signée. */
+  Schema.TaggedStruct("Image", {
+    url: Schema.String,
+    caption: Schema.NullOr(Schema.String),
+  }),
+  /** Vidéo de la médiathèque : la lecture est pilotée depuis la régie. */
+  Schema.TaggedStruct("Video", {
+    url: Schema.String,
+    caption: Schema.NullOr(Schema.String),
+    playback: VideoPlayback,
   }),
   Schema.TaggedStruct("Blank", {}),
 ]);

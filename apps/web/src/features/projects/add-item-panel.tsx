@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import type { ProjectItemDraft } from "@projection/projects/domain";
-import type { ProjectId } from "@projection/shared-kernel";
+import type { MediaId, ProjectId } from "@projection/shared-kernel";
 import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
@@ -11,13 +11,14 @@ import { useDeferredValue, useState } from "react";
 import { toast } from "sonner";
 
 import { passageAtom, passageKey, translationsAtom } from "@/features/bible/atoms";
+import { mediaListAtom } from "@/features/media/atoms";
 import { slidesListAtom } from "@/features/slides/atoms";
 import { songsListAtom } from "@/features/songs/atoms";
 import { m } from "@/paraglide/messages";
 
 import { addItemAtom, projectsReactivity } from "./atoms";
 
-type Tab = "songs" | "scripture" | "slides" | "blank";
+type Tab = "songs" | "scripture" | "slides" | "media" | "blank";
 
 export function AddItemPanel({ projectId }: { projectId: ProjectId }) {
   const [tab, setTab] = useState<Tab>("songs");
@@ -39,6 +40,7 @@ export function AddItemPanel({ projectId }: { projectId: ProjectId }) {
     { id: "songs", label: m.project_tab_songs() },
     { id: "scripture", label: m.project_tab_scripture() },
     { id: "slides", label: m.project_tab_slides() },
+    { id: "media", label: m.project_tab_media() },
     { id: "blank", label: m.project_tab_blank() },
   ];
 
@@ -65,6 +67,7 @@ export function AddItemPanel({ projectId }: { projectId: ProjectId }) {
         {tab === "songs" && <SongPicker onAdd={addItem} />}
         {tab === "scripture" && <ScripturePicker onAdd={addItem} />}
         {tab === "slides" && <SlidePicker onAdd={addItem} />}
+        {tab === "media" && <MediaPicker onAdd={addItem} />}
         {tab === "blank" && (
           <Button onClick={() => addItem({ _tag: "Blank" })}>
             <Plus className="size-4" aria-hidden />
@@ -225,5 +228,20 @@ function PassageToAdd({ lookupKey, onAdd }: { lookupKey: string; onAdd: (label: 
         {m.project_add()}
       </Button>
     </div>
+  );
+}
+
+function MediaPicker({ onAdd }: { onAdd: OnAdd }) {
+  const media = useAtomValue(mediaListAtom);
+
+  return (
+    <PickerList
+      items={
+        media._tag === "Success"
+          ? media.value.map((asset) => ({ id: asset.id, title: asset.name }))
+          : null
+      }
+      onPick={(mediaId) => onAdd({ _tag: "Media", mediaId: mediaId as MediaId })}
+    />
   );
 }

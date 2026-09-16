@@ -14,7 +14,8 @@ export const MediaStorageLive = Layer.effect(
     return MediaStorage.of({
       presignUpload: (key, contentType) =>
         storage.presignUpload(key, contentType).pipe(Effect.orDie),
-      presignDownload: (key) => storage.presignDownload(key).pipe(Effect.orDie),
+      presignDownload: (key, ttlSeconds) =>
+        storage.presignDownload(key, ttlSeconds).pipe(Effect.orDie),
       remove: (key) => storage.remove(key).pipe(Effect.orDie),
     });
   }),

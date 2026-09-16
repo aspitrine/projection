@@ -30,3 +30,6 @@ export const liveTimerStartAtom = ApiClient.mutation("LiveTimerStart");
 export const liveTimerPauseAtom = ApiClient.mutation("LiveTimerPause");
 export const liveTimerResetAtom = ApiClient.mutation("LiveTimerReset");
 export const liveEditSectionAtom = ApiClient.mutation("LiveEditSection");
+export const liveVideoPlayAtom = ApiClient.mutation("LiveVideoPlay");
+export const liveVideoPauseAtom = ApiClient.mutation("LiveVideoPause");
+export const liveVideoRestartAtom = ApiClient.mutation("LiveVideoRestart");

@@ -68,3 +68,6 @@ export class MediaTooLarge extends Schema.TaggedError<MediaTooLarge>()("MediaToo
   sizeBytes: Schema.Int,
   maxBytes: Schema.Int,
 }) {}
+
+/** Les écrans gardent une URL valable toute la durée d'un culte. */
+export const MEDIA_DISPLAY_TTL_SECONDS = 6 * 3600;

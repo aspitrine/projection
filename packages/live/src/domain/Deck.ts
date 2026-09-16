@@ -13,7 +13,7 @@ export class DeckSlide extends Schema.Class<DeckSlide>("DeckSlide")({
   parts: Schema.Array(FrameContent),
 }) {}
 
-export const DeckItemKind = Schema.Literals(["Song", "Scripture", "TextSlide", "Blank"]);
+export const DeckItemKind = Schema.Literals(["Song", "Scripture", "TextSlide", "Media", "Blank"]);
 export type DeckItemKind = typeof DeckItemKind.Type;
 
 export class DeckItem extends Schema.Class<DeckItem>("DeckItem")({

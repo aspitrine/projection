@@ -232,7 +232,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] `ObjectStorage` (S3 compatible) dans `platform`, port `MediaStorage` dans `media` : le serveur ne transporte aucun fichier, il signe des URL courtes (10 min en écriture, 15 min en lecture).
 - [x] Contexte `media` : types et tailles validés, téléversement en deux temps (réservation signée puis confirmation), suppression qui retire aussi l'objet du stockage, isolation par organisation.
 - [x] Bibliothèque médias : ajout multi-fichiers, aperçus image et vidéo, suppression.
-- [ ] Élément de projet média et lecture vidéo pilotée depuis la régie.
+- [x] Élément de projet « média » (onglet Médias du panneau d'ajout) ; images et vidéos projetées plein écran.
+- [x] Lecture vidéo pilotée depuis la régie (lecture, pause, retour au début) : tous les écrans se calent sur la position diffusée ; changer de diapo arrête la vidéo. Le son est coupé automatiquement si le navigateur le refuse, avec invite à cliquer.
+- [ ] Limite connue : le serveur ignore la durée des vidéos, donc la position affichée en régie continue d'avancer après la fin du fichier.
 
 ### T2.9 Import VideoPsalm [songs, projects]
 

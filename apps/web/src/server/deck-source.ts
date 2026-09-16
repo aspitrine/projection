@@ -8,6 +8,8 @@ import {
   LiveProjectNotFound,
 } from "@projection/live/domain";
 import { DeckSource } from "@projection/live/server";
+import { MEDIA_DISPLAY_TTL_SECONDS } from "@projection/media/domain";
+import { Media } from "@projection/media/server";
 import type { SplittingSettings } from "@projection/outputs/domain";
 import { Outputs } from "@projection/outputs/server";
 import {
@@ -15,6 +17,7 @@ import {
   type FrameContent,
   type Slide,
   type SplitRules,
+  idleVideo,
   scriptureSplitRules,
   songSplitRules,
   split,
@@ -83,6 +86,7 @@ export const DeckSourceLive = Layer.effect(
     const bible = yield* Bible;
     const textSlides = yield* TextSlides;
     const outputs = yield* Outputs;
+    const media = yield* Media;
 
     const resolveItem = (splitting: SplittingSettings) => (item: ProjectItem) => {
       switch (item._tag) {
@@ -152,6 +156,28 @@ export const DeckSourceLive = Layer.effect(
             Effect.catchTag("TextSlideNotFound", () =>
               Effect.succeed(missingItem(item, "TextSlide")),
             ),
+          );
+        case "Media":
+          return Effect.all([
+            media.get(item.mediaId),
+            media.url(item.mediaId, MEDIA_DISPLAY_TTL_SECONDS),
+          ]).pipe(
+            Effect.map(([asset, url]) => {
+              const content: FrameContent =
+                asset.kind === "image"
+                  ? { _tag: "Image", url, caption: asset.name }
+                  : { _tag: "Video", url, caption: asset.name, playback: idleVideo };
+              return new DeckItem({
+                itemId: item.id,
+                kind: "Media",
+                title: asset.name,
+                sourceId: asset.id,
+                notes: notesOf(item),
+                missing: false,
+                slides: [wholeSlide(content, asset.name)],
+              });
+            }),
+            Effect.catchTag("MediaNotFound", () => Effect.succeed(missingItem(item, "Media"))),
           );
         case "Blank":
           return Effect.succeed(

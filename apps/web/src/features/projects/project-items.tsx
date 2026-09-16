@@ -10,6 +10,7 @@ import {
   ArrowUp,
   BookOpen,
   GripVertical,
+  ImageIcon,
   type LucideIcon,
   Music,
   Presentation,
@@ -21,6 +22,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { translationsAtom } from "@/features/bible/atoms";
+import { mediaListAtom } from "@/features/media/atoms";
 import { slidesListAtom } from "@/features/slides/atoms";
 import { songsListAtom } from "@/features/songs/atoms";
 import { m } from "@/paraglide/messages";
@@ -32,12 +34,16 @@ function useItemLabels() {
   const songs = useAtomValue(songsListAtom(""));
   const slides = useAtomValue(slidesListAtom(""));
   const translations = useAtomValue(translationsAtom);
+  const media = useAtomValue(mediaListAtom);
 
   const songTitles = new Map(
     songs._tag === "Success" ? songs.value.map((song) => [song.id, song.title]) : [],
   );
   const slideTitles = new Map(
     slides._tag === "Success" ? slides.value.map((slide) => [slide.id, slide.title]) : [],
+  );
+  const mediaNames = new Map(
+    media._tag === "Success" ? media.value.map((asset) => [asset.id, asset.name]) : [],
   );
   const translationCodes = new Map(
     translations._tag === "Success"
@@ -65,6 +71,12 @@ function useItemLabels() {
           icon: Presentation,
           kind: m.item_kind_slide(),
           label: slideTitles.get(item.textSlideId) ?? (loading ? "…" : m.item_missing_slide()),
+        };
+      case "Media":
+        return {
+          icon: ImageIcon,
+          kind: m.item_kind_media(),
+          label: mediaNames.get(item.mediaId) ?? (loading ? "…" : m.item_missing_media()),
         };
       case "Blank":
         return { icon: Square, kind: m.item_kind_blank(), label: m.item_blank() };

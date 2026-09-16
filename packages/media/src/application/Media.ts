@@ -26,8 +26,10 @@ export class Media extends Context.Service<
     ): Effect.Effect<MediaUpload, UnsupportedMedia | MediaTooLarge, CurrentActor>;
     /** Marque le média comme disponible une fois le téléversement terminé. */
     confirmUpload(id: MediaId): Effect.Effect<MediaAsset, MediaNotFound, CurrentActor>;
-    /** URL de lecture à durée de vie courte. */
-    url(id: MediaId): Effect.Effect<string, MediaNotFound, CurrentActor>;
+    /** URL de lecture signée ; `ttlSeconds` allonge la validité pour les écrans. */
+    url(id: MediaId, ttlSeconds?: number): Effect.Effect<string, MediaNotFound, CurrentActor>;
+    /** Média de l'organisation courante, pour composer un projet. */
+    get(id: MediaId): Effect.Effect<MediaAsset, MediaNotFound, CurrentActor>;
     remove(id: MediaId): Effect.Effect<void, MediaNotFound, CurrentActor>;
   }
 >()("@projection/media/Media") {
@@ -93,9 +95,13 @@ export class Media extends Context.Service<
           });
         }),
 
-        url: Effect.fn("Media.url")(function* (id: MediaId) {
+        url: Effect.fn("Media.url")(function* (id: MediaId, ttlSeconds?: number) {
           const asset = yield* find(id);
-          return yield* storage.presignDownload(asset.storageKey);
+          return yield* storage.presignDownload(asset.storageKey, ttlSeconds);
+        }),
+
+        get: Effect.fn("Media.get")(function* (id: MediaId) {
+          return yield* find(id);
         }),
 
         remove: Effect.fn("Media.remove")(function* (id: MediaId) {

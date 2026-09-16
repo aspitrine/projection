@@ -17,6 +17,12 @@ export type RenderableSlide =
       readonly blocks: ReadonlyArray<Block>;
       readonly caption?: string | null;
     }
+  | {
+      readonly kind: "media";
+      readonly url: string;
+      readonly video: boolean;
+      readonly caption?: string | null;
+    }
   | { readonly kind: "blank" };
 
 const justify = { top: "flex-start", center: "center", bottom: "flex-end" } as const;
@@ -84,7 +90,19 @@ export function SlideRenderer({
       }}
       {...props}
     >
-      {slide.kind !== "blank" && (
+      {slide.kind === "media" &&
+        (slide.video ? (
+          <video
+            src={slide.url}
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 size-full object-contain"
+          />
+        ) : (
+          <img src={slide.url} alt="" className="absolute inset-0 size-full object-contain" />
+        ))}
+      {slide.kind !== "blank" && slide.kind !== "media" && (
         <div
           ref={box}
           className="absolute flex flex-col"
@@ -108,9 +126,9 @@ export function SlideRenderer({
           >
             {slide.kind === "lines" ? (
               slide.lines.map((line, index) => <p key={index}>{line}</p>)
-            ) : (
+            ) : slide.kind === "rich" ? (
               <RichTextView blocks={slide.blocks} />
-            )}
+            ) : null}
           </div>
         </div>
       )}

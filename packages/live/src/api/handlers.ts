@@ -23,6 +23,9 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveStreamResume: () => sessions.streamResume,
       LiveEditSection: ({ itemId, sectionId, lines }) =>
         sessions.editSection(itemId, sectionId, lines),
+      LiveVideoPlay: () => sessions.playVideo,
+      LiveVideoPause: () => sessions.pauseVideo,
+      LiveVideoRestart: () => sessions.restartVideo,
       LiveTimerSet: ({ durationMs }) => sessions.setTimer(durationMs),
       LiveTimerStart: () => sessions.startTimer,
       LiveTimerPause: () => sessions.pauseTimer,

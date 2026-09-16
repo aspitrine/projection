@@ -14,8 +14,10 @@ import {
 import {
   type Cover,
   type FrameContent,
-  type Track,
   remainingMs,
+  type Track,
+  type VideoPlayback,
+  videoPositionMs,
 } from "@projection/presentation/domain";
 import type { ProjectItemId, SongId } from "@projection/shared-kernel";
 import { formatTag } from "@projection/songs/domain";
@@ -35,6 +37,7 @@ import {
   Pause,
   Pencil,
   Play,
+  RotateCcw as RotateIcon,
   RotateCcw,
   Square,
 } from "lucide-react";
@@ -65,6 +68,9 @@ import {
   liveTimerResetAtom,
   liveTimerSetAtom,
   liveTimerStartAtom,
+  liveVideoPauseAtom,
+  liveVideoPlayAtom,
+  liveVideoRestartAtom,
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
@@ -319,6 +325,7 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             sectionId={currentSection}
           />
         )}
+        {current._tag === "Video" && <VideoPanel playback={snapshot.video} />}
         <StagePanel session={session} deck={deck} />
         <StreamPanel snapshot={snapshot} deck={deck} />
         <Link to="/outputs" className="text-muted-foreground block text-xs underline">
@@ -396,6 +403,52 @@ function LyricsPanel({
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+/** Lecture de la vidéo projetée : tous les écrans suivent ces commandes. */
+function VideoPanel({ playback }: { playback: VideoPlayback }) {
+  const run = useRun();
+  const play = useAtomSet(liveVideoPlayAtom, { mode: "promiseExit" });
+  const pause = useAtomSet(liveVideoPauseAtom, { mode: "promiseExit" });
+  const restart = useAtomSet(liveVideoRestartAtom, { mode: "promiseExit" });
+  const now = useNow();
+
+  return (
+    <section className="space-y-2" data-testid="live-video">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_video()}</h2>
+        <span className="text-xs tabular-nums" data-testid="live-video-position">
+          {playback.playing ? m.live_video_playing() : m.live_video_paused()} ·{" "}
+          {formatDuration(videoPositionMs(playback, now))}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex-1"
+          onClick={() =>
+            run(playback.playing ? pause({ payload: undefined }) : play({ payload: undefined }))
+          }
+        >
+          {playback.playing ? (
+            <Pause className="size-4" aria-hidden />
+          ) : (
+            <Play className="size-4" aria-hidden />
+          )}
+          {playback.playing ? m.live_video_pause() : m.live_video_play()}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => run(restart({ payload: undefined }))}
+          aria-label={m.live_video_restart()}
+        >
+          <RotateIcon className="size-4" aria-hidden />
+        </Button>
+      </div>
     </section>
   );
 }

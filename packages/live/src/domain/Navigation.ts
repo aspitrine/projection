@@ -1,4 +1,9 @@
-import type { FrameContent, StageInfo, StageTimer } from "@projection/presentation/domain";
+import type {
+  FrameContent,
+  StageInfo,
+  StageTimer,
+  VideoPlayback,
+} from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
 import { Effect } from "effect";
 
@@ -197,3 +202,7 @@ export const stageInfoAt = (
     timer,
   };
 };
+
+/** Une vidéo emporte l'état de lecture de la session : tous les écrans se recalent dessus. */
+export const withPlayback = (content: FrameContent, playback: VideoPlayback): FrameContent =>
+  content._tag === "Video" ? { ...content, playback } : content;

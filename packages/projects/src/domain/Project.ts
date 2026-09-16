@@ -1,4 +1,5 @@
 import {
+  MediaId,
   OrganizationId,
   ProjectId,
   ProjectItemId,
@@ -31,12 +32,24 @@ export class TextSlideItem extends Schema.TaggedClass<TextSlideItem>()("TextSlid
   notes: ItemNotes,
 }) {}
 
+export class MediaItem extends Schema.TaggedClass<MediaItem>()("Media", {
+  id: ProjectItemId,
+  mediaId: MediaId,
+  notes: ItemNotes,
+}) {}
+
 export class BlankItem extends Schema.TaggedClass<BlankItem>()("Blank", {
   id: ProjectItemId,
   notes: ItemNotes,
 }) {}
 
-export const ProjectItem = Schema.Union([SongItem, ScriptureItem, TextSlideItem, BlankItem]);
+export const ProjectItem = Schema.Union([
+  SongItem,
+  ScriptureItem,
+  TextSlideItem,
+  MediaItem,
+  BlankItem,
+]);
 export type ProjectItem = typeof ProjectItem.Type;
 
 /** Élément à ajouter : l'identifiant est attribué par le serveur. */
@@ -47,6 +60,7 @@ export const ProjectItemDraft = Schema.Union([
     reference: Schema.NonEmptyString,
   }),
   Schema.TaggedStruct("TextSlide", { textSlideId: TextSlideId }),
+  Schema.TaggedStruct("Media", { mediaId: MediaId }),
   Schema.TaggedStruct("Blank", {}),
 ]);
 export type ProjectItemDraft = typeof ProjectItemDraft.Type;

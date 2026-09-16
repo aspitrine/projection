@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Translation, Verse } from "@projection/bible/domain";
 import { Bible } from "@projection/bible/server";
+import { Media, MediaRepository, MediaStorage } from "@projection/media/server";
 import {
   BrandingSource,
   FrameGateway,
@@ -52,7 +53,17 @@ const BrandingStub = Layer.succeed(
   BrandingSource.of({ get: () => Effect.succeed({ name: "Église", logoUrl: null }) }),
 );
 
+const MediaStorageStub = Layer.succeed(
+  MediaStorage,
+  MediaStorage.of({
+    presignUpload: (key) => Effect.succeed(`https://stockage.test/${key}?upload`),
+    presignDownload: (key) => Effect.succeed(`https://stockage.test/${key}?lecture`),
+    remove: () => Effect.void,
+  }),
+);
+
 const ServicesLive = Layer.mergeAll(
+  Media.layer.pipe(Layer.provide(Layer.mergeAll(MediaRepository.layerMemory, MediaStorageStub))),
   Outputs.layer.pipe(
     Layer.provide(Layer.mergeAll(OutputRepository.layerMemory, FrameGatewayStub, BrandingStub)),
   ),

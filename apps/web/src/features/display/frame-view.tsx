@@ -1,6 +1,14 @@
 import type { Branding, OutputType } from "@projection/outputs/domain";
-import { type Cover, type FrameContent, SlideTheme } from "@projection/presentation/domain";
+import {
+  type Cover,
+  type FrameContent,
+  SlideTheme,
+  videoPositionMs,
+} from "@projection/presentation/domain";
 import { cn } from "@projection/ui/lib/utils";
+import { useEffect, useRef, useState } from "react";
+
+import { m } from "../../paraglide/messages";
 
 import { SlideRenderer } from "../presentation/slide-renderer";
 import { contentToSlide, roomTheme, stageTheme, streamTheme, themeFor } from "./frame";
@@ -26,12 +34,15 @@ export function FrameView({
   type,
   branding,
   className,
+  sound = false,
 }: {
   content: FrameContent;
   cover: Cover;
   type: OutputType;
   branding: Branding;
   className?: string;
+  /** Vrai sur les écrans qui doivent restituer le son des vidéos. */
+  sound?: boolean;
 }) {
   switch (cover) {
     case "black":
@@ -55,6 +66,9 @@ export function FrameView({
     case "logo":
       return <LogoSlide type={type} branding={branding} className={className} />;
     case "none":
+      if (content._tag === "Video") {
+        return <VideoSlide content={content} sound={sound} className={className} />;
+      }
       return (
         <SlideRenderer
           className={className}
@@ -116,6 +130,68 @@ function LogoSlide({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Vidéo pilotée par la régie : chaque écran se cale sur la position diffusée. */
+function VideoSlide({
+  content,
+  sound,
+  className,
+}: {
+  content: Extract<FrameContent, { _tag: "Video" }>;
+  sound: boolean;
+  className?: string;
+}) {
+  const element = useRef<HTMLVideoElement>(null);
+  const [soundBlocked, setSoundBlocked] = useState(false);
+
+  useEffect(() => {
+    const video = element.current;
+    if (video === null) return;
+
+    const expected = videoPositionMs(content.playback, Date.now()) / 1000;
+    // On ne recale que si l'écart est audible : sinon la lecture saccade.
+    if (Math.abs(video.currentTime - expected) > 0.5) video.currentTime = expected;
+
+    if (!content.playback.playing) {
+      video.pause();
+      return;
+    }
+    video.muted = !sound;
+    video.play().catch(() => {
+      // Lecture avec son refusée tant que la page n'a pas reçu de clic.
+      video.muted = true;
+      setSoundBlocked(sound);
+      void video.play().catch(() => undefined);
+    });
+  }, [content.url, content.playback, sound]);
+
+  return (
+    <div
+      data-slot="slide"
+      data-cover="none"
+      className={cn("relative aspect-video w-full overflow-hidden bg-black", className)}
+      onClick={() => {
+        const video = element.current;
+        if (video === null || !soundBlocked) return;
+        video.muted = false;
+        setSoundBlocked(false);
+      }}
+    >
+      <video
+        ref={element}
+        src={content.url}
+        playsInline
+        preload="auto"
+        className="absolute inset-0 size-full object-contain"
+      />
+      {soundBlocked && (
+        <p className="absolute right-2 bottom-2 bg-black/70 px-2 py-1 text-xs text-white">
+          {m.display_sound_blocked()}
+        </p>
+      )}
     </div>
   );
 }

@@ -24,7 +24,7 @@ export class ObjectStorage extends Context.Service<
   ObjectStorage,
   {
     presignUpload(key: string, contentType: string): Effect.Effect<string, ObjectStorageError>;
-    presignDownload(key: string): Effect.Effect<string, ObjectStorageError>;
+    presignDownload(key: string, expiresIn?: number): Effect.Effect<string, ObjectStorageError>;
     remove(key: string): Effect.Effect<void, ObjectStorageError>;
   }
 >()("@projection/platform/ObjectStorage") {
@@ -64,11 +64,9 @@ export class ObjectStorage extends Context.Service<
               },
             ),
           ),
-        presignDownload: (key) =>
+        presignDownload: (key, expiresIn = DOWNLOAD_URL_TTL_SECONDS) =>
           attempt("presignDownload", () =>
-            getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
-              expiresIn: DOWNLOAD_URL_TTL_SECONDS,
-            }),
+            getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn }),
           ),
         remove: (key) =>
           attempt("remove", () =>
