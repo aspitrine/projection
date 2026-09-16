@@ -1,6 +1,9 @@
 import {
+  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
+  PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -46,6 +49,52 @@ export class ObjectStorage extends Context.Service<
         requestChecksumCalculation: "WHEN_REQUIRED",
         credentials: { accessKeyId, secretAccessKey: Redacted.value(secretAccessKey) },
       });
+
+      /**
+       * Le navigateur téléverse et lit directement dans le stockage : sans bucket ni
+       * règles CORS, le premier envoi échoue. Les deux sont donc posés au démarrage,
+       * pour qu'une installation neuve n'ait aucune commande à lancer à la main.
+       * L'opération est idempotente, et son échec ne doit pas empêcher le serveur de
+       * démarrer : un stockage momentanément absent ne coûte que la médiathèque.
+       */
+      const prepareBucket = Effect.gen(function* () {
+        const origin = yield* Config.String("BETTER_AUTH_URL");
+        const exists = yield* Effect.tryPromise(() =>
+          client.send(new HeadBucketCommand({ Bucket: bucket })),
+        ).pipe(
+          Effect.as(true),
+          Effect.catch(() => Effect.succeed(false)),
+        );
+        if (!exists) {
+          yield* Effect.tryPromise(() => client.send(new CreateBucketCommand({ Bucket: bucket })));
+          yield* Effect.logInfo(`Bucket ${bucket} créé`);
+        }
+        yield* Effect.tryPromise(() =>
+          client.send(
+            new PutBucketCorsCommand({
+              Bucket: bucket,
+              CORSConfiguration: {
+                CORSRules: [
+                  {
+                    AllowedOrigins: [origin],
+                    AllowedMethods: ["GET", "PUT", "HEAD"],
+                    AllowedHeaders: ["*"],
+                    ExposeHeaders: ["ETag"],
+                    MaxAgeSeconds: 3600,
+                  },
+                ],
+              },
+            }),
+          ),
+        );
+      }).pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("Stockage des médias non préparé (bucket ou règles CORS)", error),
+        ),
+        Effect.withSpan("ObjectStorage.prepareBucket"),
+      );
+
+      yield* Effect.forkScoped(prepareBucket);
 
       const attempt = <A>(operation: string, run: () => Promise<A>) =>
         Effect.tryPromise({
