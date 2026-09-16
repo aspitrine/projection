@@ -18,7 +18,8 @@ export interface ImportedSong {
   readonly lyrics: string;
 }
 
-export class InvalidChordPro extends Schema.TaggedError<InvalidChordPro>()("InvalidChordPro", {
+/** Un fichier de chant sans parole projetable, quel que soit son format. */
+export class InvalidSongFile extends Schema.TaggedError<InvalidSongFile>()("InvalidSongFile", {
   reason: Schema.Literals(["NoLyrics"]),
 }) {}
 
@@ -159,7 +160,7 @@ export const parseChordPro = Effect.fnUntraced(function* (text: string, fallback
   close();
 
   if (blocks.every((block) => block.lines.length === 0)) {
-    return yield* new InvalidChordPro({ reason: "NoLyrics" });
+    return yield* new InvalidSongFile({ reason: "NoLyrics" });
   }
 
   const lyrics = blocks

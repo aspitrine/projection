@@ -2,7 +2,7 @@ import { SongId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 
 /** Formats d'import de chants (OpenLyrics et VideoPsalm à venir, T2.9 / T2.10). */
-export const ImportFormat = Schema.Literals(["chordpro"]);
+export const ImportFormat = Schema.Literals(["chordpro", "openlyrics"]);
 export type ImportFormat = typeof ImportFormat.Type;
 
 export const ImportFile = Schema.Struct({

@@ -311,8 +311,7 @@
   "song_lyrics_placeholder": "Tapez ou collez les paroles…",
   "song_sections_toolbar": "Insérer une section",
   "songs_import": "Importer",
-  "songs_import_title": "Importer des fichiers ChordPro",
-  "songs_import_hint": "Fichiers .cho, .chordpro, .chopro, .crd ou .pro, {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré.",
+  "songs_import_title": "Importer des fichiers de chants",
   "songs_import_choose": "Choisir des fichiers",
   "songs_import_running": "Import en cours…",
   "songs_import_imported": "Importés : {count}",
@@ -408,5 +407,10 @@
   "projects_import_done": "Projet « {name} » créé : {imported} chants importés, {reused} déjà connus",
   "projects_import_errors": "{count} chants n'ont pas pu être importés",
   "projects_import_failed": "Fichier VideoPsalm illisible.",
-  "projects_import_no_songs": "Aucun chant trouvé dans ce fichier."
+  "projects_import_no_songs": "Aucun chant trouvé dans ce fichier.",
+  "songs_import_format": "Format",
+  "songs_import_format_chordpro": "ChordPro",
+  "songs_import_format_openlyrics": "OpenLyrics",
+  "songs_import_hint_chordpro": "Fichiers .cho, .chordpro, .chopro, .crd ou .pro, {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré.",
+  "songs_import_hint_openlyrics": "Fichiers .xml OpenLyrics (OpenLP, Eliakim…), {max} au plus. Les accords sont retirés ; un chant dont le titre existe déjà est ignoré."
 }

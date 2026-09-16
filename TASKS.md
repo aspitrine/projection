@@ -247,7 +247,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Normalisation : accords retirés, accents recomposés (NFC), lignes nettoyées, sections sans texte ignorées, répétitions transformées en rejeu, ordre de passage conservé.
 - [x] Import `.vpagd` → chants créés en bibliothèque (dédoublonnés par `Guid`, champ `external_id`) puis projet dans l'ordre de l'agenda ; rapport importés / déjà connus / refusés.
 - [x] Panneau d'import sur la page Projets.
-- [ ] Import de recueil, et agendas contenant autre chose que des chants (Bible, image, vidéo) : échantillons encore nécessaires.
+- [x] Second agenda réel (14 chants) : `Composer` en secours d'`Author`, tags 5 et 6, sections homonymes numérotées (« Refrain 2 », « Pont 2 »), même `Guid` pour deux tonalités. Documenté dans [docs/formats/videopsalm.md](docs/formats/videopsalm.md).
+- [ ] Import de recueil, et agendas contenant autre chose que des chants (Bible, image, vidéo) : les deux agendas reçus ne contiennent que des chants, échantillons encore nécessaires.
 
 ### T2.10 Imports OpenLyrics et ChordPro [songs]
 
@@ -256,7 +257,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] ChordPro : parser (métadonnées, sections, `{chorus}`, commentaires comme libellés, accords retirés, tablatures ignorées) + tests.
 - [x] RPC `SongsImport` (format, 50 fichiers / 200 Ko au plus) : un chant par fichier, doublons de titre ignorés (sans casse ni accents), rapport importés / doublons / erreurs.
 - [x] UI d'import multi-fichiers avec rapport sur la page Chants (réutilisable pour T2.9).
-- [ ] OpenLyrics : parser + branchement sur `SongsImport`.
+- [x] OpenLyrics : parser (accords `<chord/>` retirés, `<br/>`, noms de sections `v1`/`c`/`b`…, `verseOrder`) branché sur `SongsImport`, avec choix du format dans le panneau d'import.
 
 ### T2.11 Recherche full-text [songs, bible]
 

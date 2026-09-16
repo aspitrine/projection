@@ -1,11 +1,12 @@
 import { CurrentActor, SongId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Option } from "effect";
 
-import { parseChordPro } from "../domain/ChordPro";
+import { type ImportedSong, InvalidSongFile, parseChordPro } from "../domain/ChordPro";
 
 import { InvalidLyrics, SongNotFound } from "../domain/errors";
 import { type ImportFile, type ImportFormat, ImportReport } from "../domain/Import";
 import { parseLyrics } from "../domain/Lyrics";
+import { parseOpenLyrics } from "../domain/OpenLyrics";
 import { Song, SongInput, type SongSummary, optionalText } from "../domain/Song";
 import { SongRepository } from "./SongRepository";
 
@@ -17,6 +18,21 @@ const normalizeTitle = (title: string) =>
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+
+/** Chaque format a son parser ; l'échec est le même pour tous : aucune parole trouvée. */
+const parseSongFile = (
+  format: ImportFormat,
+  content: string,
+  fallbackTitle: string,
+): Effect.Effect<ImportedSong, InvalidSongFile> => {
+  if (format === "chordpro") return parseChordPro(content, fallbackTitle);
+  return Effect.suspend(() => {
+    const song = parseOpenLyrics(content, fallbackTitle);
+    return song === null
+      ? Effect.fail(new InvalidSongFile({ reason: "NoLyrics" }))
+      : Effect.succeed(song);
+  });
+};
 
 type ImportOutcome =
   | { readonly _tag: "Imported"; readonly song: Song }
@@ -111,7 +127,7 @@ export class Songs extends Context.Service<
       });
 
       const importFiles = Effect.fn("Songs.importFiles")(function* (
-        _format: ImportFormat,
+        format: ImportFormat,
         files: ReadonlyArray<ImportFile>,
       ) {
         const actor = yield* CurrentActor;
@@ -125,7 +141,7 @@ export class Songs extends Context.Service<
 
         for (const { fileName, content } of files) {
           const fallbackTitle = fileName.replace(/\.[^.]+$/, "").trim() || "Sans titre";
-          const outcome = yield* parseChordPro(content, fallbackTitle).pipe(
+          const outcome = yield* parseSongFile(format, content, fallbackTitle).pipe(
             Effect.flatMap(
               (imported): Effect.Effect<ImportOutcome, InvalidLyrics, CurrentActor> => {
                 const title = imported.title.trim() || fallbackTitle;

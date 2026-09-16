@@ -15,7 +15,8 @@
     "@effect/sql-pg": "catalog:",
     "@projection/identity": "workspace:*",
     "@projection/shared-kernel": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fast-xml-parser": "^5.11.1"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

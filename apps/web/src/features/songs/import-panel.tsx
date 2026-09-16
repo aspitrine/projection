@@ -11,9 +11,15 @@ import { m } from "@/paraglide/messages";
 
 import { importSongsAtom, songsReactivity } from "./atoms";
 
+type Format = "chordpro" | "openlyrics";
+
+const accepted: Record<Format, string> = {
+  chordpro: ".cho,.chordpro,.chopro,.crd,.pro,.txt",
+  openlyrics: ".xml",
+};
+
 const MAX_FILES = 50;
 const MAX_BYTES = 200_000;
-const ACCEPT = ".cho,.chordpro,.chopro,.crd,.pro,.txt";
 
 type ErrorReason = ImportReport["errors"][number]["reason"] | "TooLarge";
 
@@ -37,6 +43,7 @@ export function SongImportPanel() {
   const importSongs = useAtomSet(importSongsAtom, { mode: "promiseExit" });
   const [pending, setPending] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
+  const [format, setFormat] = useState<Format>("chordpro");
 
   const importFiles = async (list: FileList | null) => {
     const files = [...(list ?? [])];
@@ -63,7 +70,7 @@ export function SongImportPanel() {
     }
 
     const exit = await importSongs({
-      payload: { format: "chordpro", files: readable },
+      payload: { format, files: readable },
       reactivityKeys: songsReactivity,
     });
     setPending(false);
@@ -88,7 +95,25 @@ export function SongImportPanel() {
         <h2 id={`${inputId}-title`} className="font-medium">
           {m.songs_import_title()}
         </h2>
-        <p className="text-muted-foreground text-xs">{m.songs_import_hint({ max: MAX_FILES })}</p>
+        <p className="text-muted-foreground text-xs">
+          {format === "chordpro"
+            ? m.songs_import_hint_chordpro({ max: MAX_FILES })
+            : m.songs_import_hint_openlyrics({ max: MAX_FILES })}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`${inputId}-format`} className="text-sm">
+          {m.songs_import_format()}
+        </label>
+        <select
+          id={`${inputId}-format`}
+          className="border-input bg-background h-8 border px-2 text-sm"
+          value={format}
+          onChange={(event) => setFormat(event.target.value as Format)}
+        >
+          <option value="chordpro">{m.songs_import_format_chordpro()}</option>
+          <option value="openlyrics">{m.songs_import_format_openlyrics()}</option>
+        </select>
       </div>
       <label
         htmlFor={inputId}
@@ -101,7 +126,7 @@ export function SongImportPanel() {
         id={inputId}
         type="file"
         multiple
-        accept={ACCEPT}
+        accept={accepted[format]}
         className="sr-only"
         disabled={pending}
         onChange={(event) => {
