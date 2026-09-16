@@ -1,0 +1,74 @@
+# Déploiement Coolify : application, base et stockage des médias.
+#
+# Coolify remplit lui-même les variables `SERVICE_*` (domaine public, mots de passe
+# générés) et injecte les autres depuis l'onglet « Environment Variables ».
+# Voir docs/deploiement.md.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # Domaine public attribué par Coolify (proxy Traefik devant le port 3001).
+      - SERVICE_FQDN_WEB_3001
+      - NODE_ENV=production
+      - BETTER_AUTH_URL=${SERVICE_FQDN_WEB_3001}
+      - BETTER_AUTH_SECRET=${SERVICE_PASSWORD_64_AUTH}
+      - DATABASE_URL=postgresql://projection:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/projection
+      # Le navigateur des opérateurs téléverse et lit directement dans Garage :
+      # l'URL doit être publique, pas le nom de service interne.
+      - S3_ENDPOINT=${SERVICE_FQDN_GARAGE_3900}
+      - S3_REGION=garage
+      - S3_BUCKET=projection
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18
+    environment:
+      - POSTGRES_DB=projection
+      - POSTGRES_USER=projection
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+    volumes:
+      - projection-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projection -d projection"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  garage:
+    image: dxflrs/garage:v1.0.1
+    environment:
+      # Domaine public du stockage : les URL signées sont ouvertes par le navigateur.
+      - SERVICE_FQDN_GARAGE_3900
+      - GARAGE_RPC_SECRET=${SERVICE_PASSWORD_64_GARAGERPC}
+      - GARAGE_ADMIN_TOKEN=${SERVICE_PASSWORD_GARAGEADMIN}
+    volumes:
+      - ./docker/garage.coolify.toml:/etc/garage.toml:ro
+      - projection-garage-meta:/var/lib/garage/meta
+      - projection-garage-data:/var/lib/garage/data
+    restart: unless-stopped
+
+volumes:
+  projection-postgres:
+  projection-garage-meta:
+  projection-garage-data:

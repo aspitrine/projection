@@ -1,0 +1,18 @@
+# Configuration Garage pour un déploiement Coolify : une seule instance, pas de réplication.
+# Les secrets viennent de l'environnement (`GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`),
+# renseignés par Coolify — rien de sensible n'est versionné ici.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "garage:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+
+[admin]
+api_bind_addr = "[::]:3903"
