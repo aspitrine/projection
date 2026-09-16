@@ -215,12 +215,14 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Écran retour : diapo courante, diapo suivante, horloge locale, minuteur, notes.
 - [x] Tests unitaires (minuteur, infos retour, notes) et fonctionnels sur Postgres.
 
-### T2.7 Édition des paroles en live [songs, live]
+### T2.7 Édition des paroles en live [songs, live] ✅
 
 **Dépend de** : T1.8
 
-- [ ] Édition d'une section depuis la régie → sauvegarde en bibliothèque → diffusion immédiate.
-- [ ] Édition concurrente : dernière écriture + notification aux autres opérateurs.
+- [x] Le deck retient l'origine de chaque élément et la section de chaque diapo ; `LiveEditSection` enregistre la section en bibliothèque (port `SongEditing`, composition root), relit le projet et diffuse aussitôt.
+- [x] Panneau d'édition dans la régie sur la section projetée.
+- [x] Édition concurrente : dernière écriture gagnante (le chant est réécrit depuis ses sections) et signalement aux autres régies dans l'état diffusé.
+- [x] Tests unitaires (commande, bouchon d'édition, deck) et fonctionnels sur Postgres.
 
 ### T2.8 Médias (Garage) [media, platform]
 

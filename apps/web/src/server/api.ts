@@ -25,6 +25,7 @@ import { ApiRpcs } from "../api/contract";
 import { auth, ensureAuthSchema } from "../services";
 import { BrandingSourceLive } from "./branding";
 import { DeckSourceLive } from "./deck-source";
+import { SongEditingLive } from "./song-editing";
 
 const AuthMigrationsLive = Layer.effectDiscard(
   Effect.promise(ensureAuthSchema).pipe(Effect.withSpan("auth.migrations")),
@@ -64,6 +65,7 @@ const HandlersLive = Layer.mergeAll(
       ),
     ),
   ),
+  Layer.provide(SongEditingLive.pipe(Layer.provide(SongsServiceLive))),
   Layer.provide(FrameGatewayLive),
   Layer.provide(BrandingSourceLive),
   Layer.provide(LiveFrames.layerMemory),

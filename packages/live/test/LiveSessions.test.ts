@@ -13,14 +13,22 @@ import {
   item,
   itemId,
   makeDeckSource,
+  makeSongEditing,
   organizationId,
   projectId,
 } from "./support";
 
+const songEditing = makeSongEditing();
+
 const layerWith = (source: ReturnType<typeof makeDeckSource>) =>
   LiveSessions.layer.pipe(
     Layer.provideMerge(
-      Layer.mergeAll(LiveSessionRepository.layerMemory, LiveFrames.layerMemory, source.layer),
+      Layer.mergeAll(
+        LiveSessionRepository.layerMemory,
+        LiveFrames.layerMemory,
+        source.layer,
+        songEditing.layer,
+      ),
     ),
   );
 
@@ -307,6 +315,33 @@ describe("LiveSessions", () => {
       // Dernière diapo : plus rien à annoncer.
       yield* sessions.goTo(itemId(3), 0).pipe(asActor());
       expect((yield* stageOf)?.next).toEqual({ _tag: "Blank" });
+    }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
+  );
+
+  it.effect("édite une section en direct : bibliothèque, diffusion et signalement", () =>
+    Effect.gen(function* () {
+      const sessions = yield* LiveSessions;
+      const frames = yield* LiveFrames;
+
+      yield* sessions.start(projectId).pipe(asActor());
+      const edited = yield* sessions
+        .editSection(itemId(1), "verse-1", ["Nouvelle ligne"])
+        .pipe(asActor());
+
+      expect(songEditing.calls.at(-1)).toEqual({
+        songId: "song-1",
+        sectionId: "verse-1",
+        lines: ["Nouvelle ligne"],
+      });
+      expect(edited.lastEdit).toMatchObject({ itemId: itemId(1), section: "verse-1" });
+      // Le signalement ne survit pas à la commande suivante.
+      expect((yield* sessions.next.pipe(asActor())).lastEdit).toBeNull();
+      expect((yield* frames.current(organizationId, "room")).version).toBeGreaterThan(0);
+
+      const unknown = yield* sessions
+        .editSection(itemId(9), "verse-1", ["x"])
+        .pipe(asActor(), Effect.flip);
+      expect(unknown._tag).toBe("LiveEditFailed");
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 });

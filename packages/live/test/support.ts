@@ -9,7 +9,7 @@ import {
 } from "@projection/shared-kernel";
 import { Effect, Layer } from "effect";
 
-import { DeckSource } from "../src/application/ports";
+import { DeckSource, SongEditing } from "../src/application/ports";
 import { Deck, DeckItem, DeckSlide } from "../src/domain/Deck";
 import { LiveProjectNotFound } from "../src/domain/LiveSession";
 
@@ -40,6 +40,7 @@ export const item = (index: number, texts: ReadonlyArray<string>, parts = 1) =>
     itemId: itemId(index),
     kind: "Song",
     title: `Élément ${index}`,
+    sourceId: `song-${index}`,
     notes: null,
     missing: false,
     slides: texts.map(
@@ -47,6 +48,7 @@ export const item = (index: number, texts: ReadonlyArray<string>, parts = 1) =>
         new DeckSlide({
           content: linesOf(text),
           label: text,
+          sectionId: `section-${text}`,
           parts:
             parts === 1
               ? [linesOf(text)]
@@ -76,5 +78,23 @@ export const makeDeckSource = (initial: Deck | null) => {
     set: (deck: Deck | null) => {
       current = deck;
     },
+  };
+};
+
+/** Édition des paroles en mémoire : retient le dernier appel pour les assertions. */
+export const makeSongEditing = () => {
+  const calls: Array<{ songId: string; sectionId: string; lines: ReadonlyArray<string> }> = [];
+  return {
+    calls,
+    layer: Layer.succeed(
+      SongEditing,
+      SongEditing.of({
+        updateSection: (songId, sectionId, lines) =>
+          Effect.sync(() => {
+            calls.push({ songId, sectionId, lines });
+            return { title: `Chant ${songId}`, section: sectionId };
+          }),
+      }),
+    ),
   };
 };

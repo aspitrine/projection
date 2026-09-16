@@ -29,18 +29,19 @@ import { Songs } from "@projection/songs/server";
 import { Effect, Layer } from "effect";
 
 /** Diapo de salle et ses parties pour la piste Stream (sous-découpage). */
-const toDeckSlide = (streamRules: SplitRules) => (slide: Slide) => {
+const toDeckSlide = (streamRules: SplitRules, sectioned: boolean) => (slide: Slide) => {
   const content: FrameContent = { _tag: "Lines", lines: slide.lines, caption: slide.label };
   return new DeckSlide({
     content,
     label: slide.parts > 1 ? `${slide.label ?? ""} (${slide.part}/${slide.parts})` : slide.label,
+    sectionId: sectioned ? (slide.blockKeys[0] ?? null) : null,
     parts: subSplit(content, streamRules),
   });
 };
 
 /** Diapo non découpable (texte enrichi, écran vide) : une seule partie. */
 const wholeSlide = (content: FrameContent, label: string | null) =>
-  new DeckSlide({ content, label, parts: [content] });
+  new DeckSlide({ content, label, sectionId: null, parts: [content] });
 
 const songSlides = (song: Song, splitting: SplittingSettings) => {
   const sections = new Map(song.sections.map((section) => [section.id, section]));
@@ -51,7 +52,7 @@ const songSlides = (song: Song, splitting: SplittingSettings) => {
       : [new ContentBlock({ key: section.id, label: formatTag(section), lines: section.lines })];
   });
   return split(blocks, songSplitRules(splitting.room.songMaxLines)).map(
-    toDeckSlide(songSplitRules(splitting.stream.songMaxLines)),
+    toDeckSlide(songSplitRules(splitting.stream.songMaxLines), true),
   );
 };
 
@@ -59,7 +60,15 @@ const songSlides = (song: Song, splitting: SplittingSettings) => {
 const notesOf = (item: ProjectItem) => item.notes ?? null;
 
 const missingItem = (item: ProjectItem, kind: DeckItemKind, title = "") =>
-  new DeckItem({ itemId: item.id, kind, title, notes: notesOf(item), missing: true, slides: [] });
+  new DeckItem({
+    itemId: item.id,
+    kind,
+    title,
+    sourceId: null,
+    notes: notesOf(item),
+    missing: true,
+    slides: [],
+  });
 
 /**
  * Résout un projet en diapos à partir des contextes songs, bible et slides, avec le
@@ -84,6 +93,7 @@ export const DeckSourceLive = Layer.effect(
                 new DeckItem({
                   itemId: item.id,
                   kind: "Song",
+                  sourceId: song.id,
                   title: song.title,
                   notes: notesOf(item),
                   missing: false,
@@ -106,13 +116,16 @@ export const DeckSourceLive = Layer.effect(
               return new DeckItem({
                 itemId: item.id,
                 kind: "Scripture",
+                sourceId: null,
                 title: `${passage.label} (${passage.translation.code})`,
                 notes: notesOf(item),
                 missing: false,
                 slides: split(
                   blocks,
                   scriptureSplitRules(splitting.room.scriptureMaxCharacters),
-                ).map(toDeckSlide(scriptureSplitRules(splitting.stream.scriptureMaxCharacters))),
+                ).map(
+                  toDeckSlide(scriptureSplitRules(splitting.stream.scriptureMaxCharacters), false),
+                ),
               });
             }),
             Effect.catch(() => Effect.succeed(missingItem(item, "Scripture", item.reference))),
@@ -124,6 +137,7 @@ export const DeckSourceLive = Layer.effect(
                 new DeckItem({
                   itemId: item.id,
                   kind: "TextSlide",
+                  sourceId: slide.id,
                   title: slide.title,
                   notes: notesOf(item),
                   missing: false,
@@ -144,6 +158,7 @@ export const DeckSourceLive = Layer.effect(
             new DeckItem({
               itemId: item.id,
               kind: "Blank",
+              sourceId: null,
               title: "",
               notes: notesOf(item),
               missing: false,

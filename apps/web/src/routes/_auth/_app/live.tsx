@@ -17,9 +17,11 @@ import {
   type Track,
   remainingMs,
 } from "@projection/presentation/domain";
-import type { ProjectItemId } from "@projection/shared-kernel";
+import type { ProjectItemId, SongId } from "@projection/shared-kernel";
+import { formatTag } from "@projection/songs/domain";
 import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
+import { Textarea } from "@projection/ui/components/textarea";
 import { cn } from "@projection/ui/lib/utils";
 import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
 import { Exit } from "effect";
@@ -31,6 +33,7 @@ import {
   MonitorOff,
   Radio,
   Pause,
+  Pencil,
   Play,
   RotateCcw,
   Square,
@@ -44,6 +47,7 @@ import { FrameView } from "@/features/display/frame-view";
 import { formatDuration, useNow } from "@/features/display/time";
 import {
   liveAtom,
+  liveEditSectionAtom,
   liveGoToAtom,
   liveNextAtom,
   livePreviousAtom,
@@ -64,6 +68,7 @@ import {
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
+import { songAtom } from "@/features/songs/atoms";
 import { formatProjectDate } from "@/features/projects/format";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
@@ -214,6 +219,24 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [next, previous, setCover, streamNext, streamPrevious, run]);
 
+  // Paroles mises à jour par un autre opérateur : on prévient une seule fois.
+  const noticedEdit = useRef<number | null>(null);
+  useEffect(() => {
+    const edit = snapshot.lastEdit;
+    if (edit === null || noticedEdit.current === edit.at) return;
+    noticedEdit.current = edit.at;
+    toast.info(m.live_edit_notice({ title: edit.title, section: edit.section }));
+  }, [snapshot.lastEdit]);
+
+  const currentItem =
+    session.cursor === null
+      ? null
+      : (deck.items.find((item) => item.itemId === session.cursor?.itemId) ?? null);
+  const currentSection =
+    currentItem === null || session.cursor === null
+      ? null
+      : (currentItem.slides[session.cursor.slideIndex]?.sectionId ?? null);
+
   const current = contentAt(deck, session.cursor);
   const upcomingCursor = session.cursor === null ? null : nextCursor(deck, session.cursor);
   const hasUpcoming =
@@ -288,6 +311,14 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
             <p className="text-muted-foreground text-xs">{m.live_end()}</p>
           )}
         </section>
+        {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
+          <LyricsPanel
+            key={`${currentItem.itemId}:${currentSection}`}
+            itemId={currentItem.itemId}
+            songId={currentItem.sourceId}
+            sectionId={currentSection}
+          />
+        )}
         <StagePanel session={session} deck={deck} />
         <StreamPanel snapshot={snapshot} deck={deck} />
         <Link to="/outputs" className="text-muted-foreground block text-xs underline">
@@ -295,6 +326,77 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
         </Link>
       </aside>
     </div>
+  );
+}
+
+/** Édition en direct de la section projetée : enregistrée en bibliothèque puis diffusée. */
+function LyricsPanel({
+  itemId,
+  songId,
+  sectionId,
+}: {
+  itemId: ProjectItemId;
+  songId: string;
+  sectionId: string;
+}) {
+  const song = useAtomValue(songAtom(songId as SongId));
+  const editSection = useAtomSet(liveEditSectionAtom, { mode: "promiseExit" });
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const section =
+    song._tag === "Success"
+      ? (song.value.sections.find((candidate) => candidate.id === sectionId) ?? null)
+      : null;
+  if (section === null) return null;
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-muted-foreground text-xs font-medium uppercase">
+          {m.live_edit_section({ section: formatTag(section) })}
+        </h2>
+        <Button
+          size="sm"
+          variant="outline"
+          aria-expanded={draft !== null}
+          onClick={() => setDraft(draft === null ? section.lines.join("\n") : null)}
+        >
+          <Pencil className="size-4" aria-hidden />
+          {m.live_edit_lyrics()}
+        </Button>
+      </div>
+
+      {draft !== null && (
+        <div className="space-y-2">
+          <Textarea
+            aria-label={m.live_edit_lyrics()}
+            className="min-h-32 text-sm"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={async () => {
+                const lines = draft.split("\n");
+                const exit = await editSection({ payload: { itemId, sectionId, lines } });
+                if (Exit.isSuccess(exit)) {
+                  toast.success(m.live_edit_saved());
+                  setDraft(null);
+                } else {
+                  toast.error(m.live_edit_failed());
+                }
+              }}
+            >
+              {m.live_edit_save()}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
+              {m.live_edit_cancel()}
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

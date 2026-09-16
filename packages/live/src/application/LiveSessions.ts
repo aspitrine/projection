@@ -17,6 +17,8 @@ import {
   type LiveCursor,
   type LiveItemNotFound,
   type LiveProjectNotFound,
+  LiveEdit,
+  LiveEditFailed,
   LiveSession,
   LiveSnapshot,
   NoLiveProject,
@@ -42,7 +44,7 @@ import {
 } from "../domain/Navigation";
 import { pauseTimer, resetTimer, setDuration, startTimer } from "../domain/Timer";
 import { LiveFrames } from "./LiveFrames";
-import { DeckSource, LiveSessionRepository } from "./ports";
+import { DeckSource, LiveSessionRepository, SongEditing } from "./ports";
 
 interface Draft {
   readonly deck: Deck | null;
@@ -54,6 +56,8 @@ interface Draft {
   readonly streamCursor: StreamCursor | null;
   readonly streamOverride: StreamOverride | null;
   readonly timer: StageTimer;
+  /** Édition de paroles à signaler aux autres régies (non persistée). */
+  readonly lastEdit: LiveEdit | null;
 }
 
 interface OrganizationState {
@@ -73,6 +77,7 @@ const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover):
   streamCursor: null,
   streamOverride: null,
   timer: idleTimer,
+  lastEdit: null,
 });
 
 /**
@@ -104,6 +109,12 @@ export class LiveSessions extends Context.Service<
     readonly streamResume: Command;
     /** Lier recale le stream sur la diapo de la salle. */
     setStreamLinked(linked: boolean): Command;
+    /** Édite une section du chant en cours : bibliothèque mise à jour puis diffusion. */
+    editSection(
+      itemId: ProjectItemId,
+      sectionId: string,
+      lines: ReadonlyArray<string>,
+    ): Command<NoLiveProject | LiveEditFailed>;
     /** Minuteur du retour scène : durée, démarrage, pause, remise à zéro. */
     setTimer(durationMs: number): Command;
     readonly startTimer: Command;
@@ -119,6 +130,7 @@ export class LiveSessions extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* LiveSessionRepository;
       const decks = yield* DeckSource;
+      const songs = yield* SongEditing;
       const frames = yield* LiveFrames;
       const states = new Map<OrganizationId, OrganizationState>();
       const initLock = yield* Semaphore.make(1);
@@ -183,6 +195,7 @@ export class LiveSessions extends Context.Service<
               streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
               streamOverride: from.streamOverride,
               timer: from.timer,
+              lastEdit: null,
             };
           },
         });
@@ -195,6 +208,7 @@ export class LiveSessions extends Context.Service<
       ) =>
         new LiveSnapshot({
           deck: draft.deck,
+          lastEdit: draft.lastEdit,
           session: new LiveSession({
             organizationId,
             projectId: draft.projectId,
@@ -284,6 +298,7 @@ export class LiveSessions extends Context.Service<
         streamCursor: current.session.streamCursor,
         streamOverride: current.session.streamOverride,
         timer: current.session.timer,
+        lastEdit: null,
       });
 
       /** Nouvelle position de la salle ; en mode lié, le stream suit. */
@@ -334,6 +349,7 @@ export class LiveSessions extends Context.Service<
                     : (streamPositions(deck)[0] ?? null),
                   streamOverride: null,
                   timer,
+                  lastEdit: null,
                 };
               }),
             ),
@@ -417,6 +433,30 @@ export class LiveSessions extends Context.Service<
         streamResume: command((current) =>
           Effect.succeed({ ...keep(current), streamOverride: null }),
         ).pipe(Effect.withSpan("LiveSessions.streamResume")),
+
+        editSection: (itemId, sectionId, lines) =>
+          command((current) =>
+            Effect.gen(function* () {
+              const deck = yield* requireDeck(current);
+              const { projectId } = current.session;
+              const item = deck.items.find((candidate) => candidate.itemId === itemId);
+              if (item === undefined || item.sourceId === null || projectId === null) {
+                return yield* new LiveEditFailed({ reason: "NotEditable" });
+              }
+              const edited = yield* songs.updateSection(item.sourceId, sectionId, lines);
+              const now = yield* Clock.currentTimeMillis;
+              const resolved = yield* tryResolve(projectId);
+              return {
+                ...reconcile(resolved, projectId, current.session),
+                lastEdit: new LiveEdit({
+                  itemId,
+                  title: edited.title,
+                  section: edited.section,
+                  at: now,
+                }),
+              };
+            }),
+          ).pipe(Effect.withSpan("LiveSessions.editSection")),
 
         setTimer: (durationMs) =>
           command((current) =>

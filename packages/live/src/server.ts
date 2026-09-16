@@ -5,7 +5,7 @@ import { LiveSessions } from "./application/LiveSessions";
 import { SqlLiveSessionRepository } from "./infrastructure/SqlLiveSessionRepository";
 
 export { LiveFrames } from "./application/LiveFrames";
-export { DeckSource } from "./application/ports";
+export { DeckSource, SongEditing } from "./application/ports";
 export { liveMigrations } from "./migrations";
 
 /** Régie (requiert `SqlClient`, `LiveFrames`, `DeckSource` et `ActorMiddleware`). */

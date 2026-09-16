@@ -8,6 +8,7 @@ import {
   LiveItemNotFound,
   LiveProjectNotFound,
   LiveSnapshot,
+  LiveEditFailed,
   NoLiveProject,
   StreamLines,
 } from "../domain/LiveSession";
@@ -43,6 +44,19 @@ export const LiveRpcs = RpcGroup.make(
     error: NoLiveProject,
   }),
   Rpc.make("LiveStreamResume", { success: LiveSnapshot }),
+  /** Édition en direct d'une section de chant (dernière écriture gagnante). */
+  Rpc.make("LiveEditSection", {
+    payload: {
+      itemId: ProjectItemId,
+      sectionId: Schema.String,
+      lines: Schema.Array(Schema.String.check(Schema.isMaxLength(500))).check(
+        Schema.isMinLength(1),
+        Schema.isMaxLength(200),
+      ),
+    },
+    success: LiveSnapshot,
+    error: Schema.Union([NoLiveProject, LiveEditFailed]),
+  }),
   Rpc.make("LiveTimerSet", {
     payload: {
       durationMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 86_400_000 })),

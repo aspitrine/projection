@@ -62,10 +62,20 @@ export const idleSession = (organizationId: OrganizationId) =>
     updatedAt: 0,
   });
 
+/** Dernière édition de paroles en direct, signalée aux autres régies. */
+export class LiveEdit extends Schema.Class<LiveEdit>("LiveEdit")({
+  itemId: ProjectItemId,
+  title: Schema.String,
+  section: Schema.String,
+  at: Schema.Number,
+}) {}
+
 /** État diffusé aux régies : session et projet résolu. */
 export class LiveSnapshot extends Schema.Class<LiveSnapshot>("LiveSnapshot")({
   session: LiveSession,
   deck: Schema.NullOr(Deck),
+  /** Non persisté : disparaît au redémarrage. */
+  lastEdit: Schema.NullOr(LiveEdit),
 }) {}
 
 export class LiveProjectNotFound extends Schema.TaggedError<LiveProjectNotFound>()(
@@ -75,6 +85,10 @@ export class LiveProjectNotFound extends Schema.TaggedError<LiveProjectNotFound>
 
 export class LiveItemNotFound extends Schema.TaggedError<LiveItemNotFound>()("LiveItemNotFound", {
   itemId: ProjectItemId,
+}) {}
+
+export class LiveEditFailed extends Schema.TaggedError<LiveEditFailed>()("LiveEditFailed", {
+  reason: Schema.Literals(["NotEditable", "NotFound", "InvalidLyrics"]),
 }) {}
 
 export class NoLiveProject extends Schema.TaggedError<NoLiveProject>()("NoLiveProject", {}) {}

@@ -339,5 +339,13 @@
   "project_item_notes_placeholder": "Notes pour le retour scène : tonalité, consignes, enchaînement…",
   "project_item_notes_save": "Enregistrer",
   "project_item_notes_cancel": "Annuler",
-  "project_item_notes_saved": "Notes enregistrées"
+  "project_item_notes_saved": "Notes enregistrées",
+  "live_edit_lyrics": "Modifier les paroles",
+  "live_edit_section": "Section : {section}",
+  "live_edit_save": "Enregistrer et diffuser",
+  "live_edit_cancel": "Annuler",
+  "live_edit_saved": "Paroles enregistrées et diffusées",
+  "live_edit_failed": "Modification impossible.",
+  "live_edit_notice": "Paroles mises à jour : {title} ({section})",
+  "live_edit_unavailable": "Seuls les chants peuvent être modifiés depuis la régie."
 }

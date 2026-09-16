@@ -14,6 +14,7 @@ import {
   baseDeckForIntegration,
   itemId,
   makeDeckSource,
+  makeSongEditing,
   organizationId,
   projectId,
 } from "./integration-support";
@@ -43,7 +44,7 @@ const FakeActorMiddleware = Layer.succeed(
 const source = makeDeckSource(baseDeckForIntegration);
 
 const ApiLive = Layer.mergeAll(LiveLive, FakeActorMiddleware, SqlLiveSessionRepository).pipe(
-  Layer.provideMerge(Layer.mergeAll(LiveFrames.layerMemory, source.layer)),
+  Layer.provideMerge(Layer.mergeAll(LiveFrames.layerMemory, source.layer, makeSongEditing().layer)),
   Layer.provideMerge(MigratedDatabase),
 );
 

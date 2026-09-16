@@ -148,6 +148,15 @@ describe("DeckSourceLive", () => {
       });
 
       // Sous-découpage stream par défaut : 2 lignes.
+      expect(songItem?.sourceId).toBe(song.id);
+      expect(songItem?.slides.map((slide) => slide.sectionId)).toEqual([
+        "verse-1",
+        "verse-1",
+        "chorus",
+        "chorus",
+      ]);
+      expect(scripture?.slides[0]?.sectionId).toBeNull();
+
       expect(songItem?.slides[0]?.parts).toEqual([
         { _tag: "Lines", lines: ["L1", "L2"], caption: "Couplet 1" },
         { _tag: "Lines", lines: ["L3"], caption: "Couplet 1" },

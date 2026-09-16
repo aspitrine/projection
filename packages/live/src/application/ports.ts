@@ -2,7 +2,7 @@ import type { CurrentActor, OrganizationId, ProjectId } from "@projection/shared
 import { Context, Effect, Layer, Option, Ref } from "effect";
 
 import type { Deck } from "../domain/Deck";
-import type { LiveProjectNotFound, LiveSession } from "../domain/LiveSession";
+import type { LiveEditFailed, LiveProjectNotFound, LiveSession } from "../domain/LiveSession";
 
 /**
  * Port : résout un projet en diapos (chants, passages, diapos texte…).
@@ -14,6 +14,25 @@ export class DeckSource extends Context.Service<
     resolve(projectId: ProjectId): Effect.Effect<Deck, LiveProjectNotFound, CurrentActor>;
   }
 >()("@projection/live/DeckSource") {}
+
+/**
+ * Port : édition d'une section de chant depuis la régie (bibliothèque songs).
+ * Implémenté dans la composition root ; dernière écriture gagnante.
+ */
+export class SongEditing extends Context.Service<
+  SongEditing,
+  {
+    updateSection(
+      songId: string,
+      sectionId: string,
+      lines: ReadonlyArray<string>,
+    ): Effect.Effect<
+      { readonly title: string; readonly section: string },
+      LiveEditFailed,
+      CurrentActor
+    >;
+  }
+>()("@projection/live/SongEditing") {}
 
 /** Port de persistance de la session live (une par organisation). */
 export class LiveSessionRepository extends Context.Service<
