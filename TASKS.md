@@ -288,11 +288,15 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` fait · **Dépend de** = t�
 - [x] Rendu partagé (miniatures, aperçus régie, écrans) : titre mis en avant, citation entre guillemets « », attribution détachée.
 - [x] Tests unitaires (`applyLayout`, rendu jsdom des trois mises en page) et fonctionnels (mise en page conservée à la création et à la mise à jour).
 
-### T2.14 Régie responsive [web]
+### T2.14 Régie responsive [web] ✅
 
 **Dépend de** : T2.2
 
-- [ ] Vue tablette/mobile utilisable pour le pilotage.
+- [x] En-tête de la régie sorti des colonnes : titre du projet et arrêt toujours en haut, quelle que soit la largeur.
+- [x] Sous `lg`, les aperçus et les panneaux (retour scène, stream, vidéo, paroles) passent avant le déroulé : l'écran courant est visible sans défiler.
+- [x] Barre de pilotage fixée en bas sous `lg` (précédente, écran noir, suivante ; cibles de 48 px, marge sûre iOS), alignée sur le contenu au-delà de `md`.
+- [x] Raccourcis clavier masqués sur petit écran (sans clavier) ; aucun défilement horizontal de 375 px à 1440 px.
+- [x] Vérifié dans le navigateur à 375, 768 et 1440 px : pilotage complet depuis la barre (diapo suivante, précédente, écran noir) et mise en page inchangée sur poste fixe.
 
 ---
 

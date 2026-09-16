@@ -255,87 +255,100 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
       upcomingCursor.slideIndex !== session.cursor.slideIndex);
 
   return (
-    <div className="flex min-h-full flex-col lg:h-full lg:flex-row">
-      <div className="min-w-0 flex-1 space-y-4 p-4 lg:overflow-y-auto">
-        <header className="flex flex-wrap items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-muted-foreground text-xs uppercase">{m.nav_live()}</p>
-            <h1 className="truncate text-xl font-semibold">{deck.projectName}</h1>
-          </div>
-          <Button variant="outline" onClick={() => run(previous({ payload: undefined }))}>
-            <ChevronLeft className="size-4" aria-hidden />
-            {m.live_previous()}
-          </Button>
-          <Button onClick={() => run(next({ payload: undefined }))}>
-            {m.live_next()}
-            <ChevronRight className="size-4" aria-hidden />
-          </Button>
+    // Sous `lg`, les aperçus et les panneaux passent devant le déroulé et la barre
+    // de pilotage reste fixée en bas de l'écran (tablette, téléphone).
+    <div className="flex min-h-full flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:h-full lg:pb-0">
+      <header className="flex flex-wrap items-center gap-2 border-b p-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-muted-foreground text-xs uppercase">{m.nav_live()}</p>
+          <h1 className="truncate text-xl font-semibold">{deck.projectName}</h1>
+        </div>
+        <Button
+          variant="outline"
+          className="hidden lg:inline-flex"
+          onClick={() => run(previous({ payload: undefined }))}
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          {m.live_previous()}
+        </Button>
+        <Button className="hidden lg:inline-flex" onClick={() => run(next({ payload: undefined }))}>
+          {m.live_next()}
+          <ChevronRight className="size-4" aria-hidden />
+        </Button>
+        <div className="hidden lg:block">
           <CoverButtons track="room" cover={session.roomCover} />
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (window.confirm(m.live_stop_confirm())) void run(stop({ payload: undefined }));
-            }}
-          >
-            <Square className="size-4" aria-hidden />
-            {m.live_stop()}
-          </Button>
-        </header>
-        <p className="text-muted-foreground text-xs">{m.live_shortcuts()}</p>
-        <DeckView
-          deck={deck}
-          cursor={session.cursor}
-          streamCursor={session.streamCursor}
-          onPick={(itemId, slideIndex) => run(goTo({ payload: { itemId, slideIndex } }))}
-          onPickStream={(itemId, slideIndex) =>
-            run(streamGoTo({ payload: { itemId, slideIndex, part: 0 } }))
-          }
-        />
+        </div>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (window.confirm(m.live_stop_confirm())) void run(stop({ payload: undefined }));
+          }}
+        >
+          <Square className="size-4" aria-hidden />
+          {m.live_stop()}
+        </Button>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <div className="min-w-0 flex-1 space-y-4 p-4 lg:overflow-y-auto">
+          <p className="text-muted-foreground hidden text-xs lg:block">{m.live_shortcuts()}</p>
+          <DeckView
+            deck={deck}
+            cursor={session.cursor}
+            streamCursor={session.streamCursor}
+            onPick={(itemId, slideIndex) => run(goTo({ payload: { itemId, slideIndex } }))}
+            onPickStream={(itemId, slideIndex) =>
+              run(streamGoTo({ payload: { itemId, slideIndex, part: 0 } }))
+            }
+          />
+        </div>
+
+        <aside className="bg-card order-first space-y-4 border-b p-4 lg:order-none lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-l xl:w-96">
+          <section className="space-y-1">
+            <h2 className="text-muted-foreground text-xs font-medium uppercase">
+              {m.live_room()} · {m.live_screen()}
+            </h2>
+            <CoverPreview
+              testId="live-screen"
+              track="room"
+              cover={session.roomCover}
+              content={current}
+              ringClassName="ring-green-600"
+            />
+          </section>
+          <section className="space-y-1">
+            <h2 className="text-muted-foreground text-xs font-medium uppercase">
+              {m.live_next_preview()}
+            </h2>
+            {hasUpcoming ? (
+              <div className="opacity-80 ring-1 ring-foreground/10">
+                <SlideRenderer
+                  theme={roomTheme}
+                  slide={contentToSlide(contentAt(deck, upcomingCursor))}
+                />
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">{m.live_end()}</p>
+            )}
+          </section>
+          {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
+            <LyricsPanel
+              key={`${currentItem.itemId}:${currentSection}`}
+              itemId={currentItem.itemId}
+              songId={currentItem.sourceId}
+              sectionId={currentSection}
+            />
+          )}
+          {current._tag === "Video" && <VideoPanel playback={snapshot.video} url={current.url} />}
+          <StagePanel session={session} deck={deck} />
+          <StreamPanel snapshot={snapshot} deck={deck} />
+          <Link to="/outputs" className="text-muted-foreground block text-xs underline">
+            {m.live_outputs_link()}
+          </Link>
+        </aside>
       </div>
 
-      <aside className="bg-card space-y-4 border-t p-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l xl:w-96">
-        <section className="space-y-1">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase">
-            {m.live_room()} · {m.live_screen()}
-          </h2>
-          <CoverPreview
-            testId="live-screen"
-            track="room"
-            cover={session.roomCover}
-            content={current}
-            ringClassName="ring-green-600"
-          />
-        </section>
-        <section className="space-y-1">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase">
-            {m.live_next_preview()}
-          </h2>
-          {hasUpcoming ? (
-            <div className="opacity-80 ring-1 ring-foreground/10">
-              <SlideRenderer
-                theme={roomTheme}
-                slide={contentToSlide(contentAt(deck, upcomingCursor))}
-              />
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-xs">{m.live_end()}</p>
-          )}
-        </section>
-        {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
-          <LyricsPanel
-            key={`${currentItem.itemId}:${currentSection}`}
-            itemId={currentItem.itemId}
-            songId={currentItem.sourceId}
-            sectionId={currentSection}
-          />
-        )}
-        {current._tag === "Video" && <VideoPanel playback={snapshot.video} url={current.url} />}
-        <StagePanel session={session} deck={deck} />
-        <StreamPanel snapshot={snapshot} deck={deck} />
-        <Link to="/outputs" className="text-muted-foreground block text-xs underline">
-          {m.live_outputs_link()}
-        </Link>
-      </aside>
+      <LiveBar cover={session.roomCover} />
     </div>
   );
 }
@@ -783,6 +796,48 @@ function LinePicker({
           </Button>
         </details>
       )}
+    </div>
+  );
+}
+
+/** Barre de pilotage fixée en bas sous `lg` : avancer, reculer, écran noir. */
+function LiveBar({ cover }: { cover: Cover }) {
+  const run = useRun();
+  const next = useAtomSet(liveNextAtom, { mode: "promiseExit" });
+  const previous = useAtomSet(livePreviousAtom, { mode: "promiseExit" });
+  const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
+  const black = cover === "black";
+
+  return (
+    // La barre longe le contenu : sous `md` plein écran, au-delà elle démarre après la navigation.
+    <div
+      className="bg-card fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] md:left-60 lg:hidden"
+      data-testid="live-bar"
+    >
+      <Button
+        variant="outline"
+        className="h-12 flex-1"
+        onClick={() => run(previous({ payload: undefined }))}
+      >
+        <ChevronLeft className="size-5" aria-hidden />
+        {m.live_previous()}
+      </Button>
+      <Button
+        variant={black ? "destructive" : "outline"}
+        size="icon"
+        className="size-12"
+        aria-pressed={black}
+        aria-label={m.live_cover_black()}
+        onClick={() =>
+          run(setCover({ payload: { track: "room", cover: black ? "none" : "black" } }))
+        }
+      >
+        <MonitorOff className="size-5" aria-hidden />
+      </Button>
+      <Button className="h-12 flex-1" onClick={() => run(next({ payload: undefined }))}>
+        {m.live_next()}
+        <ChevronRight className="size-5" aria-hidden />
+      </Button>
     </div>
   );
 }
