@@ -1,6 +1,7 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { acceptedContentTypes, type MediaAsset } from "@projection/media/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
+import { Input } from "@projection/ui/components/input";
 import {
   Empty,
   EmptyDescription,
@@ -10,7 +11,7 @@ import {
 } from "@projection/ui/components/empty";
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { Cause, Exit, Option } from "effect";
-import { FileUp, ImageIcon, Trash2 } from "lucide-react";
+import { FileUp, ImageIcon, Pencil, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ import {
   deleteMediaAtom,
   mediaListAtom,
   mediaReactivity,
+  renameMediaAtom,
   requestUploadAtom,
 } from "@/features/media/atoms";
 import { MediaPreview } from "@/features/media/media-preview";
@@ -152,35 +154,94 @@ function MediaGrid() {
 
 function MediaCard({ asset }: { asset: MediaAsset }) {
   const remove = useAtomSet(deleteMediaAtom, { mode: "promiseExit" });
+  const [editing, setEditing] = useState(false);
 
   return (
     <li className="space-y-2 border p-2" data-media-kind={asset.kind}>
       <MediaPreview asset={asset} />
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{asset.name}</p>
-          <p className="text-muted-foreground text-xs">
-            {asset.kind === "image" ? m.media_kind_image() : m.media_kind_video()} ·{" "}
-            {formatSize(asset.sizeBytes)}
-          </p>
+      {editing ? (
+        <RenameForm asset={asset} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{asset.name}</p>
+            <p className="text-muted-foreground text-xs">
+              {asset.kind === "image" ? m.media_kind_image() : m.media_kind_video()} ·{" "}
+              {formatSize(asset.sizeBytes)}
+            </p>
+          </div>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`${m.media_rename()} : ${asset.name}`}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`${m.media_delete()} : ${asset.name}`}
+            onClick={async () => {
+              if (!window.confirm(m.media_delete_confirm({ name: asset.name }))) return;
+              const exit = await remove({
+                payload: { id: asset.id },
+                reactivityKeys: mediaReactivity,
+              });
+              if (Exit.isSuccess(exit)) toast.success(m.media_deleted());
+              else toast.error(m.media_action_error());
+            }}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
         </div>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={`${m.media_delete()} : ${asset.name}`}
-          onClick={async () => {
-            if (!window.confirm(m.media_delete_confirm({ name: asset.name }))) return;
-            const exit = await remove({
-              payload: { id: asset.id },
-              reactivityKeys: mediaReactivity,
-            });
-            if (Exit.isSuccess(exit)) toast.success(m.media_deleted());
-            else toast.error(m.media_action_error());
-          }}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-      </div>
+      )}
     </li>
+  );
+}
+
+function RenameForm({ asset, onDone }: { asset: MediaAsset; onDone: () => void }) {
+  const rename = useAtomSet(renameMediaAtom, { mode: "promiseExit" });
+  const [name, setName] = useState(asset.name);
+  const [pending, setPending] = useState(false);
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        const trimmed = name.trim();
+        if (trimmed === "" || trimmed === asset.name) return onDone();
+        setPending(true);
+        const exit = await rename({
+          payload: { id: asset.id, name: trimmed },
+          reactivityKeys: mediaReactivity,
+        });
+        setPending(false);
+        if (Exit.isSuccess(exit)) {
+          toast.success(m.media_renamed());
+          onDone();
+        } else toast.error(m.media_action_error());
+      }}
+    >
+      <Input
+        aria-label={m.media_name()}
+        className="h-7 min-w-0 flex-1 text-sm"
+        required
+        maxLength={255}
+        autoFocus
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onDone();
+        }}
+      />
+      <Button type="submit" size="sm" disabled={pending}>
+        {m.media_save()}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        {m.media_cancel()}
+      </Button>
+    </form>
   );
 }

@@ -1,6 +1,7 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import type { SlideLayout } from "@projection/presentation/domain";
 import type { ProjectItem } from "@projection/projects/domain";
+import type { MediaAsset } from "@projection/media/domain";
 import type { ProjectId } from "@projection/shared-kernel";
 import { type Song, formatLyrics, parseLyrics } from "@projection/songs/domain";
 import { hasVisibleContent, type TextSlide } from "@projection/slides/domain";
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 
 import { passageAtom, passageKey, translationsAtom } from "@/features/bible/atoms";
 import { liveRefreshAtom } from "@/features/live/atoms";
+import { mediaListAtom, mediaReactivity, renameMediaAtom } from "@/features/media/atoms";
 import { projectsReactivity, replaceItemAtom } from "@/features/projects/atoms";
 import { RichTextEditor } from "@/features/slides/rich-text-editor";
 import { slideAtom, slidesReactivity, updateSlideAtom } from "@/features/slides/atoms";
@@ -30,7 +32,7 @@ import { songAtom, songsReactivity, updateSongAtom } from "@/features/songs/atom
 import { type SongFormValues, toSongInput } from "@/features/songs/song-editor";
 import { m } from "@/paraglide/messages";
 
-type EditableItem = Extract<ProjectItem, { _tag: "Song" | "Scripture" | "TextSlide" }>;
+type EditableItem = Extract<ProjectItem, { _tag: "Song" | "Scripture" | "TextSlide" | "Media" }>;
 
 export function EditItemDialog({ projectId, item }: { projectId: ProjectId; item: EditableItem }) {
   const [open, setOpen] = useState(false);
@@ -55,6 +57,8 @@ export function EditItemDialog({ projectId, item }: { projectId: ProjectId; item
             <SongContentEditor item={item} onDone={() => setOpen(false)} />
           ) : item._tag === "TextSlide" ? (
             <SlideContentEditor item={item} onDone={() => setOpen(false)} />
+          ) : item._tag === "Media" ? (
+            <MediaNameEditor item={item} onDone={() => setOpen(false)} />
           ) : (
             <ScriptureReplacement projectId={projectId} item={item} onDone={() => setOpen(false)} />
           )}
@@ -293,6 +297,75 @@ function SlideContentForm({ slide, onDone }: { slide: TextSlide; onDone: () => v
       <div className="flex justify-end">
         <Button type="submit" disabled={!valid || pending}>
           {m.slide_save()}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function MediaNameEditor({
+  item,
+  onDone,
+}: {
+  item: Extract<ProjectItem, { _tag: "Media" }>;
+  onDone: () => void;
+}) {
+  const result = useAtomValue(mediaListAtom);
+  if (result._tag === "Initial") return <p className="text-muted-foreground text-sm">…</p>;
+  const asset =
+    result._tag === "Success"
+      ? result.value.find((candidate) => candidate.id === item.mediaId)
+      : undefined;
+  if (asset === undefined) return <p className="text-sm text-red-500">{m.media_load_error()}</p>;
+  return <MediaNameForm key={asset.id} asset={asset} onDone={onDone} />;
+}
+
+function MediaNameForm({ asset, onDone }: { asset: MediaAsset; onDone: () => void }) {
+  const rename = useAtomSet(renameMediaAtom, { mode: "promiseExit" });
+  const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
+  const [name, setName] = useState(asset.name);
+  const [pending, setPending] = useState(false);
+  const valid = name.trim() !== "";
+
+  const save = async () => {
+    if (!valid) return;
+    setPending(true);
+    const exit = await rename({
+      payload: { id: asset.id, name: name.trim() },
+      reactivityKeys: mediaReactivity,
+    });
+    if (Exit.isFailure(exit)) {
+      setPending(false);
+      return toast.error(m.live_edit_content_failed());
+    }
+    // Le déroulé de la régie reprend le nouveau nom.
+    await refresh({ payload: undefined });
+    setPending(false);
+    toast.success(m.live_edit_content_saved());
+    onDone();
+  };
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <div className="space-y-1.5">
+        <Label htmlFor="live-media-name">{m.media_name()}</Label>
+        <Input
+          id="live-media-name"
+          required
+          maxLength={255}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={!valid || pending}>
+          {m.media_save()}
         </Button>
       </div>
     </form>

@@ -39,6 +39,7 @@ export class Media extends Context.Service<
       id: MediaId,
       ttlSeconds?: number,
     ): Effect.Effect<Option.Option<{ readonly asset: MediaAsset; readonly url: string }>>;
+    rename(id: MediaId, name: string): Effect.Effect<MediaAsset, MediaNotFound, CurrentActor>;
     remove(id: MediaId): Effect.Effect<void, MediaNotFound, CurrentActor>;
   }
 >()("@projection/media/Media") {
@@ -124,6 +125,15 @@ export class Media extends Context.Service<
           }
           const url = yield* storage.presignDownload(asset.value.storageKey, ttlSeconds);
           return Option.some({ asset: asset.value, url });
+        }),
+
+        rename: Effect.fn("Media.rename")(function* (id: MediaId, name: string) {
+          const actor = yield* CurrentActor;
+          const renamed = yield* repository.rename(actor.organizationId, id, name);
+          return yield* Option.match(renamed, {
+            onNone: () => Effect.fail(new MediaNotFound({ id })),
+            onSome: Effect.succeed,
+          });
         }),
 
         remove: Effect.fn("Media.remove")(function* (id: MediaId) {

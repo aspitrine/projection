@@ -42,6 +42,16 @@ export const SqlMediaRepository = Layer.effect(
       `,
     });
 
+    const rename = SqlSchema.findOneOption({
+      Request: Schema.Struct({ organizationId: OrganizationId, id: MediaId, name: Schema.String }),
+      Result: MediaAsset,
+      execute: ({ organizationId, id, name }) => sql`
+        UPDATE media_asset SET name = ${name}
+        WHERE id = ${id}::uuid AND organization_id = ${organizationId}
+        RETURNING ${columns}
+      `,
+    });
+
     const remove = SqlSchema.findOneOption({
       Request: request,
       Result: MediaAsset,
@@ -72,6 +82,11 @@ export const SqlMediaRepository = Layer.effect(
         markReady({ organizationId, id }).pipe(
           Effect.orDie,
           Effect.withSpan("SqlMediaRepository.markReady"),
+        ),
+      rename: (organizationId, id, name) =>
+        rename({ organizationId, id, name }).pipe(
+          Effect.orDie,
+          Effect.withSpan("SqlMediaRepository.rename"),
         ),
       delete: (organizationId, id) =>
         remove({ organizationId, id }).pipe(

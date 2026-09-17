@@ -15,13 +15,15 @@ import { Label } from "@projection/ui/components/label";
 import { Textarea } from "@projection/ui/components/textarea";
 import { cn } from "@projection/ui/lib/utils";
 import { Exit } from "effect";
-import { FileUp, Plus } from "lucide-react";
+import { FileUp, Plus, Trash2 } from "lucide-react";
 import { useDeferredValue, useId, useState } from "react";
 import { toast } from "sonner";
 
 import { passageAtom, passageKey, translationsAtom } from "@/features/bible/atoms";
+import { liveRefreshAtom } from "@/features/live/atoms";
 import {
   confirmUploadAtom,
+  deleteMediaAtom,
   mediaListAtom,
   mediaReactivity,
   requestUploadAtom,
@@ -91,9 +93,12 @@ type OnAdd = (item: ProjectItemDraft) => Promise<void>;
 function PickerList({
   items,
   onPick,
+  onRemove,
 }: {
   items: ReadonlyArray<{ id: string; title: string }> | null;
   onPick: (id: string) => void;
+  /** Suppression de la bibliothèque, quand l'onglet la permet. */
+  onRemove?: (id: string, title: string) => void;
 }) {
   if (items === null) return <p className="text-muted-foreground text-sm">…</p>;
   if (items.length === 0)
@@ -112,6 +117,17 @@ function PickerList({
             <Plus className="size-3.5" aria-hidden />
             {m.project_add()}
           </Button>
+          {onRemove && (
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label={`${m.media_delete()} : ${item.title}`}
+              title={m.media_delete()}
+              onClick={() => onRemove(item.id, item.title)}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+            </Button>
+          )}
         </li>
       ))}
     </ul>
@@ -242,6 +258,17 @@ function PassageToAdd({ lookupKey, onAdd }: { lookupKey: string; onAdd: (label: 
 
 function MediaPicker({ onAdd }: { onAdd: OnAdd }) {
   const media = useAtomValue(mediaListAtom);
+  const remove = useAtomSet(deleteMediaAtom, { mode: "promiseExit" });
+  const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
+
+  const removeMedia = async (id: string, name: string) => {
+    if (!window.confirm(m.media_delete_confirm({ name }))) return;
+    const exit = await remove({ payload: { id: id as MediaId }, reactivityKeys: mediaReactivity });
+    if (Exit.isFailure(exit)) return toast.error(m.media_action_error());
+    toast.success(m.media_deleted());
+    // Les éléments du projet qui l'utilisaient passent en « introuvable » dans la régie.
+    await refresh({ payload: undefined });
+  };
 
   return (
     <div className="space-y-2">
@@ -253,6 +280,7 @@ function MediaPicker({ onAdd }: { onAdd: OnAdd }) {
             : null
         }
         onPick={(mediaId) => onAdd({ _tag: "Media", mediaId: mediaId as MediaId })}
+        onRemove={removeMedia}
       />
     </div>
   );

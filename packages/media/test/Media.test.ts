@@ -45,6 +45,14 @@ describe("Media", () => {
         const foreign = yield* media.url(upload.asset.id).pipe(asActor("org-b"), Effect.flip);
         expect(foreign._tag).toBe("MediaNotFound");
 
+        const renamed = yield* media.rename(upload.asset.id, "Fond bleu").pipe(asActor("org-a"));
+        expect(renamed.name).toBe("Fond bleu");
+        expect((yield* media.list.pipe(asActor("org-a")))[0]?.name).toBe("Fond bleu");
+        const foreignRename = yield* media
+          .rename(upload.asset.id, "Autre")
+          .pipe(asActor("org-b"), Effect.flip);
+        expect(foreignRename._tag).toBe("MediaNotFound");
+
         yield* media.remove(upload.asset.id).pipe(asActor("org-a"));
         expect(yield* Ref.get(storage.removed)).toEqual([upload.asset.storageKey]);
         expect(yield* media.list.pipe(asActor("org-a"))).toEqual([]);

@@ -14,6 +14,11 @@ export class MediaRepository extends Context.Service<
       organizationId: OrganizationId,
       id: MediaId,
     ): Effect.Effect<Option.Option<MediaAsset>>;
+    rename(
+      organizationId: OrganizationId,
+      id: MediaId,
+      name: string,
+    ): Effect.Effect<Option.Option<MediaAsset>>;
     delete(organizationId: OrganizationId, id: MediaId): Effect.Effect<Option.Option<MediaAsset>>;
   }
 >()("@projection/media/MediaRepository") {
@@ -60,6 +65,8 @@ export class MediaRepository extends Context.Service<
           insert: (asset) => Ref.update(store, (assets) => [...assets, asset]),
           markReady: (organizationId, id) =>
             update(organizationId, id, (asset) => new MediaAsset({ ...asset, ready: true })),
+          rename: (organizationId, id, name) =>
+            update(organizationId, id, (asset) => new MediaAsset({ ...asset, name })),
           delete: (organizationId, id) => update(organizationId, id, () => null),
         });
       }),

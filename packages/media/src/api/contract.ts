@@ -6,6 +6,7 @@ import { Rpc, RpcGroup } from "effect/unstable/rpc";
 import {
   MediaAsset,
   MediaNotFound,
+  MediaName,
   MediaTooLarge,
   MediaUpload,
   MediaUploadInput,
@@ -26,5 +27,10 @@ export const MediaRpcs = RpcGroup.make(
     error: MediaNotFound,
   }),
   Rpc.make("MediaUrl", { payload: { id: MediaId }, success: Schema.String, error: MediaNotFound }),
+  Rpc.make("MediaRename", {
+    payload: { id: MediaId, name: MediaName },
+    success: MediaAsset,
+    error: MediaNotFound,
+  }),
   Rpc.make("MediaDelete", { payload: { id: MediaId }, error: MediaNotFound }),
 ).middleware(ActorMiddleware);

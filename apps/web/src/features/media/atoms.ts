@@ -16,4 +16,5 @@ export const mediaUrlAtom = Atom.family((id: MediaId) =>
 
 export const requestUploadAtom = ApiClient.mutation("MediaRequestUpload");
 export const confirmUploadAtom = ApiClient.mutation("MediaConfirmUpload");
+export const renameMediaAtom = ApiClient.mutation("MediaRename");
 export const deleteMediaAtom = ApiClient.mutation("MediaDelete");

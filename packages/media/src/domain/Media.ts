@@ -44,8 +44,15 @@ export class MediaAsset extends Schema.Class<MediaAsset>("MediaAsset")({
   createdAt: Schema.Number,
 }) {}
 
+/** Nom affiché d'un média, choisi au téléversement puis modifiable. */
+export const MediaName = Schema.String.check(
+  Schema.isTrimmed(),
+  Schema.isNonEmpty(),
+  Schema.isMaxLength(255),
+);
+
 export class MediaUploadInput extends Schema.Class<MediaUploadInput>("MediaUploadInput")({
-  name: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(255)),
+  name: MediaName,
   contentType: Schema.String,
   sizeBytes: Schema.Int.check(Schema.isGreaterThan(0)),
 }) {}

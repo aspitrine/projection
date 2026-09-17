@@ -40,6 +40,7 @@ import {
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  GripVertical,
   ImageIcon,
   MonitorOff,
   MonitorPlay,
@@ -51,6 +52,7 @@ import {
   Play,
   RotateCcw,
   Square,
+  Trash2,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -98,7 +100,12 @@ import { AddItemPanel } from "@/features/projects/add-item-panel";
 import { passageBoundsAtom, passageKey } from "@/features/bible/atoms";
 import { EditItemDialog } from "@/features/live/edit-item-dialog";
 import { LiveSlideCards } from "@/features/live/slide-cards";
-import { projectsReactivity, replaceItemAtom } from "@/features/projects/atoms";
+import {
+  moveItemAtom,
+  projectsReactivity,
+  removeItemAtom,
+  replaceItemAtom,
+} from "@/features/projects/atoms";
 import { songAtom } from "@/features/songs/atoms";
 import { formatProjectDate } from "@/features/projects/format";
 import { authClient } from "@/lib/auth-client";
@@ -147,10 +154,12 @@ function ProjectRegieContent({
   const run = useRun();
   const activeProjectId = result._tag === "Success" ? result.value.session.projectId : null;
 
+  // On attend la session courante : relancer le projet déjà ouvert ramènerait au premier élément.
+  const loaded = result._tag === "Success";
   useEffect(() => {
-    if (activeProjectId === projectId) return;
+    if (!loaded || activeProjectId === projectId) return;
     void run(() => start({ payload: { projectId } }));
-  }, [activeProjectId, projectId, run, start]);
+  }, [loaded, activeProjectId, projectId, run, start]);
 
   if (result._tag === "Initial") return <Loader />;
   if (result._tag === "Failure") {
@@ -280,7 +289,7 @@ function Regie({
         void run(() => previous({ payload: undefined }));
       } else if (event.key === "b" || event.key === "B") {
         const track: Track = event.shiftKey ? "stream" : "room";
-        const cover: Cover = covers.current[track] === "black" ? "none" : "black";
+        const cover: Cover = covers.current[track] === "hideText" ? "none" : "hideText";
         void run(() => setCover({ payload: { track, cover } }), `cover:${track}`);
       } else {
         return;
@@ -396,12 +405,23 @@ function Regie({
                 {selectedItem === null ? "Aucun élément sélectionné" : itemTitle(selectedItem)}
               </h2>
             </div>
-            {selectedProjectItem !== null &&
-              (selectedProjectItem._tag === "Song" ||
-                selectedProjectItem._tag === "TextSlide" ||
-                selectedProjectItem._tag === "Scripture") && (
-                <EditItemDialog projectId={deck.projectId} item={selectedProjectItem} />
+            <div className="flex items-center gap-2">
+              {selectedProjectItem !== null &&
+                (selectedProjectItem._tag === "Song" ||
+                  selectedProjectItem._tag === "TextSlide" ||
+                  selectedProjectItem._tag === "Scripture" ||
+                  selectedProjectItem._tag === "Media") && (
+                  <EditItemDialog projectId={deck.projectId} item={selectedProjectItem} />
+                )}
+              {selectedItem !== null && (
+                <RemoveItemButton
+                  projectId={deck.projectId}
+                  itemId={selectedItem.itemId}
+                  title={itemTitle(selectedItem)}
+                  onRemoved={() => setSelected(null)}
+                />
               )}
+            </div>
           </div>
           {selected === null ? (
             <p className="text-muted-foreground border border-dashed p-8 text-center text-sm">
@@ -963,13 +983,13 @@ function LinePicker({
   );
 }
 
-/** Barre de pilotage fixée en bas sous `lg` : avancer, reculer, écran noir. */
+/** Barre de pilotage fixée en bas sous `lg` : avancer, reculer, masquer le texte. */
 function LiveBar({ cover }: { cover: Cover }) {
   const run = useRun();
   const next = useAtomSet(liveNextAtom, { mode: "promiseExit" });
   const previous = useAtomSet(livePreviousAtom, { mode: "promiseExit" });
   const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
-  const black = cover === "black";
+  const hidden = cover === "hideText";
 
   return (
     // La barre longe le contenu : sous `md` plein écran, au-delà elle démarre après la navigation.
@@ -986,19 +1006,19 @@ function LiveBar({ cover }: { cover: Cover }) {
         {m.live_previous()}
       </Button>
       <Button
-        variant={black ? "destructive" : "outline"}
+        variant={hidden ? "destructive" : "outline"}
         size="icon"
         className="size-12"
-        aria-pressed={black}
-        aria-label={m.live_cover_black()}
+        aria-pressed={hidden}
+        aria-label={m.live_cover_hide_text()}
         onClick={() =>
           run(
-            () => setCover({ payload: { track: "room", cover: black ? "none" : "black" } }),
+            () => setCover({ payload: { track: "room", cover: hidden ? "none" : "hideText" } }),
             "cover:room",
           )
         }
       >
-        <MonitorOff className="size-5" aria-hidden />
+        <EyeOff className="size-5" aria-hidden />
       </Button>
       <Button className="h-12 flex-1" onClick={() => run(() => next({ payload: undefined }))}>
         {m.live_next()}
@@ -1041,7 +1061,7 @@ function CoverButtons({
       aria-label={track === "room" ? m.live_room() : m.live_stream()}
       className={cn("flex flex-wrap gap-2", size === "sm" && "w-full")}
     >
-      {(["black", "logo", "hideText"] as const).map((option) => {
+      {(["logo", "hideText"] as const).map((option) => {
         const Icon = coverIcons[option];
         const active = cover === option;
         return (
@@ -1104,6 +1124,45 @@ const itemTitle = (item: DeckItem) =>
   item.kind === "Blank" ? m.live_blank_item() : item.title || m.live_missing();
 
 /** Ordre de passage compact : la sélection prépare le contenu au centre sans le diffuser. */
+/** Retire l'élément sélectionné du projet ; la régie reçoit le déroulé mis à jour. */
+function RemoveItemButton({
+  projectId,
+  itemId,
+  title,
+  onRemoved,
+}: {
+  projectId: ProjectId;
+  itemId: ProjectItemId;
+  title: string;
+  onRemoved: () => void;
+}) {
+  const remove = useAtomSet(removeItemAtom, { mode: "promiseExit" });
+  const [pending, setPending] = useState(false);
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={pending}
+      onClick={async () => {
+        if (!window.confirm(m.live_remove_item_confirm({ title }))) return;
+        setPending(true);
+        const exit = await remove({
+          payload: { projectId, itemId },
+          reactivityKeys: projectsReactivity,
+        });
+        setPending(false);
+        if (Exit.isFailure(exit)) return toast.error(m.project_action_error());
+        toast.success(m.live_item_removed());
+        onRemoved();
+      }}
+    >
+      <Trash2 className="size-4" aria-hidden />
+      {m.project_remove_item()}
+    </Button>
+  );
+}
+
 function RunSheet({
   deck,
   selected,
@@ -1115,6 +1174,24 @@ function RunSheet({
   live: LiveCursor | null;
   onSelect: (itemId: ProjectItemId, slideIndex: number) => void;
 }) {
+  const move = useAtomSet(moveItemAtom, { mode: "promiseExit" });
+  const [dragging, setDragging] = useState<ProjectItemId | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const moveTo = async (itemId: ProjectItemId, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= deck.items.length) return;
+    const exit = await move({
+      payload: { projectId: deck.projectId, itemId, toIndex },
+      reactivityKeys: projectsReactivity,
+    });
+    if (Exit.isFailure(exit)) toast.error(m.project_action_error());
+  };
+
+  const endDrag = () => {
+    setDragging(null);
+    setDropIndex(null);
+  };
+
   return (
     <section className="space-y-2 p-3" aria-label="Ordre de passage">
       <h2 className="text-muted-foreground text-xs font-medium uppercase">Ordre de passage</h2>
@@ -1122,22 +1199,64 @@ function RunSheet({
         {deck.items.map((item, index) => {
           const selectedItem = selected?.itemId === item.itemId;
           const liveItem = live?.itemId === item.itemId;
+          const title = itemTitle(item);
           return (
-            <li key={item.itemId}>
+            <li
+              key={item.itemId}
+              className={cn(
+                "flex items-center gap-1 rounded",
+                dragging === item.itemId && "opacity-50",
+                dropIndex === index && dragging !== item.itemId && "ring-1 ring-foreground/40",
+              )}
+              onDragOver={(event) => {
+                if (dragging === null) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropIndex(index);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (dragging !== null && dragging !== item.itemId) void moveTo(dragging, index);
+                endDrag();
+              }}
+            >
+              {/* Poignée : glisser-déposer à la souris, flèches haut/bas au clavier. */}
+              <button
+                type="button"
+                draggable
+                aria-label={`${m.project_drag_hint()} : ${title}`}
+                title={m.project_drag_hint()}
+                className="text-muted-foreground hover:text-foreground shrink-0 cursor-grab touch-none p-1 active:cursor-grabbing"
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("text/plain", item.itemId);
+                  event.dataTransfer.effectAllowed = "move";
+                  const row = event.currentTarget.parentElement;
+                  if (row !== null) event.dataTransfer.setDragImage(row, 12, 16);
+                  setDragging(item.itemId);
+                }}
+                onDragEnd={endDrag}
+                onKeyDown={(event) => {
+                  if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                  event.preventDefault();
+                  void moveTo(item.itemId, index + (event.key === "ArrowUp" ? -1 : 1));
+                }}
+              >
+                <GripVertical className="size-4" aria-hidden />
+              </button>
               <button
                 type="button"
                 disabled={item.missing || item.slides.length === 0}
                 aria-current={selectedItem ? "true" : undefined}
                 onClick={() => onSelect(item.itemId, 0)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+                  "flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-2 text-left text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
                   selectedItem && "bg-muted font-medium ring-1 ring-foreground/20",
                 )}
               >
                 <span className="text-muted-foreground w-5 shrink-0 text-right text-xs">
                   {index + 1}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{itemTitle(item)}</span>
+                <span className="min-w-0 flex-1 truncate">{title}</span>
                 {liveItem && (
                   <span
                     className="size-2 shrink-0 rounded-full bg-red-500"

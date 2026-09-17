@@ -12,6 +12,7 @@ export const MediaHandlersLive = MediaRpcs.toLayer(
       MediaRequestUpload: (input) => media.requestUpload(input),
       MediaConfirmUpload: ({ id }) => media.confirmUpload(id),
       MediaUrl: ({ id }) => media.url(id),
+      MediaRename: ({ id, name }) => media.rename(id, name),
       MediaDelete: ({ id }) => media.remove(id),
     };
   }),
