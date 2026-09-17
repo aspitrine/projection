@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { PgClient } from "@effect/sql-pg";
 import { ActorMiddleware } from "@projection/identity/contract";
 import { runMigrations } from "@projection/platform";
-import { Actor, CurrentActor, OrganizationId, UserId } from "@projection/shared-kernel";
+import { Actor, CurrentActor, OrganizationId, ProjectId, UserId } from "@projection/shared-kernel";
 import { Config, Effect, Exit, Layer, Queue } from "effect";
 import { RpcTest } from "effect/unstable/rpc";
 
@@ -14,6 +14,7 @@ import { BrandingSourceMemory, FrameGatewayMemory } from "./support";
 
 /** Tests fonctionnels de l'API outputs sur Postgres (TEST_DATABASE_URL). */
 const DatabaseLive = PgClient.layerConfig({ url: Config.Redacted("TEST_DATABASE_URL") });
+const projectId = ProjectId.make("11111111-1111-4111-8111-111111111111");
 
 const MigratedDatabase = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -47,11 +48,11 @@ const ApiLive = Layer.mergeAll(OutputsLive, FakeActorMiddleware).pipe(
 );
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => {
-  it.effect("des listes simultanées ne créent qu'une sortie par organisation", () =>
+  it.effect("des listes simultanées ne créent qu'une sortie par projet", () =>
     Effect.gen(function* () {
       const client = yield* RpcTest.makeClient(OutputsRpcs);
       const results = yield* Effect.all(
-        Array.from({ length: 5 }, () => client.OutputsList()),
+        Array.from({ length: 5 }, () => client.OutputsList({ projectId })),
         { concurrency: "unbounded" },
       );
       expect(new Set(results.flat().map((output) => output.id)).size).toBe(1);
@@ -62,7 +63,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
     Effect.gen(function* () {
       const outputs = yield* RpcTest.makeClient(OutputsRpcs);
       const display = yield* RpcTest.makeClient(DisplayRpcs);
-      const [output] = yield* outputs.OutputsList();
+      const [output] = yield* outputs.OutputsList({ projectId });
       if (output === undefined) throw new Error("sortie manquante");
 
       const screen = yield* display.DisplayWatch({ token: output.token }, { asQueue: true });
@@ -90,10 +91,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
     Effect.gen(function* () {
       const client = yield* RpcTest.makeClient(OutputsRpcs);
       const organization = { headers: { "x-test-organization": "org-crud" } };
-      const [room] = yield* client.OutputsList(undefined, organization);
+      const [room] = yield* client.OutputsList({ projectId }, organization);
       if (room === undefined) throw new Error("sortie manquante");
 
-      const stream = yield* client.OutputsCreate({ name: "Stream", type: "stream" }, organization);
+      const stream = yield* client.OutputsCreate(
+        { projectId, name: "Stream", type: "stream" },
+        organization,
+      );
       const renamed = yield* client.OutputsRename(
         { id: stream.id, name: "Stream YouTube" },
         organization,
@@ -101,14 +105,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
       expect(renamed).toMatchObject({ name: "Stream YouTube", type: "stream" });
 
       const invalidName = yield* client
-        .OutputsCreate({ name: "  ", type: "stage" }, organization)
+        .OutputsCreate({ projectId, name: "  ", type: "stage" }, organization)
         .pipe(Effect.exit);
       expect(Exit.isFailure(invalidName)).toBe(true);
 
       yield* client.OutputsRemove({ id: stream.id }, organization);
       const last = yield* client.OutputsRemove({ id: room.id }, organization).pipe(Effect.flip);
       expect(last._tag).toBe("LastOutput");
-      expect(yield* client.OutputsList(undefined, organization)).toHaveLength(1);
+      expect(yield* client.OutputsList({ projectId }, organization)).toHaveLength(1);
 
       const settings = {
         room: { songMaxLines: 5, scriptureMaxCharacters: 280 },
@@ -135,14 +139,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
     Effect.gen(function* () {
       const client = yield* RpcTest.makeClient(OutputsRpcs);
       const organization = { headers: { "x-test-organization": "org-theme" } };
-      const [room] = yield* client.OutputsList(undefined, organization);
+      const [room] = yield* client.OutputsList({ projectId }, organization);
       if (room === undefined) throw new Error("sortie manquante");
 
       const custom = { ...defaultThemeFor("room"), background: "#123456", transitionMs: 0 };
       const themed = yield* client.OutputsSetTheme({ id: room.id, theme: custom }, organization);
       expect(themed.theme).toMatchObject({ background: "#123456", transitionMs: 0 });
 
-      const reloaded = yield* client.OutputsList(undefined, organization);
+      const reloaded = yield* client.OutputsList({ projectId }, organization);
       expect(reloaded[0]?.theme?.background).toBe("#123456");
 
       const reset = yield* client.OutputsSetTheme({ id: room.id, theme: null }, organization);

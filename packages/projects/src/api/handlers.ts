@@ -16,6 +16,8 @@ export const ProjectsHandlersLive = ProjectsRpcs.toLayer(
       ProjectsAddItem: ({ projectId, item, position }) =>
         projects.addItem(projectId, item, position),
       ProjectsRemoveItem: ({ projectId, itemId }) => projects.removeItem(projectId, itemId),
+      ProjectsReplaceItem: ({ projectId, itemId, item }) =>
+        projects.replaceItem(projectId, itemId, item),
       ProjectsSetItemNotes: ({ projectId, itemId, notes }) =>
         projects.setItemNotes(projectId, itemId, notes),
       ProjectsMoveItem: ({ projectId, itemId, toIndex }) =>

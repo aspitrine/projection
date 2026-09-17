@@ -1,5 +1,5 @@
 import { PgClient } from "@effect/sql-pg";
-import { OrganizationId, OutputId } from "@projection/shared-kernel";
+import { OrganizationId, OutputId, ProjectId } from "@projection/shared-kernel";
 import { Effect, Layer, Schema } from "effect";
 import { SqlSchema } from "effect/unstable/sql";
 
@@ -12,7 +12,8 @@ export const SqlOutputRepository = Layer.effect(
     const sql = yield* PgClient.PgClient;
 
     const columns = sql`
-      id::text AS "id", organization_id AS "organizationId", name, type, token, theme,
+      id::text AS "id", organization_id AS "organizationId", project_id::text AS "projectId",
+      name, type, token, theme,
       (extract(epoch FROM created_at) * 1000)::float8 AS "createdAt",
       (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
     `;
@@ -22,10 +23,12 @@ export const SqlOutputRepository = Layer.effect(
       sql`SELECT pg_advisory_xact_lock(hashtext(${`output:${organizationId}`}))`;
 
     const list = SqlSchema.findAll({
-      Request: OrganizationId,
+      Request: Schema.Struct({ organizationId: OrganizationId, projectId: ProjectId }),
       Result: Output,
-      execute: (organizationId) =>
-        sql`SELECT ${columns} FROM output WHERE organization_id = ${organizationId} ORDER BY created_at, id`,
+      execute: ({ organizationId, projectId }) =>
+        sql`SELECT ${columns} FROM output
+            WHERE organization_id = ${organizationId} AND project_id = ${projectId}::uuid
+            ORDER BY created_at, id`,
     });
 
     const findById = SqlSchema.findOneOption({
@@ -94,17 +97,25 @@ export const SqlOutputRepository = Layer.effect(
     });
 
     return OutputRepository.of({
-      list: (organizationId) =>
-        list(organizationId).pipe(Effect.orDie, Effect.withSpan("SqlOutputRepository.list")),
+      list: (organizationId, projectId) =>
+        list({ organizationId, projectId }).pipe(
+          Effect.orDie,
+          Effect.withSpan("SqlOutputRepository.list"),
+        ),
 
       insertIfNone: (output) =>
         Effect.gen(function* () {
           yield* lockOrganization(output.organizationId);
           yield* sql`
-            INSERT INTO output (id, organization_id, name, type, token, created_at, updated_at)
-            SELECT ${output.id}::uuid, ${output.organizationId}, ${output.name}, ${output.type},
+            INSERT INTO output (id, organization_id, project_id, name, type, token, created_at, updated_at)
+            SELECT ${output.id}::uuid, ${output.organizationId}, ${output.projectId}::uuid,
+                   ${output.name}, ${output.type},
                    ${output.token}, ${new Date(output.createdAt)}, ${new Date(output.updatedAt)}
-            WHERE NOT EXISTS (SELECT 1 FROM output WHERE organization_id = ${output.organizationId})
+            WHERE NOT EXISTS (
+              SELECT 1 FROM output
+              WHERE organization_id = ${output.organizationId}
+                AND project_id = ${output.projectId}::uuid
+            )
           `;
         }).pipe(
           sql.withTransaction,
@@ -114,8 +125,9 @@ export const SqlOutputRepository = Layer.effect(
 
       insert: (output) =>
         sql`
-          INSERT INTO output (id, organization_id, name, type, token, created_at, updated_at)
-          VALUES (${output.id}::uuid, ${output.organizationId}, ${output.name}, ${output.type},
+          INSERT INTO output (id, organization_id, project_id, name, type, token, created_at, updated_at)
+          VALUES (${output.id}::uuid, ${output.organizationId}, ${output.projectId}::uuid,
+                  ${output.name}, ${output.type},
                   ${output.token}, ${new Date(output.createdAt)}, ${new Date(output.updatedAt)})
         `.pipe(Effect.asVoid, Effect.orDie, Effect.withSpan("SqlOutputRepository.insert")),
 
@@ -151,10 +163,16 @@ export const SqlOutputRepository = Layer.effect(
       remove: (organizationId, id) =>
         Effect.gen(function* () {
           yield* lockOrganization(organizationId);
-          const rows = yield* sql<{ readonly id: string }>`
-            SELECT id::text AS id FROM output WHERE organization_id = ${organizationId}
+          const target = yield* sql<{ readonly projectId: string }>`
+            SELECT project_id::text AS "projectId" FROM output
+            WHERE id = ${id}::uuid AND organization_id = ${organizationId}
           `;
-          if (!rows.some((row) => row.id === id)) return "NotFound" as RemoveResult;
+          const projectId = target[0]?.projectId;
+          if (projectId === undefined) return "NotFound" as RemoveResult;
+          const rows = yield* sql<{ readonly id: string }>`
+            SELECT id::text AS id FROM output
+            WHERE organization_id = ${organizationId} AND project_id = ${projectId}::uuid
+          `;
           if (rows.length <= 1) return "Last" as RemoveResult;
           yield* sql`DELETE FROM output WHERE id = ${id}::uuid AND organization_id = ${organizationId}`;
           return "Removed" as RemoveResult;

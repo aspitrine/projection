@@ -64,10 +64,10 @@ export function FadingFrame({
     media === null ? theme : new SlideTheme({ ...theme, background: "transparent" });
 
   return (
-    <div className="relative size-full">
+    // Le bloc garde le format 16:9 même sans fond : les images, absolues, s'y superposent.
+    <div className="relative aspect-video w-full">
       {media !== null && (
-        // Dans le flux : le fond donne sa hauteur au bloc, les images se posent par-dessus.
-        <div className="relative aspect-video w-full overflow-hidden" aria-hidden>
+        <div className="absolute inset-0 overflow-hidden" aria-hidden>
           {media.video ? (
             <video
               src={media.url}

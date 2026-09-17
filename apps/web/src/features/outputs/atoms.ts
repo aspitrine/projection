@@ -1,11 +1,14 @@
+import type { ProjectId } from "@projection/shared-kernel";
+import { Atom } from "effect/unstable/reactivity";
+
 import { ApiClient } from "@/api/client";
 
 export const outputsReactivity = ["outputs"] as const;
 export const splittingReactivity = ["outputs-splitting"] as const;
 
-export const outputsListAtom = ApiClient.query("OutputsList", undefined, {
-  reactivityKeys: outputsReactivity,
-});
+export const outputsListAtom = Atom.family((projectId: ProjectId) =>
+  ApiClient.query("OutputsList", { projectId }, { reactivityKeys: outputsReactivity }),
+);
 
 export const splittingAtom = ApiClient.query("OutputsSplitting", undefined, {
   reactivityKeys: splittingReactivity,

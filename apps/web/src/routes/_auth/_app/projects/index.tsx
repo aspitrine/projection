@@ -7,8 +7,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@projection/ui/components/empty";
-import { Input } from "@projection/ui/components/input";
-import { Label } from "@projection/ui/components/label";
 import { ClientOnly, Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Exit } from "effect";
 import { FolderKanban } from "lucide-react";
@@ -19,6 +17,7 @@ import Loader from "@/components/loader";
 import { createProjectAtom, projectsListAtom, projectsReactivity } from "@/features/projects/atoms";
 import { formatProjectDate } from "@/features/projects/format";
 import { ImportAgendaPanel } from "@/features/projects/import-agenda";
+import { ProjectFormDialog } from "@/features/projects/project-form-dialog";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/projects/")({
@@ -26,7 +25,7 @@ export const Route = createFileRoute("/_auth/_app/projects/")({
     <div className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
       <h1 className="text-2xl font-semibold">{m.nav_projects()}</h1>
       <ClientOnly fallback={<Loader />}>
-        <NewProjectForm />
+        <NewProjectDialog />
         <ImportAgendaPanel />
         <ProjectsTable />
       </ClientOnly>
@@ -34,55 +33,39 @@ export const Route = createFileRoute("/_auth/_app/projects/")({
   ),
 });
 
-function NewProjectForm() {
+function NewProjectDialog() {
   const navigate = useNavigate();
   const create = useAtomSet(createProjectAtom, { mode: "promiseExit" });
-  const [name, setName] = useState("");
-  const [date, setDate] = useState("");
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   return (
-    <form
-      className="flex flex-wrap items-end gap-2 border p-4"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (name.trim() === "") return;
-        setPending(true);
-        const exit = await create({
-          payload: { name: name.trim(), date: date === "" ? null : date },
-          reactivityKeys: projectsReactivity,
-        });
-        setPending(false);
-        if (Exit.isSuccess(exit)) {
-          navigate({ to: "/projects/$projectId", params: { projectId: exit.value.id } });
-        } else {
-          toast.error(m.project_save_error());
-        }
-      }}
-    >
-      <div className="min-w-56 flex-1 space-y-1">
-        <Label htmlFor="project-name">{m.projects_name()}</Label>
-        <Input
-          id="project-name"
-          required
-          placeholder={m.projects_name_placeholder()}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="project-date">{m.projects_date()}</Label>
-        <Input
-          id="project-date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-      </div>
-      <Button type="submit" disabled={pending || name.trim() === ""}>
-        {pending ? m.projects_creating() : m.projects_create()}
+    <>
+      <Button type="button" onClick={() => setOpen(true)}>
+        {m.projects_create()}
       </Button>
-    </form>
+      <ProjectFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={m.projects_create()}
+        submitLabel={pending ? m.projects_creating() : m.projects_create()}
+        pending={pending}
+        onSubmit={async ({ name, date }) => {
+          setPending(true);
+          const exit = await create({
+            payload: { name, date },
+            reactivityKeys: projectsReactivity,
+          });
+          setPending(false);
+          if (Exit.isSuccess(exit)) {
+            setOpen(false);
+            navigate({ to: "/projects/$projectId", params: { projectId: exit.value.id } });
+          } else {
+            toast.error(m.project_save_error());
+          }
+        }}
+      />
+    </>
   );
 }
 

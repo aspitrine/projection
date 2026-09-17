@@ -74,5 +74,22 @@ export const liveMigrations = {
           DEFAULT '{"playing": false, "positionMs": 0, "since": null, "durationMs": 0}'::jsonb
       `;
     }),
+    "0008_scope_frames_to_project": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE live_frame ADD COLUMN project_id uuid`;
+      yield* sql`
+        UPDATE live_frame AS frame
+        SET project_id = session.project_id
+        FROM live_session AS session
+        WHERE session.organization_id = frame.organization_id
+      `;
+      yield* sql`DELETE FROM live_frame WHERE project_id IS NULL`;
+      yield* sql`ALTER TABLE live_frame ALTER COLUMN project_id SET NOT NULL`;
+      yield* sql`ALTER TABLE live_frame DROP CONSTRAINT live_frame_pkey`;
+      yield* sql`
+        ALTER TABLE live_frame
+        ADD PRIMARY KEY (organization_id, project_id, track)
+      `;
+    }),
   },
 };

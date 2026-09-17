@@ -48,6 +48,23 @@ export const setItemNotes = Effect.fnUntraced(function* (
   return items.map((item) => (item.id === itemId ? withNotes(item, notes) : item));
 });
 
+/** Remplace la source d'un élément en conservant son identifiant et ses notes. */
+export const replaceItem = Effect.fnUntraced(function* (
+  items: ReadonlyArray<ProjectItem>,
+  itemId: ProjectItemId,
+  draft: ProjectItemDraft,
+) {
+  const previous = items.find((item) => item.id === itemId);
+  if (previous === undefined) return yield* new ProjectItemNotFound({ itemId });
+  const replacement = createItem(draft, itemId);
+  const notes = "notes" in previous ? previous.notes : undefined;
+  return items.map((item) =>
+    item.id === itemId
+      ? ({ ...replacement, ...(notes === undefined ? {} : { notes }) } as ProjectItem)
+      : item,
+  );
+});
+
 export const createItem = (draft: ProjectItemDraft, id: ProjectItemId): ProjectItem => {
   switch (draft._tag) {
     case "Song":

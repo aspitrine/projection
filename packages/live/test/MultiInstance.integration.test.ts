@@ -88,7 +88,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("régie multi-instance (Postgres
         expect(yield* Queue.take(seen)).toBe("aucun");
 
         const screen = yield* Queue.unbounded<string>();
-        yield* b.frames.watch(organizationId, "room").pipe(
+        yield* b.frames.watch(organizationId, projectId, "room").pipe(
           Stream.runForEach((frame) => Queue.offer(screen, firstLine(frame.content))),
           Effect.forkChild,
         );
@@ -104,8 +104,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("régie multi-instance (Postgres
         expect(yield* waitFor(screen, "C1")).toBe(true);
 
         // Et l'écran branché sur B suit la même image.
-        const onB = yield* b.frames.current(organizationId, "room");
-        const onA = yield* a.frames.current(organizationId, "room");
+        const onB = yield* b.frames.current(organizationId, projectId, "room");
+        const onA = yield* a.frames.current(organizationId, projectId, "room");
         expect(onB.version).toBe(onA.version);
         expect(firstLine(onB.content)).toBe(firstLine(onA.content));
       }),

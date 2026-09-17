@@ -2,24 +2,21 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import type { Project } from "@projection/projects/domain";
 import { ProjectId } from "@projection/shared-kernel";
 import { Button, buttonVariants } from "@projection/ui/components/button";
-import { Input } from "@projection/ui/components/input";
-import { Label } from "@projection/ui/components/label";
 import { ClientOnly, Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Exit, Option, Schema } from "effect";
-import { ArrowLeft, Radio, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
-import { AddItemPanel } from "@/features/projects/add-item-panel";
 import {
   deleteProjectAtom,
   projectAtom,
   projectsReactivity,
   updateProjectAtom,
 } from "@/features/projects/atoms";
-import { liveStartAtom } from "@/features/live/atoms";
-import { ProjectItems } from "@/features/projects/project-items";
+import { ProjectFormDialog } from "@/features/projects/project-form-dialog";
+import { ProjectRegie } from "@/routes/_auth/_app/live";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/projects/$projectId")({
@@ -65,13 +62,14 @@ function LoadedProject({ id }: { id: ProjectId }) {
   const project = result.value;
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <BackLink />
-      <ProjectHeader key={`${project.id}-${project.name}-${project.date}`} project={project} />
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <ProjectItems project={project} />
-        <AddItemPanel projectId={project.id} />
-      </div>
+    // Sur grand écran, la régie occupe la hauteur disponible : seule la diffusion défile.
+    <div className="flex min-h-full flex-col lg:h-full">
+      <ProjectRegie
+        projectId={project.id}
+        headerActions={
+          <ProjectHeader key={`${project.id}-${project.name}-${project.date}`} project={project} />
+        }
+      />
     </div>
   );
 }
@@ -80,68 +78,24 @@ function ProjectHeader({ project }: { project: Project }) {
   const navigate = useNavigate();
   const update = useAtomSet(updateProjectAtom, { mode: "promiseExit" });
   const remove = useAtomSet(deleteProjectAtom, { mode: "promiseExit" });
-  const startLive = useAtomSet(liveStartAtom, { mode: "promiseExit" });
-  const [name, setName] = useState(project.name);
-  const [date, setDate] = useState(project.date ?? "");
-  const dirty = name.trim() !== project.name || (date === "" ? null : date) !== project.date;
+  const [open, setOpen] = useState(false);
 
   return (
-    <form
-      className="flex flex-wrap items-end gap-2"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (name.trim() === "") return;
-        const exit = await update({
-          payload: {
-            id: project.id,
-            input: { name: name.trim(), date: date === "" ? null : date },
-          },
-          reactivityKeys: projectsReactivity,
-        });
-        if (Exit.isSuccess(exit)) toast.success(m.project_saved());
-        else toast.error(m.project_save_error());
-      }}
-    >
-      <div className="min-w-56 flex-1 space-y-1">
-        <Label htmlFor="project-name">{m.projects_name()}</Label>
-        <Input
-          id="project-name"
-          className="h-10 text-lg font-semibold"
-          required
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="project-date">{m.projects_date()}</Label>
-        <Input
-          id="project-date"
-          type="date"
-          className="h-10"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-      </div>
-      <Button type="submit" size="lg" disabled={!dirty || name.trim() === ""}>
-        {m.project_save()}
-      </Button>
+    <>
       <Button
         type="button"
-        size="lg"
-        variant="outline"
-        onClick={async () => {
-          const exit = await startLive({ payload: { projectId: project.id } });
-          if (Exit.isSuccess(exit)) navigate({ to: "/live" });
-          else toast.error(m.project_action_error());
-        }}
+        variant="ghost"
+        size="icon-sm"
+        aria-label={m.project_edit()}
+        onClick={() => setOpen(true)}
       >
-        <Radio className="size-4" aria-hidden />
-        {m.project_broadcast()}
+        <Pencil className="size-3.5" aria-hidden />
       </Button>
       <Button
         type="button"
-        size="lg"
+        size="icon-sm"
         variant="destructive"
+        aria-label={m.project_delete()}
         onClick={async () => {
           if (!window.confirm(m.project_delete_confirm({ name: project.name }))) return;
           const exit = await remove({
@@ -156,9 +110,29 @@ function ProjectHeader({ project }: { project: Project }) {
           }
         }}
       >
-        <Trash2 className="size-4" aria-hidden />
-        {m.project_delete()}
+        <Trash2 className="size-3.5" aria-hidden />
       </Button>
-    </form>
+      <ProjectFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={m.project_edit()}
+        submitLabel={m.project_save()}
+        initialName={project.name}
+        initialDate={project.date}
+        onSubmit={async ({ name, date }) => {
+          const exit = await update({
+            payload: {
+              id: project.id,
+              input: { name, date },
+            },
+            reactivityKeys: projectsReactivity,
+          });
+          if (Exit.isSuccess(exit)) {
+            setOpen(false);
+            toast.success(m.project_saved());
+          } else toast.error(m.project_save_error());
+        }}
+      />
+    </>
   );
 }

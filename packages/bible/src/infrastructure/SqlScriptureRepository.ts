@@ -81,6 +81,44 @@ export const SqlScriptureRepository = Layer.effect(
       `,
     });
 
+    const previousVerse = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        translationId: Schema.String,
+        book: BookCode,
+        chapter: Schema.Int,
+        verse: Schema.Int,
+      }),
+      Result: Verse,
+      execute: (request) => sql`
+        SELECT book, chapter, verse, text
+        FROM bible_verse
+        WHERE translation_id = ${request.translationId}
+          AND book = ${request.book}
+          AND (chapter, verse) < (${request.chapter}, ${request.verse})
+        ORDER BY chapter DESC, verse DESC
+        LIMIT 1
+      `,
+    });
+
+    const nextVerse = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        translationId: Schema.String,
+        book: BookCode,
+        chapter: Schema.Int,
+        verse: Schema.Int,
+      }),
+      Result: Verse,
+      execute: (request) => sql`
+        SELECT book, chapter, verse, text
+        FROM bible_verse
+        WHERE translation_id = ${request.translationId}
+          AND book = ${request.book}
+          AND (chapter, verse) > (${request.chapter}, ${request.verse})
+        ORDER BY chapter, verse
+        LIMIT 1
+      `,
+    });
+
     const importBooks = Effect.fn("SqlScriptureRepository.write")(function* (
       translation: Translation,
       books: ReadonlyArray<ParsedBook>,
@@ -177,6 +215,28 @@ export const SqlScriptureRepository = Layer.effect(
           endChapter: end.chapter,
           endVerse: end.verse ?? 32767,
         }).pipe(Effect.orDie, Effect.withSpan("SqlScriptureRepository.verses")),
+      neighbors: (translationId, first, last) =>
+        Effect.all({
+          previous: previousVerse({
+            translationId,
+            book: first.book,
+            chapter: first.chapter,
+            verse: first.verse,
+          }),
+          next: nextVerse({
+            translationId,
+            book: last.book,
+            chapter: last.chapter,
+            verse: last.verse,
+          }),
+        }).pipe(
+          Effect.map(({ previous, next }) => ({
+            previous: previous._tag === "Some" ? previous.value : null,
+            next: next._tag === "Some" ? next.value : null,
+          })),
+          Effect.orDie,
+          Effect.withSpan("SqlScriptureRepository.neighbors"),
+        ),
     });
   }),
 );

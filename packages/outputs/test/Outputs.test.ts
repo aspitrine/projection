@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import { HEARTBEAT_INTERVAL } from "@projection/shared-kernel";
+import { ProjectId } from "@projection/shared-kernel";
 import { Effect, Layer, Queue, Stream } from "effect";
 import { TestClock } from "effect/testing";
 
@@ -18,6 +19,8 @@ const TestLayer = Outputs.layer.pipe(
     ),
   ),
 );
+const projectA = ProjectId.make("11111111-1111-4111-8111-111111111111");
+const projectB = ProjectId.make("22222222-2222-4222-8222-222222222222");
 
 describe("generateDisplayToken", () => {
   it.effect("produit des tokens base64url de 256 bits, tous différents", () =>
@@ -30,22 +33,27 @@ describe("generateDisplayToken", () => {
 });
 
 describe("Outputs", () => {
-  it.effect("crée une seule sortie salle par organisation", () =>
+  it.effect("crée une seule sortie salle par projet", () =>
     Effect.gen(function* () {
       const outputs = yield* Outputs;
-      const first = yield* outputs.list.pipe(asActor("org-a"));
-      const second = yield* outputs.list.pipe(asActor("org-a"));
+      const first = yield* outputs.list(projectA).pipe(asActor("org-a"));
+      const second = yield* outputs.list(projectA).pipe(asActor("org-a"));
       expect(first).toHaveLength(1);
       expect(second).toEqual(first);
-      expect(first[0]).toMatchObject({ name: "Salle", type: "room", organizationId: "org-a" });
-      expect((yield* outputs.list.pipe(asActor("org-b")))[0]?.id).not.toBe(first[0]?.id);
+      expect(first[0]).toMatchObject({
+        name: "Salle",
+        type: "room",
+        organizationId: "org-a",
+        projectId: projectA,
+      });
+      expect((yield* outputs.list(projectB).pipe(asActor("org-a")))[0]?.id).not.toBe(first[0]?.id);
     }).pipe(Effect.provide(TestLayer)),
   );
 
   it.effect("seuls propriétaire et admin régénèrent le token ; l'ancien devient invalide", () =>
     Effect.gen(function* () {
       const outputs = yield* Outputs;
-      const [output] = yield* outputs.list.pipe(asActor("org-a"));
+      const [output] = yield* outputs.list(projectA).pipe(asActor("org-a"));
       if (output === undefined) throw new Error("sortie manquante");
 
       const forbidden = yield* outputs
@@ -69,7 +77,7 @@ describe("Outputs", () => {
   it.effect("un écran reçoit l'image courante puis le test d'identification", () =>
     Effect.gen(function* () {
       const outputs = yield* Outputs;
-      const [output] = yield* outputs.list.pipe(asActor("org-a"));
+      const [output] = yield* outputs.list(projectA).pipe(asActor("org-a"));
       if (output === undefined) throw new Error("sortie manquante");
 
       const screen = yield* Queue.unbounded<string>();
@@ -92,7 +100,7 @@ describe("Outputs", () => {
   it.effect("réémet l'image courante à chaque battement de cœur", () =>
     Effect.gen(function* () {
       const outputs = yield* Outputs;
-      const [output] = yield* outputs.list.pipe(asActor("org-a"));
+      const [output] = yield* outputs.list(projectA).pipe(asActor("org-a"));
       if (output === undefined) throw new Error("sortie manquante");
 
       const received = yield* Queue.unbounded<number>();

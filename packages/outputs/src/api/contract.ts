@@ -1,6 +1,6 @@
 import { ActorMiddleware } from "@projection/identity/contract";
 import { SlideTheme, Splitting } from "@projection/presentation/domain";
-import { Forbidden, OutputId } from "@projection/shared-kernel";
+import { Forbidden, OutputId, ProjectId } from "@projection/shared-kernel";
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/unstable/rpc";
 
@@ -17,9 +17,9 @@ import {
 
 /** Gestion des sorties (opérateurs connectés ; modifications réservées propriétaire/admin). */
 export const OutputsRpcs = RpcGroup.make(
-  Rpc.make("OutputsList", { success: Schema.Array(Output) }),
+  Rpc.make("OutputsList", { payload: { projectId: ProjectId }, success: Schema.Array(Output) }),
   Rpc.make("OutputsCreate", {
-    payload: { name: OutputName, type: OutputType },
+    payload: { projectId: ProjectId, name: OutputName, type: OutputType },
     success: Output,
     error: Forbidden,
   }),

@@ -67,7 +67,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
         version: 4,
       });
 
-      const frame = yield* frames.current(organizationId, "room");
+      const frame = yield* frames.current(organizationId, projectId, "room");
       expect(frame).toMatchObject({ cover: "black", content: { _tag: "Lines", lines: ["C1"] } });
 
       const stored = yield* repository.load(organizationId);
@@ -87,7 +87,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
         streamLinked: false,
         streamCursor: { itemId: itemId(1), slideIndex: 1, part: 0 },
       });
-      expect((yield* frames.current(organizationId, "stream")).content).toEqual({
+      expect((yield* frames.current(organizationId, projectId, "stream")).content).toEqual({
         _tag: "Lines",
         lines: ["A2"],
         caption: null,
@@ -98,7 +98,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
         lines: ["Ligne choisie"],
         caption: null,
       });
-      expect((yield* frames.current(organizationId, "stream")).content).toMatchObject({
+      expect((yield* frames.current(organizationId, projectId, "stream")).content).toMatchObject({
         lines: ["Ligne choisie"],
       });
       const tooMany = yield* client

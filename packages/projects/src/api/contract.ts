@@ -39,6 +39,11 @@ export const ProjectsRpcs = RpcGroup.make(
     success: Project,
     error: ItemError,
   }),
+  Rpc.make("ProjectsReplaceItem", {
+    payload: { projectId: ProjectId, itemId: ProjectItemId, item: ProjectItemDraft },
+    success: Project,
+    error: ItemError,
+  }),
   Rpc.make("ProjectsSetItemNotes", {
     payload: {
       projectId: ProjectId,

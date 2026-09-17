@@ -1,5 +1,5 @@
 import type { Frame, FrameContent, SlideTheme, Track } from "@projection/presentation/domain";
-import type { OrganizationId, OutputId } from "@projection/shared-kernel";
+import type { OrganizationId, OutputId, ProjectId } from "@projection/shared-kernel";
 import { Context, Effect, Layer, Option, Ref, type Stream } from "effect";
 
 import {
@@ -16,8 +16,11 @@ export type RemoveResult = "Removed" | "NotFound" | "Last";
 export class OutputRepository extends Context.Service<
   OutputRepository,
   {
-    list(organizationId: OrganizationId): Effect.Effect<ReadonlyArray<Output>>;
-    /** Insère la sortie seulement si l'organisation n'en a aucune (atomique). */
+    list(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+    ): Effect.Effect<ReadonlyArray<Output>>;
+    /** Insère la sortie seulement si le projet n'en a aucune (atomique). */
     insertIfNone(output: Output): Effect.Effect<void>;
     insert(output: Output): Effect.Effect<void>;
     findById(organizationId: OrganizationId, id: OutputId): Effect.Effect<Option.Option<Output>>;
@@ -41,7 +44,7 @@ export class OutputRepository extends Context.Service<
       theme: SlideTheme | null,
       now: number,
     ): Effect.Effect<Option.Option<Output>>;
-    /** Supprime la sortie, sauf si c'est la dernière de l'organisation (atomique). */
+    /** Supprime la sortie, sauf si c'est la dernière de son projet (atomique). */
     remove(organizationId: OrganizationId, id: OutputId): Effect.Effect<RemoveResult>;
     splitting(organizationId: OrganizationId): Effect.Effect<Option.Option<SplittingSettings>>;
     saveSplitting(
@@ -77,15 +80,22 @@ export class OutputRepository extends Context.Service<
         });
 
       return OutputRepository.of({
-        list: (organizationId) =>
+        list: (organizationId, projectId) =>
           Ref.get(store).pipe(
             Effect.map((outputs) =>
-              outputs.filter((output) => output.organizationId === organizationId),
+              outputs.filter(
+                (output) =>
+                  output.organizationId === organizationId && output.projectId === projectId,
+              ),
             ),
           ),
         insertIfNone: (output) =>
           Ref.update(store, (outputs) =>
-            outputs.some((existing) => existing.organizationId === output.organizationId)
+            outputs.some(
+              (existing) =>
+                existing.organizationId === output.organizationId &&
+                existing.projectId === output.projectId,
+            )
               ? outputs
               : [...outputs, output],
           ),
@@ -101,8 +111,14 @@ export class OutputRepository extends Context.Service<
           update(organizationId, id, (output) => new Output({ ...output, theme, updatedAt: now })),
         remove: (organizationId, id) =>
           Ref.modify(store, (outputs): readonly [RemoveResult, ReadonlyArray<Output>] => {
-            const own = outputs.filter((output) => output.organizationId === organizationId);
-            if (!own.some((output) => output.id === id)) return ["NotFound", outputs];
+            const target = outputs.find(
+              (output) => output.id === id && output.organizationId === organizationId,
+            );
+            if (target === undefined) return ["NotFound", outputs];
+            const own = outputs.filter(
+              (output) =>
+                output.organizationId === organizationId && output.projectId === target.projectId,
+            );
             if (own.length <= 1) return ["Last", outputs];
             return ["Removed", outputs.filter((output) => output.id !== id)];
           }),
@@ -122,9 +138,17 @@ export class FrameGateway extends Context.Service<
   FrameGateway,
   {
     /** Image courante d'une piste puis chaque changement. */
-    watch(organizationId: OrganizationId, track: Track): Stream.Stream<Frame>;
+    watch(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      track: Track,
+    ): Stream.Stream<Frame>;
     /** Affiche un contenu sur toutes les pistes (test d'affichage). */
-    show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
+    show(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      content: FrameContent,
+    ): Effect.Effect<void>;
   }
 >()("@projection/outputs/FrameGateway") {}
 

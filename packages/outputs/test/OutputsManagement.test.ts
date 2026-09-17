@@ -4,6 +4,7 @@ import { Effect, Layer, Stream } from "effect";
 import { Outputs } from "../src/application/Outputs";
 import { OutputRepository, ThemeBackgrounds } from "../src/application/ports";
 import { SlideTheme } from "@projection/presentation/domain";
+import { ProjectId } from "@projection/shared-kernel";
 
 import { defaultSplittingSettings, trackOf } from "../src/domain/Output";
 import { defaultThemeFor } from "../src/domain/Themes";
@@ -19,6 +20,7 @@ const TestLayer = Outputs.layer.pipe(
     ),
   ),
 );
+const projectA = ProjectId.make("11111111-1111-4111-8111-111111111111");
 
 describe("Types de sortie", () => {
   it("la salle pilote salle et retour, le stream a sa piste", () => {
@@ -32,21 +34,21 @@ describe("Gestion des sorties", () => {
   it.effect("propriétaire et admin créent, renomment et suppriment ; pas les opérateurs", () =>
     Effect.gen(function* () {
       const outputs = yield* Outputs;
-      const [room] = yield* outputs.list.pipe(asActor("org-a"));
+      const [room] = yield* outputs.list(projectA).pipe(asActor("org-a"));
       if (room === undefined) throw new Error("sortie manquante");
 
       const forbidden = yield* outputs
-        .create({ name: "Stream", type: "stream" })
+        .create({ projectId: projectA, name: "Stream", type: "stream" })
         .pipe(asActor("org-a", "operator"), Effect.flip);
       expect(forbidden._tag).toBe("Forbidden");
 
       const stream = yield* outputs
-        .create({ name: "Stream YouTube", type: "stream" })
+        .create({ projectId: projectA, name: "Stream YouTube", type: "stream" })
         .pipe(asActor("org-a", "admin"));
       const stage = yield* outputs
-        .create({ name: "Retour", type: "stage" })
+        .create({ projectId: projectA, name: "Retour", type: "stage" })
         .pipe(asActor("org-a", "owner"));
-      expect((yield* outputs.list.pipe(asActor("org-a"))).map((output) => output.type)).toEqual([
+      expect((yield* outputs.list(projectA).pipe(asActor("org-a"))).map((output) => output.type)).toEqual([
         "room",
         "stream",
         "stage",
@@ -78,7 +80,7 @@ describe("Gestion des sorties", () => {
       yield* outputs.remove(stage.id).pipe(asActor("org-a", "admin"));
       const last = yield* outputs.remove(room.id).pipe(asActor("org-a", "admin"), Effect.flip);
       expect(last._tag).toBe("LastOutput");
-      expect(yield* outputs.list.pipe(asActor("org-a"))).toHaveLength(1);
+      expect(yield* outputs.list(projectA).pipe(asActor("org-a"))).toHaveLength(1);
 
       const removedToken = yield* outputs
         .watchDisplay(stream.token)
@@ -112,7 +114,7 @@ describe("Gestion des sorties", () => {
     () =>
       Effect.gen(function* () {
         const outputs = yield* Outputs;
-        const [room] = yield* outputs.list.pipe(asActor("org-a"));
+        const [room] = yield* outputs.list(projectA).pipe(asActor("org-a"));
         if (room === undefined) throw new Error("sortie manquante");
         expect(room.theme).toBeNull();
 

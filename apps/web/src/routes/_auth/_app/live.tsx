@@ -1,8 +1,13 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import {
+  formatReference,
+  type Passage,
+  type ScriptureReference,
+  type Verse,
+} from "@projection/bible/domain";
+import {
   type Deck,
   type DeckItem,
-  type LiveCursor,
   type LiveSession,
   type LiveSnapshot,
   type StreamCursor,
@@ -12,6 +17,7 @@ import {
   streamFrameContent,
   withPlayback,
 } from "@projection/live/domain";
+import { LiveCursor } from "@projection/live/domain";
 import {
   type Cover,
   type FrameContent,
@@ -21,13 +27,14 @@ import {
   type VideoPlayback,
   videoPositionMs,
 } from "@projection/presentation/domain";
-import type { ProjectItemId, SongId } from "@projection/shared-kernel";
+import type { ProjectId, ProjectItemId, SongId } from "@projection/shared-kernel";
+import type { ProjectItem } from "@projection/projects/domain";
 import { formatTag } from "@projection/songs/domain";
 import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Textarea } from "@projection/ui/components/textarea";
 import { cn } from "@projection/ui/lib/utils";
-import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Navigate, createFileRoute } from "@tanstack/react-router";
 import { Exit } from "effect";
 import {
   ChevronLeft,
@@ -35,14 +42,17 @@ import {
   EyeOff,
   ImageIcon,
   MonitorOff,
+  MonitorPlay,
   Radio,
   Pause,
+  PanelRightClose,
+  PanelRightOpen,
   Pencil,
   Play,
   RotateCcw,
   Square,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
@@ -54,6 +64,7 @@ import {
 } from "@/features/live/commands";
 import { contentToSlide, roomTheme } from "@/features/display/frame";
 import { FrameView } from "@/features/display/frame-view";
+import { OutputsDialog } from "@/features/outputs/outputs-dialog";
 import { formatDuration, useNow } from "@/features/display/time";
 import {
   liveAtom,
@@ -83,17 +94,18 @@ import {
 } from "@/features/live/atoms";
 import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
+import { AddItemPanel } from "@/features/projects/add-item-panel";
+import { passageBoundsAtom, passageKey } from "@/features/bible/atoms";
+import { EditItemDialog } from "@/features/live/edit-item-dialog";
+import { LiveSlideCards } from "@/features/live/slide-cards";
+import { projectsReactivity, replaceItemAtom } from "@/features/projects/atoms";
 import { songAtom } from "@/features/songs/atoms";
 import { formatProjectDate } from "@/features/projects/format";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/live")({
-  component: () => (
-    <ClientOnly fallback={<Loader />}>
-      <LivePage />
-    </ClientOnly>
-  ),
+  component: () => <Navigate to="/projects" />,
 });
 
 /** Damier derrière l'aperçu stream : rend la transparence visible. */
@@ -105,32 +117,54 @@ const transparencyBackground = {
 const partSummary = (content: FrameContent) =>
   content._tag === "Lines" ? content.lines.join(" / ") : content._tag === "Rich" ? "…" : "—";
 
-function LivePage() {
+/** Régie embarquée dans la page d'un projet. L'ouverture d'un projet le rend actif. */
+export function ProjectRegie({
+  projectId,
+  headerActions,
+}: {
+  projectId: ProjectId;
+  headerActions?: ReactNode;
+}) {
   const commands = usePendingCommands();
 
   return (
     <PendingCommands.Provider value={commands}>
       <PendingBanner pending={commands.pending} />
-      <LiveContent />
+      <ProjectRegieContent projectId={projectId} headerActions={headerActions} />
     </PendingCommands.Provider>
   );
 }
 
-function LiveContent() {
+function ProjectRegieContent({
+  projectId,
+  headerActions,
+}: {
+  projectId: ProjectId;
+  headerActions?: ReactNode;
+}) {
   const result = useAtomValue(liveAtom);
+  const start = useAtomSet(liveStartAtom, { mode: "promiseExit" });
+  const run = useRun();
+  const activeProjectId = result._tag === "Success" ? result.value.session.projectId : null;
+
+  useEffect(() => {
+    if (activeProjectId === projectId) return;
+    void run(() => start({ payload: { projectId } }));
+  }, [activeProjectId, projectId, run, start]);
+
   if (result._tag === "Initial") return <Loader />;
   if (result._tag === "Failure") {
     return <p className="p-6 text-sm text-red-500">{m.live_load_error()}</p>;
   }
   const snapshot = result.value;
-  return snapshot.deck === null ? (
-    <ProjectPicker />
+  return snapshot.deck === null || snapshot.session.projectId !== projectId ? (
+    <Loader />
   ) : (
-    <Regie snapshot={snapshot} deck={snapshot.deck} />
+    <Regie snapshot={snapshot} deck={snapshot.deck} headerActions={headerActions} />
   );
 }
 
-function ProjectPicker() {
+export function ProjectPicker() {
   const projects = useAtomValue(projectsListAtom);
   const start = useAtomSet(liveStartAtom, { mode: "promiseExit" });
   const run = useRun();
@@ -186,8 +220,17 @@ const isEditable = (target: EventTarget | null) =>
     ["TEXTAREA", "SELECT"].includes(target.tagName) ||
     (target instanceof HTMLInputElement && !nonTextInputs.has(target.type)));
 
-function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
+function Regie({
+  snapshot,
+  deck,
+  headerActions,
+}: {
+  snapshot: LiveSnapshot;
+  deck: Deck;
+  headerActions?: ReactNode;
+}) {
   const { session } = snapshot;
+  const [outputsOpen, setOutputsOpen] = useState(false);
   const run = useRun();
   const goTo = useAtomSet(liveGoToAtom, { mode: "promiseExit" });
   const next = useAtomSet(liveNextAtom, { mode: "promiseExit" });
@@ -195,9 +238,16 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
   const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
   const stop = useAtomSet(liveStopAtom, { mode: "promiseExit" });
-  const streamGoTo = useAtomSet(liveStreamGoToAtom, { mode: "promiseExit" });
   const streamNext = useAtomSet(liveStreamNextAtom, { mode: "promiseExit" });
   const streamPrevious = useAtomSet(liveStreamPreviousAtom, { mode: "promiseExit" });
+  const [selected, setSelected] = useState<LiveCursor | null>(session.cursor);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+
+  // Les commandes « précédente/suivante » font évoluer la session. La sélection
+  // centrale doit suivre ce curseur, sinon elle reste sur la diapo choisie au chargement.
+  useEffect(() => {
+    setSelected(session.cursor);
+  }, [session.cursor?.itemId, session.cursor?.slideIndex]);
 
   const covers = useRef({ room: session.roomCover, stream: session.streamCover });
   covers.current = { room: session.roomCover, stream: session.streamCover };
@@ -261,6 +311,12 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
 
   // Les aperçus suivent la lecture vidéo, comme les écrans.
   const current = withPlayback(contentAt(deck, session.cursor), snapshot.video);
+  const selectedItem =
+    selected === null ? null : (deck.items.find((item) => item.itemId === selected.itemId) ?? null);
+  const selectedProjectItem =
+    selected === null || project._tag !== "Success"
+      ? null
+      : (project.value.items.find((item) => item.id === selected.itemId) ?? null);
   const upcomingCursor = session.cursor === null ? null : nextCursor(deck, session.cursor);
   const hasUpcoming =
     upcomingCursor !== null &&
@@ -270,11 +326,16 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   return (
     // Sous `lg`, les aperçus et les panneaux passent devant le déroulé et la barre
     // de pilotage reste fixée en bas de l'écran (tablette, téléphone).
-    <div className="flex min-h-full flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:h-full lg:pb-0">
-      <header className="flex flex-wrap items-center gap-2 border-b p-4">
+    <div className="flex min-h-full flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:flex-1 lg:pb-0">
+      <header className="bg-background sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b p-4">
         <div className="min-w-0 flex-1">
           <p className="text-muted-foreground text-xs uppercase">{m.nav_live()}</p>
-          <h1 className="truncate text-xl font-semibold">{deck.projectName}</h1>
+          <div className="flex min-w-0 items-center gap-1">
+            <h1 className="truncate text-xl font-semibold">{deck.projectName}</h1>
+            {headerActions && (
+              <div className="flex shrink-0 items-center gap-1">{headerActions}</div>
+            )}
+          </div>
         </div>
         <Button
           variant="outline"
@@ -303,66 +364,131 @@ function Regie({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
           <Square className="size-4" aria-hidden />
           {m.live_stop()}
         </Button>
+        <Button variant="outline" onClick={() => setOutputsOpen(true)}>
+          <MonitorPlay className="size-4" aria-hidden />
+          {m.outputs_title()}
+        </Button>
+        <OutputsDialog
+          projectId={deck.projectId}
+          open={outputsOpen}
+          onOpenChange={setOutputsOpen}
+        />
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className="min-w-0 flex-1 space-y-4 p-4 lg:overflow-y-auto">
-          <p className="text-muted-foreground hidden text-xs lg:block">{m.live_shortcuts()}</p>
-          <DeckView
+        <aside className="bg-card order-first border-b lg:order-none lg:w-72 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <div className="border-b p-3">
+            <AddItemPanel projectId={deck.projectId} />
+          </div>
+          <RunSheet
             deck={deck}
-            cursor={session.cursor}
-            streamCursor={session.streamCursor}
-            onPick={(itemId, slideIndex) =>
-              run(() => goTo({ payload: { itemId, slideIndex } }), "cursor")
-            }
-            onPickStream={(itemId, slideIndex) =>
-              run(() => streamGoTo({ payload: { itemId, slideIndex, part: 0 } }), "streamCursor")
-            }
+            selected={selected}
+            live={session.cursor}
+            onSelect={(itemId, slideIndex) => setSelected(new LiveCursor({ itemId, slideIndex }))}
           />
-        </div>
+        </aside>
 
-        <aside className="bg-card order-first space-y-4 border-b p-4 lg:order-none lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-l xl:w-96">
-          <section className="space-y-1">
-            <h2 className="text-muted-foreground text-xs font-medium uppercase">
-              {m.live_room()} · {m.live_screen()}
-            </h2>
-            <CoverPreview
-              testId="live-screen"
-              track="room"
-              cover={session.roomCover}
-              content={current}
-              ringClassName="ring-green-600"
-            />
-          </section>
-          <section className="space-y-1">
-            <h2 className="text-muted-foreground text-xs font-medium uppercase">
-              {m.live_next_preview()}
-            </h2>
-            {hasUpcoming ? (
-              <div className="opacity-80 ring-1 ring-foreground/10">
-                <SlideRenderer
-                  theme={roomTheme}
-                  slide={contentToSlide(contentAt(deck, upcomingCursor))}
-                />
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-xs">{m.live_end()}</p>
-            )}
-          </section>
-          {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
-            <LyricsPanel
-              key={`${currentItem.itemId}:${currentSection}`}
-              itemId={currentItem.itemId}
-              songId={currentItem.sourceId}
-              sectionId={currentSection}
+        <main className="min-w-0 flex-1 space-y-4 p-4 lg:overflow-y-auto">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase">Diffusion</p>
+              <h2 className="font-medium">
+                {selectedItem === null ? "Aucun élément sélectionné" : itemTitle(selectedItem)}
+              </h2>
+            </div>
+            {selectedProjectItem !== null &&
+              (selectedProjectItem._tag === "Song" ||
+                selectedProjectItem._tag === "TextSlide" ||
+                selectedProjectItem._tag === "Scripture") && (
+                <EditItemDialog projectId={deck.projectId} item={selectedProjectItem} />
+              )}
+          </div>
+          {selected === null ? (
+            <p className="text-muted-foreground border border-dashed p-8 text-center text-sm">
+              Sélectionnez un élément dans l’ordre de passage.
+            </p>
+          ) : selectedItem === null ? null : (
+            <SelectedSlides
+              item={selectedItem}
+              live={session.cursor}
+              projectId={deck.projectId}
+              projectItem={selectedProjectItem}
+              onBroadcast={(slideIndex) => {
+                const cursor = new LiveCursor({ itemId: selectedItem.itemId, slideIndex });
+                setSelected(cursor);
+                void run(() => goTo({ payload: cursor }), "cursor");
+              }}
             />
           )}
-          {current._tag === "Video" && <VideoPanel playback={snapshot.video} url={current.url} />}
-          <StagePanel session={session} deck={deck} />
-          <StreamPanel snapshot={snapshot} deck={deck} />
-          <Link to="/outputs" className="text-muted-foreground block text-xs underline">
-            {m.live_outputs_link()}
-          </Link>
+          <p className="text-muted-foreground text-xs">{m.live_shortcuts()}</p>
+        </main>
+
+        <aside
+          className={cn(
+            "bg-card relative space-y-4 border-t p-4 lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l",
+            !rightPanelOpen && "hidden lg:block lg:w-12 lg:p-2",
+          )}
+        >
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="absolute top-2 right-2"
+            aria-label={
+              rightPanelOpen ? "Masquer le panneau de régie" : "Afficher le panneau de régie"
+            }
+            aria-pressed={rightPanelOpen}
+            onClick={() => setRightPanelOpen((open) => !open)}
+          >
+            {rightPanelOpen ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <PanelRightOpen className="size-4" />
+            )}
+          </Button>
+          {rightPanelOpen && (
+            <>
+              <section className="space-y-1">
+                <h2 className="text-muted-foreground text-xs font-medium uppercase">
+                  {m.live_room()} · {m.live_screen()}
+                </h2>
+                <CoverPreview
+                  testId="live-screen"
+                  track="room"
+                  cover={session.roomCover}
+                  content={current}
+                  ringClassName="ring-green-600"
+                />
+              </section>
+              <section className="space-y-1">
+                <h2 className="text-muted-foreground text-xs font-medium uppercase">
+                  {m.live_next_preview()}
+                </h2>
+                {hasUpcoming ? (
+                  <div className="opacity-80 ring-1 ring-foreground/10">
+                    <SlideRenderer
+                      theme={roomTheme}
+                      slide={contentToSlide(contentAt(deck, upcomingCursor))}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-xs">{m.live_end()}</p>
+                )}
+              </section>
+              {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
+                <LyricsPanel
+                  key={`${currentItem.itemId}:${currentSection}`}
+                  itemId={currentItem.itemId}
+                  songId={currentItem.sourceId}
+                  sectionId={currentSection}
+                />
+              )}
+              {current._tag === "Video" && (
+                <VideoPanel playback={snapshot.video} url={current.url} />
+              )}
+              <StagePanel session={session} deck={deck} />
+              <StreamPanel snapshot={snapshot} deck={deck} />
+            </>
+          )}
         </aside>
       </div>
 
@@ -977,7 +1103,188 @@ function CoverPreview({
 const itemTitle = (item: DeckItem) =>
   item.kind === "Blank" ? m.live_blank_item() : item.title || m.live_missing();
 
-function DeckView({
+/** Ordre de passage compact : la sélection prépare le contenu au centre sans le diffuser. */
+function RunSheet({
+  deck,
+  selected,
+  live,
+  onSelect,
+}: {
+  deck: Deck;
+  selected: LiveCursor | null;
+  live: LiveCursor | null;
+  onSelect: (itemId: ProjectItemId, slideIndex: number) => void;
+}) {
+  return (
+    <section className="space-y-2 p-3" aria-label="Ordre de passage">
+      <h2 className="text-muted-foreground text-xs font-medium uppercase">Ordre de passage</h2>
+      <ol className="space-y-1" data-testid="live-deck">
+        {deck.items.map((item, index) => {
+          const selectedItem = selected?.itemId === item.itemId;
+          const liveItem = live?.itemId === item.itemId;
+          return (
+            <li key={item.itemId}>
+              <button
+                type="button"
+                disabled={item.missing || item.slides.length === 0}
+                aria-current={selectedItem ? "true" : undefined}
+                onClick={() => onSelect(item.itemId, 0)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+                  selectedItem && "bg-muted font-medium ring-1 ring-foreground/20",
+                )}
+              >
+                <span className="text-muted-foreground w-5 shrink-0 text-right text-xs">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{itemTitle(item)}</span>
+                {liveItem && (
+                  <span
+                    className="size-2 shrink-0 rounded-full bg-red-500"
+                    aria-label="À l’antenne"
+                  />
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+/** Parties préparées au centre : un clic choisit et diffuse précisément cette diapo. */
+function SelectedSlides({
+  item,
+  live,
+  projectId,
+  projectItem,
+  onBroadcast,
+}: {
+  item: DeckItem;
+  live: LiveCursor | null;
+  projectId: ProjectId;
+  projectItem: ProjectItem | null;
+  onBroadcast: (slideIndex: number) => void;
+}) {
+  if (projectItem?._tag === "Scripture") {
+    return (
+      <ScriptureSelectedSlides
+        item={item}
+        live={live}
+        projectId={projectId}
+        projectItem={projectItem}
+        onBroadcast={onBroadcast}
+      />
+    );
+  }
+
+  return (
+    <LiveSlideCards item={item} title={itemTitle(item)} live={live} onBroadcast={onBroadcast} />
+  );
+}
+
+const extendReference = (passage: Passage, verse: Verse, edge: "before" | "after") => {
+  const first = passage.verses[0];
+  const last = passage.verses[passage.verses.length - 1];
+  if (first === undefined || last === undefined) return passage.label;
+  return formatReference({
+    book: passage.reference.book,
+    start: {
+      chapter: edge === "before" ? verse.chapter : first.chapter,
+      verse: edge === "before" ? verse.verse : first.verse,
+    },
+    end: {
+      chapter: edge === "after" ? verse.chapter : last.chapter,
+      verse: edge === "after" ? verse.verse : last.verse,
+    },
+  } as ScriptureReference);
+};
+
+function ScriptureSelectedSlides({
+  item,
+  live,
+  projectId,
+  projectItem,
+  onBroadcast,
+}: {
+  item: DeckItem;
+  live: LiveCursor | null;
+  projectId: ProjectId;
+  projectItem: Extract<ProjectItem, { _tag: "Scripture" }>;
+  onBroadcast: (slideIndex: number) => void;
+}) {
+  const bounds = useAtomValue(
+    passageBoundsAtom(passageKey(projectItem.translationId, projectItem.reference)),
+  );
+  const replace = useAtomSet(replaceItemAtom, { mode: "promiseExit" });
+  const [pending, setPending] = useState(false);
+
+  const extend = async (verse: Verse, edge: "before" | "after") => {
+    if (bounds._tag !== "Success") return;
+    setPending(true);
+    const reference = extendReference(bounds.value.passage, verse, edge);
+    const exit = await replace({
+      payload: {
+        projectId,
+        itemId: projectItem.id,
+        item: { _tag: "Scripture", translationId: projectItem.translationId, reference },
+      },
+      reactivityKeys: projectsReactivity,
+    });
+    setPending(false);
+    if (Exit.isFailure(exit)) toast.error(m.live_edit_item_failed());
+  };
+
+  const extensionCard = (verse: Verse, edge: "before" | "after") => (
+    <li>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-full min-h-32 w-full flex-col whitespace-normal"
+        disabled={pending}
+        onClick={() => void extend(verse, edge)}
+      >
+        {edge === "before" ? (
+          <ChevronLeft className="size-5" aria-hidden />
+        ) : (
+          <ChevronRight className="size-5" aria-hidden />
+        )}
+        <span>
+          {edge === "before" ? m.live_scripture_extend_before() : m.live_scripture_extend_after()}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {formatReference({
+            book: verse.book,
+            start: { chapter: verse.chapter, verse: verse.verse },
+            end: { chapter: verse.chapter, verse: verse.verse },
+          } as ScriptureReference)}
+        </span>
+      </Button>
+    </li>
+  );
+
+  return (
+    <LiveSlideCards
+      item={item}
+      title={itemTitle(item)}
+      live={live}
+      onBroadcast={onBroadcast}
+      before={
+        bounds._tag === "Success" && bounds.value.previous !== null
+          ? extensionCard(bounds.value.previous, "before")
+          : undefined
+      }
+      after={
+        bounds._tag === "Success" && bounds.value.next !== null
+          ? extensionCard(bounds.value.next, "after")
+          : undefined
+      }
+    />
+  );
+}
+
+export function DeckView({
   deck,
   cursor,
   streamCursor,

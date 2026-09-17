@@ -4,7 +4,14 @@ import type { Splitting } from "@projection/presentation/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
-import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import type { ProjectId } from "@projection/shared-kernel";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@projection/ui/components/dialog";
 import { Cause, Exit, Option } from "effect";
 import {
   Copy,
@@ -38,19 +45,28 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 
-export const Route = createFileRoute("/_auth/_app/outputs")({
-  component: () => (
-    <div className="container mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">{m.nav_outputs()}</h1>
-        <p className="text-muted-foreground text-sm">{m.outputs_intro()}</p>
-      </div>
-      <ClientOnly fallback={<Loader />}>
-        <OutputsPage />
-      </ClientOnly>
-    </div>
-  ),
-});
+/** Liens et réglages des écrans d'un projet. */
+export function OutputsDialog({
+  projectId,
+  open,
+  onOpenChange,
+}: {
+  projectId: ProjectId;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{m.outputs_title()}</DialogTitle>
+          <DialogDescription>{m.outputs_intro()}</DialogDescription>
+        </DialogHeader>
+        {open && <OutputsPanel projectId={projectId} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const displayUrl = (output: Output) =>
   new URL(`/display/${output.token}`, window.location.origin).href;
@@ -79,18 +95,18 @@ function useCanManage() {
   return member?.role === "owner" || member?.role === "admin";
 }
 
-function OutputsPage() {
+function OutputsPanel({ projectId }: { projectId: ProjectId }) {
   const canManage = useCanManage();
   return (
-    <>
-      {canManage && <NewOutputForm />}
-      <OutputsList canManage={canManage} />
+    <div className="space-y-4">
+      {canManage && <NewOutputForm projectId={projectId} />}
+      <OutputsList projectId={projectId} canManage={canManage} />
       <SplittingPanel canManage={canManage} />
-    </>
+    </div>
   );
 }
 
-function NewOutputForm() {
+function NewOutputForm({ projectId }: { projectId: ProjectId }) {
   const create = useAtomSet(createOutputAtom, { mode: "promiseExit" });
   const [name, setName] = useState("");
   const [type, setType] = useState<OutputType>("stream");
@@ -105,7 +121,7 @@ function NewOutputForm() {
         if (name.trim() === "") return;
         setPending(true);
         const exit = await create({
-          payload: { name: name.trim(), type },
+          payload: { projectId, name: name.trim(), type },
           reactivityKeys: outputsReactivity,
         });
         setPending(false);
@@ -151,8 +167,8 @@ function NewOutputForm() {
   );
 }
 
-function OutputsList({ canManage }: { canManage: boolean }) {
-  const result = useAtomValue(outputsListAtom);
+function OutputsList({ projectId, canManage }: { projectId: ProjectId; canManage: boolean }) {
+  const result = useAtomValue(outputsListAtom(projectId));
 
   if (result._tag === "Initial") return <Loader />;
   if (result._tag === "Failure")

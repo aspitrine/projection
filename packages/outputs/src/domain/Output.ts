@@ -6,7 +6,7 @@ import {
   roomSplitting,
   streamSplitting,
 } from "@projection/presentation/domain";
-import { OrganizationId, OutputId } from "@projection/shared-kernel";
+import { OrganizationId, OutputId, ProjectId } from "@projection/shared-kernel";
 import { Effect, Schema } from "effect";
 
 /** Types de sortie : projecteur, retour scène, stream (lower third transparent). */
@@ -39,6 +39,7 @@ export const generateDisplayToken = Effect.sync(() => {
 export class Output extends Schema.Class<Output>("Output")({
   id: OutputId,
   organizationId: OrganizationId,
+  projectId: ProjectId,
   name: Schema.NonEmptyString,
   type: OutputType,
   token: DisplayToken,

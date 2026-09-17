@@ -161,16 +161,19 @@ export class LiveSessions extends Context.Service<
       const states = new Map<OrganizationId, OrganizationState>();
       const initLock = yield* Semaphore.make(1);
 
-      const publish = (snapshot: LiveSnapshot) => {
+      const publish = (snapshot: LiveSnapshot, previousProjectId: ProjectId | null = null) => {
         const { organizationId, cursor, streamCursor, streamOverride, roomCover, streamCover } =
           snapshot.session;
+        const projectId = snapshot.session.projectId ?? previousProjectId;
+        if (projectId === null) return Effect.void;
         const stage = stageInfoAt(snapshot.deck, cursor, snapshot.session.timer);
         const roomContent = withPlayback(contentAt(snapshot.deck, cursor), snapshot.video);
         return Effect.all(
           [
-            frames.publish(organizationId, "room", roomContent, roomCover, stage),
+            frames.publish(organizationId, projectId, "room", roomContent, roomCover, stage),
             frames.publish(
               organizationId,
+              projectId,
               "stream",
               withPlayback(
                 streamFrameContent(snapshot.deck, streamCursor, streamOverride),
@@ -362,7 +365,7 @@ export class LiveSessions extends Context.Service<
               );
               yield* repository.save(snapshot.session);
               yield* SubscriptionRef.set(state.ref, snapshot);
-              yield* publish(snapshot);
+              yield* publish(snapshot, current.session.projectId);
               // Les régies des autres instances relisent la session ainsi enregistrée.
               yield* repository.announce(snapshot.session.organizationId);
               return snapshot;

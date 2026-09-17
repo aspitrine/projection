@@ -26,6 +26,12 @@ export class ScriptureRepository extends Context.Service<
       translationId: string,
       reference: ScriptureReference,
     ): Effect.Effect<ReadonlyArray<Verse>>;
+    /** Versets immédiatement avant et après un passage, dans le même livre. */
+    neighbors(
+      translationId: string,
+      first: Verse,
+      last: Verse,
+    ): Effect.Effect<{ readonly previous: Verse | null; readonly next: Verse | null }>;
     /** Recherche par contenu, sans casse ni accents. */
     search(
       translationId: string,
@@ -83,6 +89,24 @@ export class ScriptureRepository extends Context.Service<
                 return afterStart && beforeEnd;
               })
               .sort((a, b) => a.chapter - b.chapter || a.verse - b.verse),
+          ),
+        neighbors: (translationId, first, last) =>
+          Effect.succeed(
+            (() => {
+              const verses = (versesByTranslation[translationId] ?? [])
+                .filter((verse) => verse.book === first.book)
+                .sort((a, b) => a.chapter - b.chapter || a.verse - b.verse);
+              const firstIndex = verses.findIndex(
+                (verse) => verse.chapter === first.chapter && verse.verse === first.verse,
+              );
+              const lastIndex = verses.findIndex(
+                (verse) => verse.chapter === last.chapter && verse.verse === last.verse,
+              );
+              return {
+                previous: firstIndex > 0 ? (verses[firstIndex - 1] ?? null) : null,
+                next: lastIndex >= 0 ? (verses[lastIndex + 1] ?? null) : null,
+              };
+            })(),
           ),
       }),
     );

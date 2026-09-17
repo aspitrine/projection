@@ -74,6 +74,24 @@ describe("Bible.lookup", () => {
   );
 });
 
+describe("Bible.bounds", () => {
+  it.effect("renvoie les versets adjacents, y compris entre deux chapitres", () =>
+    Effect.gen(function* () {
+      const bible = yield* Bible;
+
+      const middle = yield* bible.bounds("lsg1910", "Jean 3.17-18");
+      expect(middle.previous).toMatchObject({ chapter: 3, verse: 16 });
+      expect(middle.next).toMatchObject({ chapter: 4, verse: 1 });
+
+      const first = yield* bible.bounds("lsg1910", "Jean 3.16");
+      expect(first.previous).toBeNull();
+
+      const last = yield* bible.bounds("lsg1910", "Jean 4.2");
+      expect(last.next).toBeNull();
+    }).pipe(asActor(), Effect.provide(TestLayer)),
+  );
+});
+
 describe("Bible.search", () => {
   const withText = (chapter: number, number: number, text: string) =>
     new Verse({ book: "JHN", chapter, verse: number, text });

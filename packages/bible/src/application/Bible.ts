@@ -8,6 +8,7 @@ import { parseUsfm } from "../domain/Usfm";
 import {
   type InvalidReference,
   Passage,
+  PassageBounds,
   PassageNotFound,
   InvalidTranslationFile,
   type ScriptureMatch,
@@ -49,6 +50,14 @@ export class Bible extends Context.Service<
       reference: string,
     ): Effect.Effect<
       Passage,
+      InvalidReference | PassageNotFound | UnknownTranslation,
+      CurrentActor
+    >;
+    bounds(
+      translationId: string,
+      reference: string,
+    ): Effect.Effect<
+      PassageBounds,
       InvalidReference | PassageNotFound | UnknownTranslation,
       CurrentActor
     >;
@@ -110,6 +119,20 @@ export class Bible extends Context.Service<
         return yield* repository.search(translationId, trimmed, limit);
       });
 
+      const bounds = Effect.fn("Bible.bounds")(function* (
+        translationId: string,
+        reference: string,
+      ) {
+        const passage = yield* lookup(translationId, reference);
+        const first = passage.verses[0];
+        const last = passage.verses[passage.verses.length - 1];
+        if (first === undefined || last === undefined) {
+          return yield* new PassageNotFound({ label: passage.label });
+        }
+        const neighbors = yield* repository.neighbors(translationId, first, last);
+        return new PassageBounds({ passage, ...neighbors });
+      });
+
       const importFile = Effect.fn("Bible.importFile")(function* (
         input: TranslationInput,
         content: string,
@@ -161,6 +184,7 @@ export class Bible extends Context.Service<
       return Bible.of({
         translations: visibleTranslations,
         lookup,
+        bounds,
         search,
         importFile,
         defaultTranslationId,

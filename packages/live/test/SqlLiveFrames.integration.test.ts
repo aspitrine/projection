@@ -1,7 +1,7 @@
 import { PgClient } from "@effect/sql-pg";
 import { describe, expect, it } from "@effect/vitest";
 import { runMigrations } from "@projection/platform";
-import { OrganizationId } from "@projection/shared-kernel";
+import { OrganizationId, ProjectId } from "@projection/shared-kernel";
 import { Config, Context, Effect, Layer, Queue, Stream } from "effect";
 
 import { LiveFrames } from "../src/application/LiveFrames";
@@ -28,6 +28,7 @@ const startInstance = Effect.map(Layer.build(instance), (context) =>
 );
 
 const organizationId = OrganizationId.make("org-frames-multi");
+const projectId = ProjectId.make("11111111-1111-4111-8111-111111111111");
 
 const lines = (text: string) => ({ _tag: "Lines", lines: [text], caption: null }) as const;
 
@@ -41,7 +42,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
 
         // Un écran branché sur la seconde instance.
         const received = yield* Queue.unbounded<string>();
-        yield* second.watch(organizationId, "room").pipe(
+        yield* second.watch(organizationId, projectId, "room").pipe(
           Stream.runForEach((frame) =>
             Queue.offer(
               received,
@@ -52,13 +53,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
         );
         expect(yield* Queue.take(received)).toBe("vide");
 
-        yield* first.publish(organizationId, "room", lines("Gloire à Dieu"), "none", null);
+        yield* first.publish(organizationId, projectId, "room", lines("Gloire à Dieu"), "none", null);
         expect(yield* Queue.take(received)).toBe("Gloire à Dieu");
 
         // Et en sens inverse, avec un bouton d'urgence.
-        yield* second.publish(organizationId, "room", lines("Alléluia"), "black", null);
+        yield* second.publish(organizationId, projectId, "room", lines("Alléluia"), "black", null);
         expect(yield* Queue.take(received)).toBe("Alléluia");
-        expect((yield* first.current(organizationId, "room")).cover).toBe("black");
+        expect((yield* first.current(organizationId, projectId, "room")).cover).toBe("black");
       }),
     { timeout: 20_000 },
   );
@@ -72,6 +73,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
 
         const published = yield* first.publish(
           organizationId,
+          projectId,
           "stream",
           lines("Première"),
           "none",
@@ -79,6 +81,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
         );
         const next = yield* second.publish(
           organizationId,
+          projectId,
           "stream",
           lines("Seconde"),
           "none",

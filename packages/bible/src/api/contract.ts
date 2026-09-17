@@ -8,6 +8,7 @@ import {
   InvalidReference,
   InvalidTranslationFile,
   Passage,
+  PassageBounds,
   PassageNotFound,
   ScriptureMatch,
   Translation,
@@ -21,6 +22,11 @@ export const BibleRpcs = RpcGroup.make(
   Rpc.make("BibleLookup", {
     payload: { translationId: Schema.String, reference: Schema.String },
     success: Passage,
+    error: Schema.Union([InvalidReference, PassageNotFound, UnknownTranslation]),
+  }),
+  Rpc.make("BibleBounds", {
+    payload: { translationId: Schema.String, reference: Schema.String },
+    success: PassageBounds,
     error: Schema.Union([InvalidReference, PassageNotFound, UnknownTranslation]),
   }),
   Rpc.make("BibleSearch", {

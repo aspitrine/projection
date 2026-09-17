@@ -45,7 +45,7 @@ describe("LiveSessions", () => {
     Effect.gen(function* () {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
-      const onScreen = Effect.map(frames.current(organizationId, "room"), screen);
+      const onScreen = Effect.map(frames.current(organizationId, projectId, "room"), screen);
 
       const started = yield* sessions.start(projectId).pipe(asActor());
       expect(started.deck?.projectName).toBe("Culte");
@@ -95,12 +95,12 @@ describe("LiveSessions", () => {
       editable.set(deckOf([item(4, ["D1"]), item(1, ["A1", "A2", "A3"])]));
       const inserted = yield* sessions.refresh.pipe(asActor());
       expect(inserted.session.cursor).toEqual(new LiveCursor({ itemId: itemId(1), slideIndex: 1 }));
-      expect(screen(yield* frames.current(organizationId, "room"))).toBe("A2");
+      expect(screen(yield* frames.current(organizationId, projectId, "room"))).toBe("A2");
 
       editable.set(deckOf([item(4, ["D1"])]));
       const removed = yield* sessions.refresh.pipe(asActor());
       expect(removed.session.cursor).toBeNull();
-      expect(screen(yield* frames.current(organizationId, "room"))).toBe("Blank");
+      expect(screen(yield* frames.current(organizationId, projectId, "room"))).toBe("Blank");
 
       editable.set(null);
       const deleted = yield* sessions.refresh.pipe(asActor());
@@ -137,7 +137,7 @@ describe("LiveSessions", () => {
         expect(restored.value.session.version).toBe(7);
         expect(restored.value.deck?.items).toHaveLength(3);
       }
-      expect(screen(yield* frames.current(organizationId, "room"))).toBe("[black] C1");
+      expect(screen(yield* frames.current(organizationId, projectId, "room"))).toBe("[black] C1");
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 
@@ -171,7 +171,7 @@ describe("LiveSessions", () => {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
       const onTrack = (track: "room" | "stream") =>
-        Effect.map(frames.current(organizationId, track), screen);
+        Effect.map(frames.current(organizationId, projectId, track), screen);
 
       yield* sessions.start(projectId).pipe(asActor());
       expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A1", "A1.1"]);
@@ -221,7 +221,7 @@ describe("LiveSessions", () => {
         const sessions = yield* LiveSessions;
         const frames = yield* LiveFrames;
         const onTrack = (track: "room" | "stream") =>
-          Effect.map(frames.current(organizationId, track), screen);
+          Effect.map(frames.current(organizationId, projectId, track), screen);
 
         const missing = yield* sessions
           .streamShowLines({ lines: ["x"], caption: null })
@@ -267,7 +267,7 @@ describe("LiveSessions", () => {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
       const onTrack = (track: "room" | "stream") =>
-        Effect.map(frames.current(organizationId, track), screen);
+        Effect.map(frames.current(organizationId, projectId, track), screen);
 
       yield* sessions.start(projectId).pipe(asActor());
       yield* sessions.setCover("room", "logo").pipe(asActor());
@@ -293,7 +293,7 @@ describe("LiveSessions", () => {
     Effect.gen(function* () {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
-      const stageOf = Effect.map(frames.current(organizationId, "room"), (frame) => frame.stage);
+      const stageOf = Effect.map(frames.current(organizationId, projectId, "room"), (frame) => frame.stage);
 
       yield* sessions.start(projectId).pipe(asActor());
       expect(yield* stageOf).toMatchObject({
@@ -302,7 +302,7 @@ describe("LiveSessions", () => {
         timer: { durationMs: 0, runningSince: null },
       });
       // La piste Stream ne transporte pas les infos du retour.
-      expect((yield* frames.current(organizationId, "stream")).stage).toBeNull();
+      expect((yield* frames.current(organizationId, projectId, "stream")).stage).toBeNull();
 
       yield* sessions.setTimer(60_000).pipe(asActor());
       const started = yield* sessions.startTimer.pipe(asActor());
@@ -338,7 +338,7 @@ describe("LiveSessions", () => {
       expect(edited.lastEdit).toMatchObject({ itemId: itemId(1), section: "verse-1" });
       // Le signalement ne survit pas à la commande suivante.
       expect((yield* sessions.next.pipe(asActor())).lastEdit).toBeNull();
-      expect((yield* frames.current(organizationId, "room")).version).toBeGreaterThan(0);
+      expect((yield* frames.current(organizationId, projectId, "room")).version).toBeGreaterThan(0);
 
       const unknown = yield* sessions
         .editSection(itemId(9), "verse-1", ["x"])
@@ -351,7 +351,7 @@ describe("LiveSessions", () => {
     Effect.gen(function* () {
       const sessions = yield* LiveSessions;
       const frames = yield* LiveFrames;
-      const playbackOf = Effect.map(frames.current(organizationId, "room"), (frame) =>
+      const playbackOf = Effect.map(frames.current(organizationId, projectId, "room"), (frame) =>
         frame.content._tag === "Video" ? frame.content.playback : null,
       );
 

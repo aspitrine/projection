@@ -15,6 +15,11 @@ export const passageAtom = Atom.family((key: string) => {
 export const passageKey = (translationId: string, reference: string) =>
   `${translationId}\n${reference.trim()}`;
 
+export const passageBoundsAtom = Atom.family((key: string) => {
+  const [translationId = "", reference = ""] = key.split("\n");
+  return ApiClient.query("BibleBounds", { translationId, reference });
+});
+
 /** Clé : `<translationId>\n<recherche>`. */
 export const scriptureSearchAtom = Atom.family((key: string) => {
   const [translationId = "", query = ""] = key.split("\n");

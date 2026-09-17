@@ -59,6 +59,13 @@ export class Passage extends Schema.Class<Passage>("Passage")({
   verses: Schema.Array(Verse),
 }) {}
 
+/** Passage résolu et versets immédiatement adjacents dans le même livre. */
+export class PassageBounds extends Schema.Class<PassageBounds>("PassageBounds")({
+  passage: Passage,
+  previous: Schema.NullOr(Verse),
+  next: Schema.NullOr(Verse),
+}) {}
+
 /** Verset trouvé par une recherche par contenu. */
 export class ScriptureMatch extends Schema.Class<ScriptureMatch>("ScriptureMatch")({
   translationId: Schema.String,

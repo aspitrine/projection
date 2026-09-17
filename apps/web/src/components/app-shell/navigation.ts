@@ -4,10 +4,8 @@ import {
   ImageIcon,
   LayoutDashboard,
   type LucideIcon,
-  MonitorPlay,
   Music,
   Presentation,
-  Radio,
   Search,
   Users,
 } from "lucide-react";
@@ -23,8 +21,6 @@ export interface NavigationItem {
     | "/library/slides"
     | "/library/media"
     | "/library/search"
-    | "/live"
-    | "/outputs"
     | "/settings/members";
   readonly label: () => string;
   readonly icon: LucideIcon;
@@ -53,13 +49,6 @@ export const navigation: ReadonlyArray<NavigationGroup> = [
       { to: "/library/slides", label: m.nav_slides, icon: Presentation },
       { to: "/library/media", label: m.nav_media, icon: ImageIcon },
       { to: "/library/search", label: m.nav_search, icon: Search },
-    ],
-  },
-  {
-    id: "broadcast",
-    items: [
-      { to: "/live", label: m.nav_live, icon: Radio },
-      { to: "/outputs", label: m.nav_outputs, icon: MonitorPlay },
     ],
   },
   {

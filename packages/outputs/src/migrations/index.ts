@@ -33,6 +33,16 @@ export const outputsMigrations = {
         WHERE theme IS NOT NULL
       `;
     }),
+    "0005_scope_outputs_to_project": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`ALTER TABLE output ADD COLUMN project_id uuid`;
+      // Une sortie globale ne peut pas être attribuée sans ambiguïté à un projet.
+      // Les sorties par projet seront recréées à la première ouverture de leur panneau.
+      yield* sql`DELETE FROM output`;
+      yield* sql`ALTER TABLE output ALTER COLUMN project_id SET NOT NULL`;
+      yield* sql`DROP INDEX output_organization_idx`;
+      yield* sql`CREATE INDEX output_project_idx ON output (organization_id, project_id)`;
+    }),
     "0002_create_output_splitting": Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`

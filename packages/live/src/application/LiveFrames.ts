@@ -6,24 +6,33 @@ import {
   type Track,
   initialFrame,
 } from "@projection/presentation/domain";
-import type { OrganizationId } from "@projection/shared-kernel";
+import type { OrganizationId, ProjectId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Stream, SubscriptionRef } from "effect";
 
 const tracks: ReadonlyArray<Track> = ["room", "stream"];
 
 /**
- * Image courante de chaque piste (salle, stream) de chaque organisation, diffusée aux sorties.
+ * Image courante de chaque piste (salle, stream) de chaque projet, diffusée aux sorties.
  * En mémoire (une instance) : la régie la republie depuis la session persistée.
  */
 export class LiveFrames extends Context.Service<
   LiveFrames,
   {
     /** Image courante puis chaque changement. */
-    watch(organizationId: OrganizationId, track: Track): Stream.Stream<Frame>;
-    current(organizationId: OrganizationId, track: Track): Effect.Effect<Frame>;
+    watch(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      track: Track,
+    ): Stream.Stream<Frame>;
+    current(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      track: Track,
+    ): Effect.Effect<Frame>;
     /** Contenu et bouton d'urgence d'une piste en une seule image. */
     publish(
       organizationId: OrganizationId,
+      projectId: ProjectId,
       track: Track,
       content: FrameContent,
       cover: Cover,
@@ -31,7 +40,11 @@ export class LiveFrames extends Context.Service<
       stage: StageInfo | null,
     ): Effect.Effect<Frame>;
     /** Affiche un contenu sur toutes les pistes, bouton d'urgence inchangé (test d'affichage). */
-    show(organizationId: OrganizationId, content: FrameContent): Effect.Effect<void>;
+    show(
+      organizationId: OrganizationId,
+      projectId: ProjectId,
+      content: FrameContent,
+    ): Effect.Effect<void>;
   }
 >()("@projection/live/LiveFrames") {
   static readonly layerMemory = Layer.effect(
@@ -39,9 +52,9 @@ export class LiveFrames extends Context.Service<
     Effect.sync(() => {
       const refs = new Map<string, SubscriptionRef.SubscriptionRef<Frame>>();
 
-      const refFor = (organizationId: OrganizationId, track: Track) =>
+      const refFor = (organizationId: OrganizationId, projectId: ProjectId, track: Track) =>
         Effect.suspend(() => {
-          const key = `${organizationId}:${track}`;
+          const key = `${organizationId}\n${projectId}\n${track}`;
           const existing = refs.get(key);
           if (existing !== undefined) return Effect.succeed(existing);
           return SubscriptionRef.make(initialFrame).pipe(
@@ -55,11 +68,12 @@ export class LiveFrames extends Context.Service<
 
       const update = (
         organizationId: OrganizationId,
+        projectId: ProjectId,
         track: Track,
         transition: (frame: Frame) => Pick<Frame, "cover" | "content" | "stage">,
       ) =>
         Effect.gen(function* () {
-          const ref = yield* refFor(organizationId, track);
+          const ref = yield* refFor(organizationId, projectId, track);
           const now = yield* Clock.currentTimeMillis;
           return yield* SubscriptionRef.updateAndGet(
             ref,
@@ -69,19 +83,21 @@ export class LiveFrames extends Context.Service<
         });
 
       return LiveFrames.of({
-        watch: (organizationId, track) =>
-          Stream.unwrap(Effect.map(refFor(organizationId, track), SubscriptionRef.changes)),
-        current: (organizationId, track) =>
-          Effect.flatMap(refFor(organizationId, track), SubscriptionRef.get),
-        publish: (organizationId, track, content, cover, stage) =>
-          update(organizationId, track, () => ({ cover, content, stage })).pipe(
+        watch: (organizationId, projectId, track) =>
+          Stream.unwrap(
+            Effect.map(refFor(organizationId, projectId, track), SubscriptionRef.changes),
+          ),
+        current: (organizationId, projectId, track) =>
+          Effect.flatMap(refFor(organizationId, projectId, track), SubscriptionRef.get),
+        publish: (organizationId, projectId, track, content, cover, stage) =>
+          update(organizationId, projectId, track, () => ({ cover, content, stage })).pipe(
             Effect.withSpan("LiveFrames.publish"),
           ),
-        show: (organizationId, content) =>
+        show: (organizationId, projectId, content) =>
           Effect.forEach(
             tracks,
             (track) =>
-              update(organizationId, track, (frame) => ({
+              update(organizationId, projectId, track, (frame) => ({
                 cover: frame.cover,
                 content,
                 stage: frame.stage,

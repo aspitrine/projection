@@ -7,7 +7,7 @@ const OutputsHandlersLive = OutputsRpcs.toLayer(
   Effect.gen(function* () {
     const outputs = yield* Outputs;
     return {
-      OutputsList: () => outputs.list,
+      OutputsList: ({ projectId }) => outputs.list(projectId),
       OutputsCreate: (input) => outputs.create(input),
       OutputsRename: ({ id, name }) => outputs.rename(id, name),
       OutputsSetTheme: ({ id, theme }) => outputs.setTheme(id, theme),

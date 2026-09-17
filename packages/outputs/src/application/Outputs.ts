@@ -2,6 +2,7 @@ import {
   CurrentActor,
   type Forbidden,
   OutputId,
+  ProjectId,
   requireRole,
   withHeartbeat,
 } from "@projection/shared-kernel";
@@ -32,8 +33,9 @@ export class Outputs extends Context.Service<
   Outputs,
   {
     /** Sorties de l'organisation ; crée la sortie salle par défaut si besoin. */
-    readonly list: Effect.Effect<ReadonlyArray<Output>, never, CurrentActor>;
+    list(projectId: ProjectId): Effect.Effect<ReadonlyArray<Output>, never, CurrentActor>;
     create(input: {
+      readonly projectId: ProjectId;
       readonly name: string;
       readonly type: OutputType;
     }): Effect.Effect<Output, Forbidden, CurrentActor>;
@@ -77,12 +79,17 @@ export class Outputs extends Context.Service<
           }),
         );
 
-      const newOutput = Effect.fnUntraced(function* (name: string, type: OutputType) {
+      const newOutput = Effect.fnUntraced(function* (
+        projectId: ProjectId,
+        name: string,
+        type: OutputType,
+      ) {
         const actor = yield* CurrentActor;
         const now = yield* Clock.currentTimeMillis;
         return new Output({
           id: OutputId.make(crypto.randomUUID()),
           organizationId: actor.organizationId,
+          projectId,
           name,
           type,
           token: yield* generateDisplayToken,
@@ -93,15 +100,17 @@ export class Outputs extends Context.Service<
       });
 
       return Outputs.of({
-        list: Effect.gen(function* () {
+        list: (projectId) => Effect.gen(function* () {
           const actor = yield* CurrentActor;
-          yield* repository.insertIfNone(yield* newOutput(DEFAULT_OUTPUT_NAME, "room"));
-          return yield* repository.list(actor.organizationId);
+          yield* repository.insertIfNone(
+            yield* newOutput(projectId, DEFAULT_OUTPUT_NAME, "room"),
+          );
+          return yield* repository.list(actor.organizationId, projectId);
         }).pipe(Effect.withSpan("Outputs.list")),
 
         create: Effect.fn("Outputs.create")(function* (input) {
           yield* requireRole("owner", "admin");
-          const output = yield* newOutput(input.name, input.type);
+          const output = yield* newOutput(input.projectId, input.name, input.type);
           yield* repository.insert(output);
           return output;
         }),
@@ -139,7 +148,7 @@ export class Outputs extends Context.Service<
         identify: Effect.fn("Outputs.identify")(function* (id: OutputId) {
           const actor = yield* CurrentActor;
           const output = yield* repository.findById(actor.organizationId, id).pipe(orNotFound(id));
-          yield* gateway.show(output.organizationId, {
+          yield* gateway.show(output.organizationId, output.projectId, {
             _tag: "Lines",
             lines: [output.name],
             caption: null,
@@ -172,7 +181,11 @@ export class Outputs extends Context.Service<
               }
               const connected = output.value;
               const branding = yield* brandingSource.get(connected.organizationId);
-              const frames = gateway.watch(connected.organizationId, trackOf(connected.type)).pipe(
+              const frames = gateway.watch(
+                connected.organizationId,
+                connected.projectId,
+                trackOf(connected.type),
+              ).pipe(
                 // Nom et thème sont relus à chaque image : une sortie renommée ou
                 // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
                 Stream.mapEffect((frame) =>

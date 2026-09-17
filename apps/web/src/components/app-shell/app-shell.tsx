@@ -1,6 +1,6 @@
 import { Button } from "@projection/ui/components/button";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import OrganizationSwitcher from "@/components/organization-switcher";
@@ -47,6 +47,7 @@ function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   useEffect(() => {
@@ -64,7 +65,15 @@ export default function AppShell() {
 
   return (
     <div className="flex h-svh">
-      <aside className="bg-card hidden w-60 shrink-0 flex-col border-r md:flex">
+      <aside
+        className={
+          desktopOpen
+            ? "bg-card hidden w-60 shrink-0 flex-col border-r transition-[width] duration-200 md:flex"
+            : "bg-card hidden w-0 shrink-0 overflow-hidden border-r-0 transition-[width] duration-200 md:flex"
+        }
+        aria-hidden={!desktopOpen}
+        inert={!desktopOpen}
+      >
         <Brand />
         <SidebarNavigation />
       </aside>
@@ -99,6 +108,20 @@ export default function AppShell() {
             onClick={() => setMobileOpen((open) => !open)}
           >
             {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden md:inline-flex"
+            aria-label={desktopOpen ? m.nav_close_menu() : m.nav_open_menu()}
+            aria-expanded={desktopOpen}
+            onClick={() => setDesktopOpen((open) => !open)}
+          >
+            {desktopOpen ? (
+              <PanelLeftClose className="size-4" />
+            ) : (
+              <PanelLeftOpen className="size-4" />
+            )}
           </Button>
           <div className="flex-1" />
           <OrganizationSwitcher />

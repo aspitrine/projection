@@ -1,7 +1,14 @@
 import { CurrentActor, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { Clock, Context, Effect, Layer, Option } from "effect";
 
-import { createItem, insertItem, moveItem, removeItem, setItemNotes } from "../domain/Items";
+import {
+  createItem,
+  insertItem,
+  moveItem,
+  removeItem,
+  replaceItem,
+  setItemNotes,
+} from "../domain/Items";
 import {
   Project,
   type ProjectInput,
@@ -25,6 +32,11 @@ export class Projects extends Context.Service<
     remove(id: ProjectId): Effect.Effect<void, ProjectNotFound, CurrentActor>;
     addItem(id: ProjectId, draft: ProjectItemDraft, position: number | null): Result;
     removeItem(id: ProjectId, itemId: ProjectItemId): Result<ProjectItemNotFound>;
+    replaceItem(
+      id: ProjectId,
+      itemId: ProjectItemId,
+      item: ProjectItemDraft,
+    ): Result<ProjectItemNotFound>;
     moveItem(id: ProjectId, itemId: ProjectItemId, toIndex: number): Result<ProjectItemNotFound>;
     /** Notes d'un élément, affichées sur le retour scène. */
     setItemNotes(
@@ -122,6 +134,13 @@ export class Projects extends Context.Service<
               Effect.map((items) => withItems(project, items)),
             ),
           ).pipe(Effect.withSpan("Projects.removeItem")),
+
+        replaceItem: (id, itemId, item) =>
+          modify(id, (project) =>
+            replaceItem(project.items, itemId, item).pipe(
+              Effect.map((items) => withItems(project, items)),
+            ),
+          ).pipe(Effect.withSpan("Projects.replaceItem")),
 
         setItemNotes: (id, itemId, notes) =>
           modify(id, (project) =>

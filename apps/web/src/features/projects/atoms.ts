@@ -18,6 +18,7 @@ export const updateProjectAtom = ApiClient.mutation("ProjectsUpdate");
 export const deleteProjectAtom = ApiClient.mutation("ProjectsDelete");
 export const addItemAtom = ApiClient.mutation("ProjectsAddItem");
 export const removeItemAtom = ApiClient.mutation("ProjectsRemoveItem");
+export const replaceItemAtom = ApiClient.mutation("ProjectsReplaceItem");
 export const moveItemAtom = ApiClient.mutation("ProjectsMoveItem");
 export const setItemNotesAtom = ApiClient.mutation("ProjectsSetItemNotes");
 export const importAgendaAtom = ApiClient.mutation("ImportsVideoPsalm");
