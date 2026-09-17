@@ -51,7 +51,7 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
@@ -73,7 +73,6 @@ import {
   liveRefreshAtom,
   liveSetCoverAtom,
   liveStartAtom,
-  liveStopAtom,
   liveStreamGoToAtom,
   liveStreamNextAtom,
   liveStreamPreviousAtom,
@@ -90,6 +89,13 @@ import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
 import { AddItemPanel } from "@/features/projects/add-item-panel";
 import { passageBoundsAtom, passageKey } from "@/features/bible/atoms";
 import { EditItemDialog } from "@/features/live/edit-item-dialog";
+import {
+  type PanelImperativeHandle,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@projection/ui/components/resizable";
 import { LiveSlideCards } from "@/features/live/slide-cards";
 import { OutputPreview, ThemedSlide } from "@/features/outputs/output-preview";
 import {
@@ -238,11 +244,27 @@ function Regie({
   const previous = useAtomSet(livePreviousAtom, { mode: "promiseExit" });
   const setCover = useAtomSet(liveSetCoverAtom, { mode: "promiseExit" });
   const refresh = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
-  const stop = useAtomSet(liveStopAtom, { mode: "promiseExit" });
   const streamNext = useAtomSet(liveStreamNextAtom, { mode: "promiseExit" });
   const streamPrevious = useAtomSet(liveStreamPreviousAtom, { mode: "promiseExit" });
   const [selected, setSelected] = useState<LiveCursor | null>(session.cursor);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const rightPanel = useRef<PanelImperativeHandle | null>(null);
+  const panelLayout = useDefaultLayout({ id: "live-regie-panels" });
+  const toggleRightPanel = () => {
+    const panel = rightPanel.current;
+    if (!isDesktop || panel === null) return setRightPanelOpen((open) => !open);
+    if (panel.isCollapsed()) panel.expand();
+    else panel.collapse();
+    setRightPanelOpen(!panel.isCollapsed());
+  };
+
+  // Disposition restaurée repliée : l'état du bouton suit le panneau dès l'affichage.
+  useEffect(() => {
+    if (isDesktop && rightPanel.current !== null) {
+      setRightPanelOpen(!rightPanel.current.isCollapsed());
+    }
+  }, [isDesktop]);
 
   // Les commandes « précédente/suivante » font évoluer la session. La sélection
   // centrale doit suivre ce curseur, sinon elle reste sur la diapo choisie au chargement.
@@ -324,6 +346,131 @@ function Regie({
     (upcomingCursor.itemId !== session.cursor?.itemId ||
       upcomingCursor.slideIndex !== session.cursor.slideIndex);
 
+  const runSheetPanel = (
+    <aside className="bg-card border-b lg:h-full lg:overflow-y-auto lg:border-b-0">
+      <div className="border-b p-3">
+        <AddItemPanel projectId={deck.projectId} />
+      </div>
+      <RunSheet
+        deck={deck}
+        selected={selected}
+        live={session.cursor}
+        onSelect={(itemId, slideIndex) => setSelected(new LiveCursor({ itemId, slideIndex }))}
+      />
+    </aside>
+  );
+
+  const broadcastPanel = (
+    <main className="min-w-0 flex-1 space-y-4 p-4 lg:h-full lg:overflow-y-auto">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-muted-foreground text-xs uppercase">Diffusion</p>
+          <h2 className="font-medium">
+            {selectedItem === null ? "Aucun élément sélectionné" : itemTitle(selectedItem)}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedProjectItem !== null &&
+            (selectedProjectItem._tag === "Song" ||
+              selectedProjectItem._tag === "TextSlide" ||
+              selectedProjectItem._tag === "Scripture" ||
+              selectedProjectItem._tag === "Media") && (
+              <EditItemDialog projectId={deck.projectId} item={selectedProjectItem} />
+            )}
+          {selectedItem !== null && (
+            <RemoveItemButton
+              projectId={deck.projectId}
+              itemId={selectedItem.itemId}
+              title={itemTitle(selectedItem)}
+              onRemoved={() => setSelected(null)}
+            />
+          )}
+        </div>
+      </div>
+      {selected === null ? (
+        <p className="text-muted-foreground border border-dashed p-8 text-center text-sm">
+          Sélectionnez un élément dans l’ordre de passage.
+        </p>
+      ) : selectedItem === null ? null : (
+        <SelectedSlides
+          item={selectedItem}
+          live={session.cursor}
+          projectId={deck.projectId}
+          projectItem={selectedProjectItem}
+          onBroadcast={(slideIndex) => {
+            const cursor = new LiveCursor({ itemId: selectedItem.itemId, slideIndex });
+            setSelected(cursor);
+            void run(() => goTo({ payload: cursor }), "cursor");
+          }}
+        />
+      )}
+      <p className="text-muted-foreground text-xs">{m.live_shortcuts()}</p>
+    </main>
+  );
+
+  const controlPanel = (
+    <aside
+      className={cn(
+        "bg-card relative space-y-4 border-t p-4 lg:h-full lg:overflow-y-auto lg:border-t-0",
+        !rightPanelOpen && "hidden lg:block lg:p-2",
+      )}
+    >
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        className="absolute top-2 right-2"
+        aria-label={rightPanelOpen ? "Masquer le panneau de régie" : "Afficher le panneau de régie"}
+        aria-pressed={rightPanelOpen}
+        onClick={toggleRightPanel}
+      >
+        {rightPanelOpen ? (
+          <PanelRightClose className="size-4" />
+        ) : (
+          <PanelRightOpen className="size-4" />
+        )}
+      </Button>
+      {rightPanelOpen && (
+        <>
+          <section className="space-y-1">
+            <h2 className="text-muted-foreground text-xs font-medium uppercase">
+              {m.live_room()} · {m.live_screen()}
+            </h2>
+            <CoverPreview
+              projectId={deck.projectId}
+              testId="live-screen"
+              track="room"
+              cover={session.roomCover}
+              content={current}
+              ringClassName="ring-green-600"
+            />
+          </section>
+          <section className="space-y-1">
+            <h2 className="text-muted-foreground text-xs font-medium uppercase">
+              {m.live_next_preview()}
+            </h2>
+            {hasUpcoming ? (
+              <div className="opacity-80 ring-1 ring-foreground/10">
+                <ThemedSlide projectId={deck.projectId} content={contentAt(deck, upcomingCursor)} />
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">{m.live_end()}</p>
+            )}
+          </section>
+          {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
+            <LyricsPanel
+              key={`${currentItem.itemId}:${currentSection}`}
+              itemId={currentItem.itemId}
+              songId={currentItem.sourceId}
+              sectionId={currentSection}
+            />
+          )}
+          {current._tag === "Video" && <VideoPanel playback={snapshot.video} url={current.url} />}
+          <StreamPanel snapshot={snapshot} deck={deck} />
+        </>
+      )}
+    </aside>
+  );
+
   return (
     // Sous `lg`, les aperçus et les panneaux passent devant le déroulé et la barre
     // de pilotage reste fixée en bas de l'écran (tablette, téléphone).
@@ -356,15 +503,6 @@ function Regie({
         <div className="hidden lg:block">
           <CoverButtons track="room" cover={session.roomCover} />
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            if (window.confirm(m.live_stop_confirm())) void run(() => stop({ payload: undefined }));
-          }}
-        >
-          <Square className="size-4" aria-hidden />
-          {m.live_stop()}
-        </Button>
         <Button variant="outline" onClick={() => setThemeOpen(true)}>
           <Palette className="size-4" aria-hidden />
           {m.project_theme()}
@@ -381,133 +519,45 @@ function Regie({
         />
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside className="bg-card order-first border-b lg:order-none lg:w-72 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <div className="border-b p-3">
-            <AddItemPanel projectId={deck.projectId} />
-          </div>
-          <RunSheet
-            deck={deck}
-            selected={selected}
-            live={session.cursor}
-            onSelect={(itemId, slideIndex) => setSelected(new LiveCursor({ itemId, slideIndex }))}
-          />
-        </aside>
-
-        <main className="min-w-0 flex-1 space-y-4 p-4 lg:overflow-y-auto">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-muted-foreground text-xs uppercase">Diffusion</p>
-              <h2 className="font-medium">
-                {selectedItem === null ? "Aucun élément sélectionné" : itemTitle(selectedItem)}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {selectedProjectItem !== null &&
-                (selectedProjectItem._tag === "Song" ||
-                  selectedProjectItem._tag === "TextSlide" ||
-                  selectedProjectItem._tag === "Scripture" ||
-                  selectedProjectItem._tag === "Media") && (
-                  <EditItemDialog projectId={deck.projectId} item={selectedProjectItem} />
-                )}
-              {selectedItem !== null && (
-                <RemoveItemButton
-                  projectId={deck.projectId}
-                  itemId={selectedItem.itemId}
-                  title={itemTitle(selectedItem)}
-                  onRemoved={() => setSelected(null)}
-                />
-              )}
-            </div>
-          </div>
-          {selected === null ? (
-            <p className="text-muted-foreground border border-dashed p-8 text-center text-sm">
-              Sélectionnez un élément dans l’ordre de passage.
-            </p>
-          ) : selectedItem === null ? null : (
-            <SelectedSlides
-              item={selectedItem}
-              live={session.cursor}
-              projectId={deck.projectId}
-              projectItem={selectedProjectItem}
-              onBroadcast={(slideIndex) => {
-                const cursor = new LiveCursor({ itemId: selectedItem.itemId, slideIndex });
-                setSelected(cursor);
-                void run(() => goTo({ payload: cursor }), "cursor");
-              }}
-            />
-          )}
-          <p className="text-muted-foreground text-xs">{m.live_shortcuts()}</p>
-        </main>
-
-        <aside
-          className={cn(
-            "bg-card relative space-y-4 border-t p-4 lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l",
-            !rightPanelOpen && "hidden lg:block lg:w-12 lg:p-2",
-          )}
+      {isDesktop ? (
+        // Grand écran : colonnes redimensionnables, disposition mémorisée par navigateur.
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="min-h-0 flex-1"
+          defaultLayout={panelLayout.defaultLayout}
+          onLayoutChanged={(layout, meta) => {
+            panelLayout.onLayoutChanged(layout, meta);
+            // Replié (à la souris ou par le bouton) : le panneau n'affiche plus que son bouton.
+            setRightPanelOpen(!(rightPanel.current?.isCollapsed() ?? false));
+          }}
         >
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            className="absolute top-2 right-2"
-            aria-label={
-              rightPanelOpen ? "Masquer le panneau de régie" : "Afficher le panneau de régie"
-            }
-            aria-pressed={rightPanelOpen}
-            onClick={() => setRightPanelOpen((open) => !open)}
+          <ResizablePanel id="run-sheet" defaultSize="22" minSize="200px" maxSize="45">
+            {runSheetPanel}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel id="broadcast" minSize="30">
+            {broadcastPanel}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel
+            id="control"
+            panelRef={rightPanel}
+            defaultSize="22"
+            minSize="220px"
+            maxSize="45"
+            collapsible
+            collapsedSize="48px"
           >
-            {rightPanelOpen ? (
-              <PanelRightClose className="size-4" />
-            ) : (
-              <PanelRightOpen className="size-4" />
-            )}
-          </Button>
-          {rightPanelOpen && (
-            <>
-              <section className="space-y-1">
-                <h2 className="text-muted-foreground text-xs font-medium uppercase">
-                  {m.live_room()} · {m.live_screen()}
-                </h2>
-                <CoverPreview
-                  projectId={deck.projectId}
-                  testId="live-screen"
-                  track="room"
-                  cover={session.roomCover}
-                  content={current}
-                  ringClassName="ring-green-600"
-                />
-              </section>
-              <section className="space-y-1">
-                <h2 className="text-muted-foreground text-xs font-medium uppercase">
-                  {m.live_next_preview()}
-                </h2>
-                {hasUpcoming ? (
-                  <div className="opacity-80 ring-1 ring-foreground/10">
-                    <ThemedSlide
-                      projectId={deck.projectId}
-                      content={contentAt(deck, upcomingCursor)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-xs">{m.live_end()}</p>
-                )}
-              </section>
-              {currentItem !== null && currentItem.sourceId !== null && currentSection !== null && (
-                <LyricsPanel
-                  key={`${currentItem.itemId}:${currentSection}`}
-                  itemId={currentItem.itemId}
-                  songId={currentItem.sourceId}
-                  sectionId={currentSection}
-                />
-              )}
-              {current._tag === "Video" && (
-                <VideoPanel playback={snapshot.video} url={current.url} />
-              )}
-              <StreamPanel snapshot={snapshot} deck={deck} />
-            </>
-          )}
-        </aside>
-      </div>
+            {controlPanel}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {runSheetPanel}
+          {broadcastPanel}
+          {controlPanel}
+        </div>
+      )}
 
       <LiveBar cover={session.roomCover} />
     </div>
@@ -878,6 +928,18 @@ function LinePicker({
     </div>
   );
 }
+
+/** Suit une media query CSS (mise en page tablette / grand écran). */
+const useMediaQuery = (query: string) =>
+  useSyncExternalStore(
+    (onChange) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 
 /** Barre de pilotage fixée en bas sous `lg` : avancer, reculer, masquer le texte. */
 function LiveBar({ cover }: { cover: Cover }) {

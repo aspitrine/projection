@@ -24,7 +24,6 @@ export const liveNextAtom = ApiClient.mutation("LiveNext");
 export const livePreviousAtom = ApiClient.mutation("LivePrevious");
 export const liveSetCoverAtom = ApiClient.mutation("LiveSetCover");
 export const liveRefreshAtom = ApiClient.mutation("LiveRefresh");
-export const liveStopAtom = ApiClient.mutation("LiveStop");
 export const liveStreamGoToAtom = ApiClient.mutation("LiveStreamGoTo");
 export const liveStreamNextAtom = ApiClient.mutation("LiveStreamNext");
 export const liveStreamPreviousAtom = ApiClient.mutation("LiveStreamPrevious");

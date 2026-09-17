@@ -67,9 +67,6 @@ describe("LiveSessions", () => {
       expect((yield* sessions.goTo(itemId(2), 0).pipe(asActor(), Effect.flip))._tag).toBe(
         "LiveItemNotFound",
       );
-
-      yield* sessions.stop.pipe(asActor());
-      expect(yield* onScreen).toBe("Blank");
     }).pipe(Effect.provide(layerWith(source))),
   );
 
@@ -203,9 +200,6 @@ describe("LiveSessions", () => {
 
       yield* sessions.setCover("stream", "black").pipe(asActor());
       expect(yield* onTrack("stream")).toBe("[black] A1.2");
-
-      const stopped = yield* sessions.stop.pipe(asActor());
-      expect(stopped.session).toMatchObject({ streamLinked: true, streamCursor: null });
     }).pipe(
       Effect.provide(
         layerWith(makeDeckSource(deckOf([item(1, ["A1", "A2"], 2), item(3, ["C1"], 2)]))),
@@ -282,9 +276,6 @@ describe("LiveSessions", () => {
       expect(yield* onTrack("room")).toBe("[logo] A2");
       yield* sessions.setCover("room", "none").pipe(asActor());
       expect([yield* onTrack("room"), yield* onTrack("stream")]).toEqual(["A2", "[hideText] A2"]);
-
-      const stopped = yield* sessions.stop.pipe(asActor());
-      expect(stopped.session).toMatchObject({ roomCover: "none", streamCover: "none" });
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 

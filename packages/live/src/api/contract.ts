@@ -71,5 +71,4 @@ export const LiveRpcs = RpcGroup.make(
     error: NoLiveProject,
   }),
   Rpc.make("LiveRefresh", { success: LiveSnapshot }),
-  Rpc.make("LiveStop", { success: LiveSnapshot }),
 ).middleware(ActorMiddleware);

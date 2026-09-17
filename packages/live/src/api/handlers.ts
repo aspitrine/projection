@@ -29,7 +29,6 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveVideoSeek: ({ positionMs }) => sessions.seekVideo(positionMs),
       LiveVideoDuration: ({ durationMs }) => sessions.setVideoDuration(durationMs),
       LiveRefresh: () => sessions.refresh,
-      LiveStop: () => sessions.stop,
     };
   }),
 );

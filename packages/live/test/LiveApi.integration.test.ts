@@ -105,15 +105,6 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API live (Postgres)", () => {
         .LiveStreamShowLines({ lines: Array.from({ length: 13 }, () => "x"), caption: null })
         .pipe(Effect.exit);
       expect(Exit.isFailure(tooMany)).toBe(true);
-
-      yield* client.LiveStop();
-      expect(Option.getOrNull(yield* repository.load(organizationId))).toMatchObject({
-        projectId: null,
-        cursor: null,
-        streamLinked: true,
-        streamOverride: null,
-        version: 8,
-      });
     }).pipe(Effect.provide(ApiLive)),
   );
 });

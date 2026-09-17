@@ -137,7 +137,6 @@ export class LiveSessions extends Context.Service<
     setVideoDuration(durationMs: number): Command<NoLiveProject>;
     /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant les positions. */
     readonly refresh: Command;
-    readonly stop: Command;
   }
 >()("@projection/live/LiveSessions") {
   static readonly layer = Layer.effect(
@@ -572,10 +571,6 @@ export class LiveSessions extends Context.Service<
             reconcile(deck, projectId, current.session),
           );
         }).pipe(Effect.withSpan("LiveSessions.refresh")),
-
-        stop: command(() => Effect.succeed(idleDraft(true, "none", "none"))).pipe(
-          Effect.withSpan("LiveSessions.stop"),
-        ),
       });
     }),
   );

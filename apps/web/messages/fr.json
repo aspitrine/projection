@@ -249,8 +249,6 @@
   "live_start": "Diffuser",
   "live_previous": "Précédente",
   "live_next": "Suivante",
-  "live_stop": "Arrêter",
-  "live_stop_confirm": "Arrêter la diffusion ? Les écrans deviendront vides.",
   "live_screen": "À l'écran",
   "live_next_preview": "Suivante",
   "live_end": "Fin du projet",
