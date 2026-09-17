@@ -43,11 +43,12 @@ export class Slide extends Schema.Class<Slide>("Slide")({
 export const songSplitRules = (maxLines: number) =>
   new SplitRules({ maxLines, maxCharacters: null, mergeBlocks: false, balance: true });
 
+/** Un verset par diapo : les versets ne sont jamais regroupés. */
 export const scriptureSplitRules = (maxCharacters: number) =>
   new SplitRules({
     maxLines: Number.MAX_SAFE_INTEGER,
     maxCharacters,
-    mergeBlocks: true,
+    mergeBlocks: false,
     balance: false,
   });
 

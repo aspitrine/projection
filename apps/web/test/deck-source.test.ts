@@ -184,8 +184,8 @@ describe("DeckSourceLive", () => {
       expect(blank?.slides[0]?.parts).toEqual([{ _tag: "Blank" }]);
 
       expect(scripture).toMatchObject({ kind: "Scripture", title: "Jean 3.16-17 (LSG)" });
-      expect(scripture?.slides).toHaveLength(1);
-      expect(scripture?.slides[0]?.label).toBe("Jean 3.16");
+      // Un verset par diapo.
+      expect(scripture?.slides.map((slide) => slide.label)).toEqual(["Jean 3.16", "Jean 3.17"]);
 
       expect(textItem?.slides[0]?.content).toEqual({
         _tag: "Rich",

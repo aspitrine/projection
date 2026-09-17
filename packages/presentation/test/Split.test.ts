@@ -68,7 +68,7 @@ describe("split — chants", () => {
 });
 
 describe("split — versets", () => {
-  it("regroupe les versets courts jusqu'à la limite de caractères", () => {
+  it("place chaque verset sur sa propre diapo, même court", () => {
     const slides = split(
       [
         block("v16", ["a".repeat(40)]),
@@ -77,9 +77,8 @@ describe("split — versets", () => {
       ],
       scriptureSplitRules(100),
     );
-    expect(slides.map((slide) => slide.blockKeys)).toEqual([["v16", "v17"], ["v18"]]);
-    expect(slides[0]?.label).toBe("v16");
-    expect(slides[1]?.label).toBe("v18");
+    expect(slides.map((slide) => slide.blockKeys)).toEqual([["v16"], ["v17"], ["v18"]]);
+    expect(slides.map((slide) => slide.label)).toEqual(["v16", "v17", "v18"]);
   });
 
   it("laisse seul un verset plus long que la limite", () => {

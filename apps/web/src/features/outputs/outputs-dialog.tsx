@@ -1,6 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import type { Output, OutputType, SplittingSettings } from "@projection/outputs/domain";
-import type { Splitting } from "@projection/presentation/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
@@ -378,26 +377,25 @@ function SplittingForm({ initial, canManage }: { initial: SplittingSettings; can
   const [settings, setSettings] = useState(initial);
   const [pending, setPending] = useState(false);
 
-  const field = (track: keyof SplittingSettings, key: keyof Splitting) => {
-    const id = `splitting-${track}-${key}`;
-    const bounds = key === "songMaxLines" ? { min: 1, max: 12 } : { min: 40, max: 1000 };
+  // Seules les lignes de chant se règlent : la Bible affiche toujours un verset par diapo.
+  const field = (track: keyof SplittingSettings) => {
+    const id = `splitting-${track}-songMaxLines`;
     return (
       <div className="space-y-1">
-        <Label htmlFor={id}>
-          {key === "songMaxLines" ? m.splitting_song_lines() : m.splitting_scripture_characters()}
-        </Label>
+        <Label htmlFor={id}>{m.splitting_song_lines()}</Label>
         <Input
           id={id}
           type="number"
           required
           step={1}
-          {...bounds}
+          min={1}
+          max={12}
           disabled={!canManage}
-          value={settings[track][key]}
+          value={settings[track].songMaxLines}
           onChange={(event) =>
             setSettings((current) => ({
               ...current,
-              [track]: { ...current[track], [key]: event.target.valueAsNumber },
+              [track]: { ...current[track], songMaxLines: event.target.valueAsNumber },
             }))
           }
         />
@@ -428,8 +426,7 @@ function SplittingForm({ initial, canManage }: { initial: SplittingSettings; can
             <legend className="text-sm font-medium">
               {track === "room" ? m.splitting_room() : m.splitting_stream()}
             </legend>
-            {field(track, "songMaxLines")}
-            {field(track, "scriptureMaxCharacters")}
+            {field(track)}
           </fieldset>
         ))}
       </div>
