@@ -105,7 +105,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("API outputs (Postgres)", () => 
       expect(renamed).toMatchObject({ name: "Stream YouTube", type: "stream" });
 
       const invalidName = yield* client
-        .OutputsCreate({ projectId, name: "  ", type: "stage" }, organization)
+        .OutputsCreate({ projectId, name: "  ", type: "room" }, organization)
         .pipe(Effect.exit);
       expect(Exit.isFailure(invalidName)).toBe(true);
 

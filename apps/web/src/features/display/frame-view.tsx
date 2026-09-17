@@ -15,7 +15,7 @@ import { defaultThemeFor } from "@projection/outputs/domain";
 
 import { contentToSlide } from "./frame";
 
-/** Écran noir : noir franc en salle et au retour, rien du tout sur le stream (transparent). */
+/** Écran noir : noir franc en salle, rien du tout sur le stream (transparent). */
 const blackTheme = (theme: SlideTheme, type: OutputType) =>
   new SlideTheme({ ...theme, background: type === "stream" ? "transparent" : "#000000" });
 

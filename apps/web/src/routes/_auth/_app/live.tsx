@@ -8,7 +8,6 @@ import {
 import {
   type Deck,
   type DeckItem,
-  type LiveSession,
   type LiveSnapshot,
   type StreamCursor,
   type StreamOverride,
@@ -21,7 +20,6 @@ import { LiveCursor } from "@projection/live/domain";
 import {
   type Cover,
   type FrameContent,
-  remainingMs,
   type Track,
   videoEnded,
   type VideoPlayback,
@@ -31,7 +29,6 @@ import type { ProjectId, ProjectItemId, SongId } from "@projection/shared-kernel
 import type { ProjectItem } from "@projection/projects/domain";
 import { formatTag } from "@projection/songs/domain";
 import { Button } from "@projection/ui/components/button";
-import { Input } from "@projection/ui/components/input";
 import { Textarea } from "@projection/ui/components/textarea";
 import { cn } from "@projection/ui/lib/utils";
 import { Link, Navigate, createFileRoute } from "@tanstack/react-router";
@@ -48,9 +45,9 @@ import {
   Pause,
   PanelRightClose,
   PanelRightOpen,
+  Palette,
   Pencil,
   Play,
-  RotateCcw,
   Square,
   Trash2,
 } from "lucide-react";
@@ -64,9 +61,8 @@ import {
   useRun,
   usePendingCommands,
 } from "@/features/live/commands";
-import { contentToSlide, roomTheme } from "@/features/display/frame";
-import { FrameView } from "@/features/display/frame-view";
 import { OutputsDialog } from "@/features/outputs/outputs-dialog";
+import { ThemeDialog } from "@/features/outputs/theme-dialog";
 import { formatDuration, useNow } from "@/features/display/time";
 import {
   liveAtom,
@@ -84,22 +80,18 @@ import {
   liveStreamResumeAtom,
   liveStreamSetLinkedAtom,
   liveStreamShowLinesAtom,
-  liveTimerPauseAtom,
-  liveTimerResetAtom,
-  liveTimerSetAtom,
-  liveTimerStartAtom,
   liveVideoDurationAtom,
   liveVideoPauseAtom,
   liveVideoPlayAtom,
   liveVideoRestartAtom,
   liveVideoSeekAtom,
 } from "@/features/live/atoms";
-import { SlideRenderer } from "@/features/presentation/slide-renderer";
 import { projectAtom, projectsListAtom } from "@/features/projects/atoms";
 import { AddItemPanel } from "@/features/projects/add-item-panel";
 import { passageBoundsAtom, passageKey } from "@/features/bible/atoms";
 import { EditItemDialog } from "@/features/live/edit-item-dialog";
 import { LiveSlideCards } from "@/features/live/slide-cards";
+import { OutputPreview, ThemedSlide } from "@/features/outputs/output-preview";
 import {
   moveItemAtom,
   projectsReactivity,
@@ -108,7 +100,6 @@ import {
 } from "@/features/projects/atoms";
 import { songAtom } from "@/features/songs/atoms";
 import { formatProjectDate } from "@/features/projects/format";
-import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/_app/live")({
@@ -240,6 +231,7 @@ function Regie({
 }) {
   const { session } = snapshot;
   const [outputsOpen, setOutputsOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const run = useRun();
   const goTo = useAtomSet(liveGoToAtom, { mode: "promiseExit" });
   const next = useAtomSet(liveNextAtom, { mode: "promiseExit" });
@@ -373,6 +365,11 @@ function Regie({
           <Square className="size-4" aria-hidden />
           {m.live_stop()}
         </Button>
+        <Button variant="outline" onClick={() => setThemeOpen(true)}>
+          <Palette className="size-4" aria-hidden />
+          {m.project_theme()}
+        </Button>
+        <ThemeDialog projectId={deck.projectId} open={themeOpen} onOpenChange={setThemeOpen} />
         <Button variant="outline" onClick={() => setOutputsOpen(true)}>
           <MonitorPlay className="size-4" aria-hidden />
           {m.outputs_title()}
@@ -472,6 +469,7 @@ function Regie({
                   {m.live_room()} · {m.live_screen()}
                 </h2>
                 <CoverPreview
+                  projectId={deck.projectId}
                   testId="live-screen"
                   track="room"
                   cover={session.roomCover}
@@ -485,9 +483,9 @@ function Regie({
                 </h2>
                 {hasUpcoming ? (
                   <div className="opacity-80 ring-1 ring-foreground/10">
-                    <SlideRenderer
-                      theme={roomTheme}
-                      slide={contentToSlide(contentAt(deck, upcomingCursor))}
+                    <ThemedSlide
+                      projectId={deck.projectId}
+                      content={contentAt(deck, upcomingCursor)}
                     />
                   </div>
                 ) : (
@@ -505,7 +503,6 @@ function Regie({
               {current._tag === "Video" && (
                 <VideoPanel playback={snapshot.video} url={current.url} />
               )}
-              <StagePanel session={session} deck={deck} />
               <StreamPanel snapshot={snapshot} deck={deck} />
             </>
           )}
@@ -688,108 +685,6 @@ function VideoPanel({ playback, url }: { playback: VideoPlayback; url: string })
   );
 }
 
-/** Retour scène : notes de l'élément en cours et minuteur piloté depuis la régie. */
-function StagePanel({ session, deck }: { session: LiveSession; deck: Deck }) {
-  const run = useRun();
-  const now = useNow();
-  const setTimer = useAtomSet(liveTimerSetAtom, { mode: "promiseExit" });
-  const startTimer = useAtomSet(liveTimerStartAtom, { mode: "promiseExit" });
-  const pauseTimer = useAtomSet(liveTimerPauseAtom, { mode: "promiseExit" });
-  const resetTimer = useAtomSet(liveTimerResetAtom, { mode: "promiseExit" });
-  const [minutes, setMinutes] = useState(5);
-
-  const notes =
-    session.cursor === null
-      ? null
-      : (deck.items.find((item) => item.itemId === session.cursor?.itemId)?.notes ?? null);
-  const remaining = remainingMs(session.timer, now);
-  const running = session.timer.runningSince !== null;
-
-  return (
-    <section className="space-y-2" data-testid="live-stage">
-      <h2 className="text-muted-foreground text-xs font-medium uppercase">{m.live_stage()}</h2>
-
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "flex-1 text-2xl font-semibold tabular-nums",
-            session.timer.durationMs === 0 && "text-muted-foreground",
-            remaining < 0 && "text-red-500",
-          )}
-          data-testid="live-timer"
-        >
-          {formatDuration(remaining)}
-        </span>
-        <Button
-          size="sm"
-          variant="outline"
-          aria-label={running ? m.live_timer_pause() : m.live_timer_start()}
-          disabled={session.timer.durationMs === 0}
-          onClick={() =>
-            run(
-              () =>
-                running ? pauseTimer({ payload: undefined }) : startTimer({ payload: undefined }),
-              "timer",
-            )
-          }
-        >
-          {running ? (
-            <Pause className="size-4" aria-hidden />
-          ) : (
-            <Play className="size-4" aria-hidden />
-          )}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-label={m.live_timer_reset()}
-          onClick={() => run(() => resetTimer({ payload: undefined }), "timer")}
-        >
-          <RotateCcw className="size-4" aria-hidden />
-        </Button>
-      </div>
-
-      <form
-        className="flex items-center gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void run(
-            () => setTimer({ payload: { durationMs: Math.round(minutes * 60_000) } }),
-            "timer",
-          );
-        }}
-      >
-        <Input
-          type="number"
-          min={0}
-          max={180}
-          step={1}
-          className="h-8 w-20"
-          aria-label={m.live_timer_minutes()}
-          value={minutes}
-          onChange={(event) => setMinutes(event.target.valueAsNumber || 0)}
-        />
-        <Button type="submit" size="sm" variant="outline">
-          {m.live_timer_set()}
-        </Button>
-      </form>
-
-      <div className="space-y-1">
-        <h3 className="text-muted-foreground text-xs font-medium uppercase">
-          {m.live_item_notes()}
-        </h3>
-        {notes === null ? (
-          <p className="text-muted-foreground text-xs">{m.live_no_notes()}</p>
-        ) : (
-          <p className="text-xs whitespace-pre-wrap" data-testid="live-notes">
-            {notes}
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck }) {
   const { session } = snapshot;
   const { streamCursor } = session;
@@ -822,6 +717,7 @@ function StreamPanel({ snapshot, deck }: { snapshot: LiveSnapshot; deck: Deck })
         </label>
       </div>
       <CoverPreview
+        projectId={deck.projectId}
         track="stream"
         cover={session.streamCover}
         content={withPlayback(
@@ -1089,28 +985,27 @@ function CoverButtons({
 
 /** Aperçu d'une piste tel que le voient ses écrans, bouton d'urgence compris. */
 function CoverPreview({
+  projectId,
   track,
   cover,
   content,
   ringClassName,
   testId,
 }: {
+  projectId: ProjectId;
   track: Track;
   cover: Cover;
   content: FrameContent;
   ringClassName: string;
   testId?: string;
 }) {
-  const { data: organization } = authClient.useActiveOrganization();
-  const branding = { name: organization?.name ?? "", logoUrl: organization?.logo ?? null };
-
   return (
     <div
       className={cn("relative ring-2", cover === "none" ? ringClassName : "ring-red-500")}
       style={track === "stream" ? transparencyBackground : undefined}
       data-testid={testId}
     >
-      <FrameView content={content} cover={cover} type={track} branding={branding} />
+      <OutputPreview projectId={projectId} type={track} content={content} cover={cover} />
       {cover !== "none" && (
         <span className="absolute top-2 left-2 bg-red-600 px-1.5 py-0.5 text-[0.65rem] font-medium text-white">
           {activeCoverLabels[cover]()}
@@ -1299,7 +1194,13 @@ function SelectedSlides({
   }
 
   return (
-    <LiveSlideCards item={item} title={itemTitle(item)} live={live} onBroadcast={onBroadcast} />
+    <LiveSlideCards
+      projectId={projectId}
+      item={item}
+      title={itemTitle(item)}
+      live={live}
+      onBroadcast={onBroadcast}
+    />
   );
 }
 
@@ -1385,6 +1286,7 @@ function ScriptureSelectedSlides({
 
   return (
     <LiveSlideCards
+      projectId={projectId}
       item={item}
       title={itemTitle(item)}
       live={live}
@@ -1456,7 +1358,7 @@ export function DeckView({
                       active && "ring-2 ring-red-500 hover:ring-red-500",
                     )}
                   >
-                    <SlideRenderer theme={roomTheme} slide={contentToSlide(slide.content)} />
+                    <ThemedSlide projectId={deck.projectId} content={slide.content} />
                     {onStream && (
                       <span
                         className="absolute top-1 right-1 bg-sky-500 px-1 text-[0.6rem] font-medium text-white"

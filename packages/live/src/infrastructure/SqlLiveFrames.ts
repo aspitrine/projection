@@ -24,7 +24,11 @@ const parseKey = (
   const [organizationId, projectId, track] = payload.split("\n");
   if (organizationId === undefined || projectId === undefined) return null;
   if (track !== "room" && track !== "stream") return null;
-  return { organizationId: organizationId as OrganizationId, projectId: projectId as ProjectId, track };
+  return {
+    organizationId: organizationId as OrganizationId,
+    projectId: projectId as ProjectId,
+    track,
+  };
 };
 
 const Row = Schema.Struct({ frame: Frame });
@@ -106,7 +110,7 @@ export const SqlLiveFrames = Layer.effect(
       organizationId: OrganizationId,
       projectId: ProjectId,
       track: Track,
-      transition: (frame: Frame) => Pick<Frame, "cover" | "content" | "stage">,
+      transition: (frame: Frame) => Pick<Frame, "cover" | "content">,
     ) =>
       Effect.gen(function* () {
         // La base fait autorité : une autre instance a pu publier entre-temps.
@@ -127,10 +131,8 @@ export const SqlLiveFrames = Layer.effect(
         Effect.gen(function* () {
           const key = parseKey(notification.payload);
           // Piste qu'aucun écran de cette instance ne regarde : rien à rafraîchir.
-          if (
-            key === null ||
-            !refs.has(keyOf(key.organizationId, key.projectId, key.track))
-          ) return;
+          if (key === null || !refs.has(keyOf(key.organizationId, key.projectId, key.track)))
+            return;
           const frame = yield* load(key.organizationId, key.projectId, key.track);
           const ref = refs.get(keyOf(key.organizationId, key.projectId, key.track));
           if (ref !== undefined) yield* SubscriptionRef.set(ref, frame);
@@ -145,8 +147,8 @@ export const SqlLiveFrames = Layer.effect(
           Effect.map(refFor(organizationId, projectId, track), SubscriptionRef.changes),
         ),
       current: (organizationId, projectId, track) => load(organizationId, projectId, track),
-      publish: (organizationId, projectId, track, content, cover, stage) =>
-        update(organizationId, projectId, track, () => ({ cover, content, stage })).pipe(
+      publish: (organizationId, projectId, track, content, cover) =>
+        update(organizationId, projectId, track, () => ({ cover, content })).pipe(
           Effect.withSpan("SqlLiveFrames.publish"),
         ),
       show: (organizationId, projectId, content) =>
@@ -156,7 +158,6 @@ export const SqlLiveFrames = Layer.effect(
             update(organizationId, projectId, track, (frame) => ({
               cover: frame.cover,
               content,
-              stage: frame.stage,
             })),
           { discard: true },
         ).pipe(Effect.withSpan("SqlLiveFrames.show")),

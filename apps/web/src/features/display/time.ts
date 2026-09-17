@@ -13,10 +13,7 @@ export const formatDuration = (ms: number) => {
     : `${sign}${minutes}:${paddedSeconds}`;
 };
 
-export const formatClock = (now: number, locale: string) =>
-  new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(now);
-
-/** Horloge locale rafraîchie à intervalle régulier (horloge et minuteur des écrans). */
+/** Horloge locale rafraîchie à intervalle régulier (progression des vidéos). */
 export const useNow = (intervalMs = 1000) => {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

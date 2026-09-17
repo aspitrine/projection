@@ -18,6 +18,7 @@ import {
   type OutputType,
   type SlideBackground,
   type SplittingSettings,
+  brandingFor,
   defaultSplittingSettings,
   generateDisplayToken,
   isDisplayToken,
@@ -100,13 +101,14 @@ export class Outputs extends Context.Service<
       });
 
       return Outputs.of({
-        list: (projectId) => Effect.gen(function* () {
-          const actor = yield* CurrentActor;
-          yield* repository.insertIfNone(
-            yield* newOutput(projectId, DEFAULT_OUTPUT_NAME, "room"),
-          );
-          return yield* repository.list(actor.organizationId, projectId);
-        }).pipe(Effect.withSpan("Outputs.list")),
+        list: (projectId) =>
+          Effect.gen(function* () {
+            const actor = yield* CurrentActor;
+            yield* repository.insertIfNone(
+              yield* newOutput(projectId, DEFAULT_OUTPUT_NAME, "room"),
+            );
+            return yield* repository.list(actor.organizationId, projectId);
+          }).pipe(Effect.withSpan("Outputs.list")),
 
         create: Effect.fn("Outputs.create")(function* (input) {
           yield* requireRole("owner", "admin");
@@ -180,37 +182,43 @@ export class Outputs extends Context.Service<
                 return yield* new InvalidDisplayToken();
               }
               const connected = output.value;
-              const branding = yield* brandingSource.get(connected.organizationId);
-              const frames = gateway.watch(
-                connected.organizationId,
-                connected.projectId,
-                trackOf(connected.type),
-              ).pipe(
-                // Nom et thème sont relus à chaque image : une sortie renommée ou
-                // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
-                Stream.mapEffect((frame) =>
-                  Effect.gen(function* () {
-                    const latest = yield* repository.findByToken(connected.token);
-                    const current = Option.getOrElse(latest, () => connected);
-                    const theme = current.theme ?? defaultThemeFor(current.type);
-                    const background =
-                      theme.backgroundMediaId === null
-                        ? Option.none<SlideBackground>()
-                        : yield* backgrounds.resolve(
-                            current.organizationId,
-                            theme.backgroundMediaId,
-                          );
-                    return new DisplayFrame({
-                      outputName: current.name,
-                      outputType: current.type,
-                      theme,
-                      background: Option.getOrElse(background, () => null),
-                      branding,
-                      frame,
-                    });
-                  }),
-                ),
-              );
+              const organizationBranding = yield* brandingSource.get(connected.organizationId);
+              const frames = gateway
+                .watch(connected.organizationId, connected.projectId, trackOf(connected.type))
+                .pipe(
+                  // Nom et thème sont relus à chaque image : une sortie renommée ou
+                  // re-thématisée s'applique dès la diapo suivante, sans reconnexion.
+                  Stream.mapEffect((frame) =>
+                    Effect.gen(function* () {
+                      const latest = yield* repository.findByToken(connected.token);
+                      const current = Option.getOrElse(latest, () => connected);
+                      const theme = current.theme ?? defaultThemeFor(current.type);
+                      const background =
+                        theme.backgroundMediaId === null
+                          ? Option.none<SlideBackground>()
+                          : yield* backgrounds.resolve(
+                              current.organizationId,
+                              theme.backgroundMediaId,
+                            );
+                      const logoImage =
+                        theme.logo?._tag === "Image"
+                          ? yield* backgrounds.resolve(current.organizationId, theme.logo.mediaId)
+                          : Option.none<SlideBackground>();
+                      return new DisplayFrame({
+                        outputName: current.name,
+                        outputType: current.type,
+                        theme,
+                        background: Option.getOrElse(background, () => null),
+                        branding: brandingFor(
+                          organizationBranding,
+                          theme.logo,
+                          Option.getOrElse(logoImage, () => null),
+                        ),
+                        frame,
+                      });
+                    }),
+                  ),
+                );
               // Battement de cœur : un écran silencieux se réabonne plutôt que de rester figé.
               return withHeartbeat(frames);
             }),

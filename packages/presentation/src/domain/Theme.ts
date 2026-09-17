@@ -1,5 +1,14 @@
 import { Schema } from "effect";
 
+/** Logo choisi pour le bouton « Logo » : un texte libre ou une image de la médiathèque. */
+export const ThemeLogo = Schema.Union([
+  Schema.TaggedStruct("Text", {
+    text: Schema.String.check(Schema.isTrimmed(), Schema.isNonEmpty(), Schema.isMaxLength(120)),
+  }),
+  Schema.TaggedStruct("Image", { mediaId: Schema.String }),
+]);
+export type ThemeLogo = typeof ThemeLogo.Type;
+
 /**
  * Apparence d'une diapo. Les tailles de police sont exprimées en pourcentage de la
  * hauteur de la diapo (unité CSS `cqh`) : le rendu est identique quelle que soit sa taille.
@@ -29,6 +38,8 @@ export class SlideTheme extends Schema.Class<SlideTheme>("SlideTheme")({
   backgroundDim: Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 })),
   /** Durée du fondu entre deux diapos, en millisecondes (0 : changement net). */
   transitionMs: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 2000 })),
+  /** Logo propre à la sortie ; absent ou `null` : nom et logo de l'organisation. */
+  logo: Schema.optionalKey(Schema.NullOr(ThemeLogo)),
 }) {}
 
 export const defaultTheme = new SlideTheme({

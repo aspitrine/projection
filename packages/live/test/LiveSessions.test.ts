@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import type { Frame } from "@projection/presentation/domain";
-import { idleTimer, idleVideo } from "@projection/presentation/domain";
+import { idleVideo } from "@projection/presentation/domain";
 import { Effect, Layer, Queue, Stream } from "effect";
 
 import { LiveFrames } from "../src/application/LiveFrames";
@@ -122,7 +122,6 @@ describe("LiveSessions", () => {
           streamLinked: true,
           streamCursor: null,
           streamOverride: null,
-          timer: idleTimer,
           video: idleVideo,
           version: 7,
           updatedAt: 1,
@@ -286,37 +285,6 @@ describe("LiveSessions", () => {
 
       const stopped = yield* sessions.stop.pipe(asActor());
       expect(stopped.session).toMatchObject({ roomCover: "none", streamCover: "none" });
-    }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
-  );
-
-  it.effect("publie les infos du retour scène : diapo suivante et minuteur", () =>
-    Effect.gen(function* () {
-      const sessions = yield* LiveSessions;
-      const frames = yield* LiveFrames;
-      const stageOf = Effect.map(frames.current(organizationId, projectId, "room"), (frame) => frame.stage);
-
-      yield* sessions.start(projectId).pipe(asActor());
-      expect(yield* stageOf).toMatchObject({
-        next: { _tag: "Lines", lines: ["A2"] },
-        notes: null,
-        timer: { durationMs: 0, runningSince: null },
-      });
-      // La piste Stream ne transporte pas les infos du retour.
-      expect((yield* frames.current(organizationId, projectId, "stream")).stage).toBeNull();
-
-      yield* sessions.setTimer(60_000).pipe(asActor());
-      const started = yield* sessions.startTimer.pipe(asActor());
-      expect(started.session.timer.runningSince).not.toBeNull();
-      expect((yield* stageOf)?.timer.durationMs).toBe(60_000);
-
-      const paused = yield* sessions.pauseTimer.pipe(asActor());
-      expect(paused.session.timer.runningSince).toBeNull();
-      const reset = yield* sessions.resetTimer.pipe(asActor());
-      expect(reset.session.timer).toEqual({ durationMs: 60_000, elapsedMs: 0, runningSince: null });
-
-      // Dernière diapo : plus rien à annoncer.
-      yield* sessions.goTo(itemId(3), 0).pipe(asActor());
-      expect((yield* stageOf)?.next).toEqual({ _tag: "Blank" });
     }).pipe(Effect.provide(layerWith(makeDeckSource(baseDeck)))),
   );
 

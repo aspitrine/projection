@@ -23,9 +23,8 @@ const TestLayer = Outputs.layer.pipe(
 const projectA = ProjectId.make("11111111-1111-4111-8111-111111111111");
 
 describe("Types de sortie", () => {
-  it("la salle pilote salle et retour, le stream a sa piste", () => {
+  it("chaque type de sortie a sa piste", () => {
     expect(trackOf("room")).toBe("room");
-    expect(trackOf("stage")).toBe("room");
     expect(trackOf("stream")).toBe("stream");
   });
 });
@@ -45,26 +44,24 @@ describe("Gestion des sorties", () => {
       const stream = yield* outputs
         .create({ projectId: projectA, name: "Stream YouTube", type: "stream" })
         .pipe(asActor("org-a", "admin"));
-      const stage = yield* outputs
-        .create({ projectId: projectA, name: "Retour", type: "stage" })
+      const hall = yield* outputs
+        .create({ projectId: projectA, name: "Hall", type: "room" })
         .pipe(asActor("org-a", "owner"));
-      expect((yield* outputs.list(projectA).pipe(asActor("org-a"))).map((output) => output.type)).toEqual([
-        "room",
-        "stream",
-        "stage",
-      ]);
+      expect(
+        (yield* outputs.list(projectA).pipe(asActor("org-a"))).map((output) => output.type),
+      ).toEqual(["room", "stream", "room"]);
 
       const renamed = yield* outputs
-        .rename(stage.id, "Retour musiciens")
+        .rename(hall.id, "Écran du hall")
         .pipe(asActor("org-a", "admin"));
       expect(renamed).toMatchObject({
-        name: "Retour musiciens",
-        type: "stage",
-        token: stage.token,
+        name: "Écran du hall",
+        type: "room",
+        token: hall.token,
       });
 
       const foreign = yield* outputs
-        .rename(stage.id, "Piratage")
+        .rename(hall.id, "Piratage")
         .pipe(asActor("org-b", "owner"), Effect.flip);
       expect(foreign._tag).toBe("OutputNotFound");
 
@@ -77,7 +74,7 @@ describe("Gestion des sorties", () => {
       });
 
       yield* outputs.remove(stream.id).pipe(asActor("org-a", "admin"));
-      yield* outputs.remove(stage.id).pipe(asActor("org-a", "admin"));
+      yield* outputs.remove(hall.id).pipe(asActor("org-a", "admin"));
       const last = yield* outputs.remove(room.id).pipe(asActor("org-a", "admin"), Effect.flip);
       expect(last._tag).toBe("LastOutput");
       expect(yield* outputs.list(projectA).pipe(asActor("org-a"))).toHaveLength(1);
@@ -134,6 +131,21 @@ describe("Gestion des sorties", () => {
         // L'écran reçoit le thème résolu, sans avoir à connaître les valeurs par défaut.
         const display = yield* outputs.watchDisplay(room.token).pipe(Stream.runHead);
         expect(display._tag === "Some" && display.value.theme.background).toBe("#102030");
+
+        expect(display._tag === "Some" && display.value.branding).toEqual({
+          name: "Église org-a",
+          logoUrl: null,
+        });
+
+        // Un logo texte propre à la sortie remplace l'identité de l'organisation.
+        yield* outputs
+          .setTheme(room.id, new SlideTheme({ ...custom, logo: { _tag: "Text", text: "Culte" } }))
+          .pipe(asActor("org-a", "admin"));
+        const withLogo = yield* outputs.watchDisplay(room.token).pipe(Stream.runHead);
+        expect(withLogo._tag === "Some" && withLogo.value.branding).toEqual({
+          name: "Culte",
+          logoUrl: null,
+        });
 
         const reset = yield* outputs.setTheme(room.id, null).pipe(asActor("org-a", "owner"));
         expect(reset.theme).toBeNull();

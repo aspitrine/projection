@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
-import type { Output, OutputType, SplittingSettings } from "@projection/outputs/domain";
+import type { Output, OutputType } from "@projection/outputs/domain";
 import { Button, buttonVariants } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
@@ -16,7 +16,6 @@ import {
   Copy,
   ExternalLink,
   MonitorPlay,
-  MonitorSpeaker,
   Pencil,
   RefreshCw,
   ScanEye,
@@ -27,8 +26,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import Loader from "@/components/loader";
-import { ThemeEditor } from "@/features/outputs/theme-editor";
-import { liveRefreshAtom } from "@/features/live/atoms";
 import {
   createOutputAtom,
   identifyOutputAtom,
@@ -37,12 +34,10 @@ import {
   regenerateTokenAtom,
   removeOutputAtom,
   renameOutputAtom,
-  splittingAtom,
-  splittingReactivity,
-  updateSplittingAtom,
 } from "@/features/outputs/atoms";
-import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
+
+import { useCanManage } from "./can-manage";
 
 /** Liens et réglages des écrans d'un projet. */
 export function OutputsDialog({
@@ -70,29 +65,22 @@ export function OutputsDialog({
 const displayUrl = (output: Output) =>
   new URL(`/display/${output.token}`, window.location.origin).href;
 
-const outputTypes: ReadonlyArray<OutputType> = ["room", "stage", "stream"];
+const outputTypes: ReadonlyArray<OutputType> = ["room", "stream"];
 
 const typeLabels = {
   room: m.output_type_room,
-  stage: m.output_type_stage,
   stream: m.output_type_stream,
 } as const;
 
 const typeHints = {
   room: m.output_type_hint_room,
-  stage: m.output_type_hint_stage,
   stream: m.output_type_hint_stream,
 } as const;
 
-const typeIcons = { room: MonitorPlay, stage: MonitorSpeaker, stream: Video } as const;
+const typeIcons = { room: MonitorPlay, stream: Video } as const;
 
 const selectClassName =
   "border-input bg-background h-8 border px-2 text-sm focus-visible:ring-1 focus-visible:outline-none";
-
-function useCanManage() {
-  const { data: member } = authClient.useActiveMember();
-  return member?.role === "owner" || member?.role === "admin";
-}
 
 function OutputsPanel({ projectId }: { projectId: ProjectId }) {
   const canManage = useCanManage();
@@ -100,7 +88,6 @@ function OutputsPanel({ projectId }: { projectId: ProjectId }) {
     <div className="space-y-4">
       {canManage && <NewOutputForm projectId={projectId} />}
       <OutputsList projectId={projectId} canManage={canManage} />
-      <SplittingPanel canManage={canManage} />
     </div>
   );
 }
@@ -336,107 +323,6 @@ function OutputCard({ output, canManage }: { output: Output; canManage: boolean 
           </>
         )}
       </div>
-      {canManage && (
-        <details>
-          <summary className="cursor-pointer text-sm select-none">{m.theme_title()}</summary>
-          <ThemeEditor output={output} />
-        </details>
-      )}
     </li>
-  );
-}
-
-function SplittingPanel({ canManage }: { canManage: boolean }) {
-  const result = useAtomValue(splittingAtom);
-
-  return (
-    <section className="space-y-3 border p-4" aria-labelledby="splitting-title">
-      <div className="space-y-1">
-        <h2 id="splitting-title" className="font-medium">
-          {m.splitting_title()}
-        </h2>
-        <p className="text-muted-foreground text-xs">{m.splitting_intro()}</p>
-      </div>
-      {result._tag !== "Success" ? (
-        <Loader />
-      ) : (
-        <SplittingForm
-          // Recrée le formulaire quand les réglages enregistrés changent.
-          key={JSON.stringify(result.value)}
-          initial={result.value}
-          canManage={canManage}
-        />
-      )}
-    </section>
-  );
-}
-
-function SplittingForm({ initial, canManage }: { initial: SplittingSettings; canManage: boolean }) {
-  const update = useAtomSet(updateSplittingAtom, { mode: "promiseExit" });
-  const refreshLive = useAtomSet(liveRefreshAtom, { mode: "promiseExit" });
-  const [settings, setSettings] = useState(initial);
-  const [pending, setPending] = useState(false);
-
-  // Seules les lignes de chant se règlent : la Bible affiche toujours un verset par diapo.
-  const field = (track: keyof SplittingSettings) => {
-    const id = `splitting-${track}-songMaxLines`;
-    return (
-      <div className="space-y-1">
-        <Label htmlFor={id}>{m.splitting_song_lines()}</Label>
-        <Input
-          id={id}
-          type="number"
-          required
-          step={1}
-          min={1}
-          max={12}
-          disabled={!canManage}
-          value={settings[track].songMaxLines}
-          onChange={(event) =>
-            setSettings((current) => ({
-              ...current,
-              [track]: { ...current[track], songMaxLines: event.target.valueAsNumber },
-            }))
-          }
-        />
-      </div>
-    );
-  };
-
-  return (
-    <form
-      className="space-y-3"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        setPending(true);
-        const exit = await update({ payload: settings, reactivityKeys: splittingReactivity });
-        setPending(false);
-        if (Exit.isSuccess(exit)) {
-          toast.success(m.splitting_saved());
-          // Une régie en cours relit le projet avec le nouveau découpage.
-          void refreshLive({ payload: undefined });
-        } else {
-          toast.error(m.outputs_action_error());
-        }
-      }}
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(["room", "stream"] as const).map((track) => (
-          <fieldset key={track} className="space-y-2">
-            <legend className="text-sm font-medium">
-              {track === "room" ? m.splitting_room() : m.splitting_stream()}
-            </legend>
-            {field(track)}
-          </fieldset>
-        ))}
-      </div>
-      {canManage ? (
-        <Button type="submit" size="sm" disabled={pending}>
-          {m.outputs_save()}
-        </Button>
-      ) : (
-        <p className="text-muted-foreground text-xs">{m.splitting_readonly()}</p>
-      )}
-    </form>
   );
 }

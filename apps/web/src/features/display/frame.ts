@@ -1,4 +1,4 @@
-export { defaultThemeFor, roomTheme, stageTheme, streamTheme } from "@projection/outputs/domain";
+export { defaultThemeFor, roomTheme, streamTheme } from "@projection/outputs/domain";
 import type { FrameContent } from "@projection/presentation/domain";
 import { parseRichText } from "@projection/slides/domain";
 

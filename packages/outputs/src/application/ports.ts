@@ -138,11 +138,7 @@ export class FrameGateway extends Context.Service<
   FrameGateway,
   {
     /** Image courante d'une piste puis chaque changement. */
-    watch(
-      organizationId: OrganizationId,
-      projectId: ProjectId,
-      track: Track,
-    ): Stream.Stream<Frame>;
+    watch(organizationId: OrganizationId, projectId: ProjectId, track: Track): Stream.Stream<Frame>;
     /** Affiche un contenu sur toutes les pistes (test d'affichage). */
     show(
       organizationId: OrganizationId,

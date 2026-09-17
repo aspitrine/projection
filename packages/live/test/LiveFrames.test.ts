@@ -24,7 +24,6 @@ describe("LiveFrames", () => {
         "room",
         { _tag: "Lines", lines: ["Gloire"], caption: "Refrain" },
         "none",
-        null,
       );
       yield* frames.publish(
         orgA,
@@ -32,7 +31,6 @@ describe("LiveFrames", () => {
         "room",
         { _tag: "Lines", lines: ["Gloire"], caption: "Refrain" },
         "black",
-        null,
       );
 
       const [initial, shown, blackout] = yield* Fiber.join(received);
@@ -53,14 +51,19 @@ describe("LiveFrames", () => {
           "stream",
           { _tag: "Lines", lines: ["Gloire"], caption: null },
           "black",
-          null,
         );
         expect((yield* frames.current(orgA, projectA, "room")).version).toBe(0);
         expect((yield* frames.current(orgA, projectA, "stream")).version).toBe(1);
 
         yield* frames.show(orgA, projectA, { _tag: "Lines", lines: ["Salle"], caption: null });
-        expect(yield* frames.current(orgA, projectA, "room")).toMatchObject({ version: 1, cover: "none" });
-        expect(yield* frames.current(orgA, projectA, "stream")).toMatchObject({ version: 2, cover: "black" });
+        expect(yield* frames.current(orgA, projectA, "room")).toMatchObject({
+          version: 1,
+          cover: "none",
+        });
+        expect(yield* frames.current(orgA, projectA, "stream")).toMatchObject({
+          version: 2,
+          cover: "black",
+        });
         expect((yield* frames.current(orgA, projectB, "room")).version).toBe(0);
         expect((yield* frames.current(orgB, projectA, "room")).version).toBe(0);
       }).pipe(Effect.provide(LiveFrames.layerMemory)),

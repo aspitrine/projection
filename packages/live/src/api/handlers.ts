@@ -28,10 +28,6 @@ export const LiveHandlersLive = LiveRpcs.toLayer(
       LiveVideoRestart: () => sessions.restartVideo,
       LiveVideoSeek: ({ positionMs }) => sessions.seekVideo(positionMs),
       LiveVideoDuration: ({ durationMs }) => sessions.setVideoDuration(durationMs),
-      LiveTimerSet: ({ durationMs }) => sessions.setTimer(durationMs),
-      LiveTimerStart: () => sessions.startTimer,
-      LiveTimerPause: () => sessions.pauseTimer,
-      LiveTimerReset: () => sessions.resetTimer,
       LiveRefresh: () => sessions.refresh,
       LiveStop: () => sessions.stop,
     };

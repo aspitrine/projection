@@ -121,13 +121,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("régie multi-instance (Postgres
 
         yield* a.sessions.start(projectId).pipe(asActor);
         yield* a.sessions.setCover("room", "black").pipe(asActor);
-        yield* a.sessions.setTimer(5 * 60_000).pipe(asActor);
 
-        // La régie de B lit l'état enregistré par A, minuteur compris.
+        // La régie de B lit l'état enregistré par A.
         const onB = yield* b.sessions.watch.pipe(Stream.runHead, asActor);
         const snapshot = Option.getOrThrow(onB);
         expect(snapshot.session.roomCover).toBe("black");
-        expect(snapshot.session.timer.durationMs).toBe(5 * 60_000);
       }),
     { timeout: 20_000 },
   );

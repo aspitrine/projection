@@ -1,9 +1,4 @@
-import type {
-  FrameContent,
-  StageInfo,
-  StageTimer,
-  VideoPlayback,
-} from "@projection/presentation/domain";
+import type { FrameContent, VideoPlayback } from "@projection/presentation/domain";
 import type { ProjectItemId } from "@projection/shared-kernel";
 import { Effect } from "effect";
 
@@ -186,22 +181,6 @@ export const streamFrameContent = (
   override !== null
     ? { _tag: "Lines", lines: override.lines, caption: override.caption }
     : streamContentAt(deck, cursor);
-
-/** Ce que le retour scène affiche : diapo suivante, notes de l'élément, minuteur. */
-export const stageInfoAt = (
-  deck: Deck | null,
-  cursor: LiveCursor | null,
-  timer: StageTimer,
-): StageInfo => {
-  if (deck === null || cursor === null) return { next: blank, notes: null, timer };
-  const upcoming = nextCursor(deck, cursor);
-  const last = upcoming === null || sameSlide(upcoming, cursor);
-  return {
-    next: last ? blank : contentAt(deck, upcoming),
-    notes: findItem(deck, cursor.itemId)?.notes ?? null,
-    timer,
-  };
-};
 
 /** Une vidéo emporte l'état de lecture de la session : tous les écrans se recalent dessus. */
 export const withPlayback = (content: FrameContent, playback: VideoPlayback): FrameContent =>

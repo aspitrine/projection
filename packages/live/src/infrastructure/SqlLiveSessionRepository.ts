@@ -1,4 +1,4 @@
-import { Cover, StageTimer, VideoPlayback } from "@projection/presentation/domain";
+import { Cover, VideoPlayback } from "@projection/presentation/domain";
 import { OrganizationId, ProjectId, ProjectItemId } from "@projection/shared-kernel";
 import { PgClient } from "@effect/sql-pg";
 import { Effect, Layer, Option, Schema, Stream } from "effect";
@@ -19,7 +19,6 @@ const Row = Schema.Struct({
   streamSlideIndex: Schema.Int,
   streamPart: Schema.Int,
   streamOverride: Schema.NullOr(StreamOverride),
-  timer: StageTimer,
   video: VideoPlayback,
   version: Schema.Int,
   updatedAt: Schema.Number,
@@ -46,7 +45,7 @@ export const SqlLiveSessionRepository = Layer.effect(
           room_cover AS "roomCover", stream_cover AS "streamCover",
           stream_linked AS "streamLinked", stream_item_id::text AS "streamItemId",
           stream_slide_index AS "streamSlideIndex", stream_part AS "streamPart",
-          stream_override AS "streamOverride", stage_timer AS "timer", video, version,
+          stream_override AS "streamOverride", video, version,
           (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"
         FROM live_session WHERE organization_id = ${organizationId}
       `,
@@ -86,7 +85,6 @@ export const SqlLiveSessionRepository = Layer.effect(
                           part: row.streamPart,
                         }),
                   streamOverride: row.streamOverride,
-                  timer: row.timer,
                   video: row.video,
                   version: row.version,
                   updatedAt: row.updatedAt,
@@ -103,12 +101,12 @@ export const SqlLiveSessionRepository = Layer.effect(
         return sql`
           INSERT INTO live_session (organization_id, project_id, item_id, slide_index,
             room_cover, stream_cover, stream_linked, stream_item_id, stream_slide_index,
-            stream_part, stream_override, stage_timer, video, version, updated_at)
+            stream_part, stream_override, video, version, updated_at)
           VALUES (${session.organizationId}, ${session.projectId}::uuid, ${session.cursor?.itemId ?? null}::uuid,
                   ${session.cursor?.slideIndex ?? 0}, ${session.roomCover}, ${session.streamCover},
                   ${session.streamLinked}, ${session.streamCursor?.itemId ?? null}::uuid,
                   ${session.streamCursor?.slideIndex ?? 0}, ${session.streamCursor?.part ?? 0},
-                  ${override}::jsonb, ${JSON.stringify(session.timer)}::jsonb,
+                  ${override}::jsonb,
                   ${JSON.stringify(session.video)}::jsonb,
                   ${session.version}, ${new Date(session.updatedAt)})
           ON CONFLICT (organization_id) DO UPDATE SET
@@ -122,7 +120,6 @@ export const SqlLiveSessionRepository = Layer.effect(
             stream_slide_index = EXCLUDED.stream_slide_index,
             stream_part = EXCLUDED.stream_part,
             stream_override = EXCLUDED.stream_override,
-            stage_timer = EXCLUDED.stage_timer,
             video = EXCLUDED.video,
             version = EXCLUDED.version,
             updated_at = EXCLUDED.updated_at

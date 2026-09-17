@@ -61,7 +61,7 @@ export function SlideRenderer({
   ...props
 }: ComponentProps<"div"> & {
   slide: RenderableSlide;
-  /** `bottom` : tout en bas de la diapo (salle, retour) ; `below` : juste sous le texte (stream). */
+  /** `bottom` : tout en bas de la diapo (salle) ; `below` : juste sous le texte (stream). */
   referencePlacement?: "bottom" | "below";
   theme?: SlideTheme;
   /** Fond du thème, déjà résolu en URL ; le voile vient de `theme.backgroundDim`. */

@@ -53,11 +53,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
         );
         expect(yield* Queue.take(received)).toBe("vide");
 
-        yield* first.publish(organizationId, projectId, "room", lines("Gloire à Dieu"), "none", null);
+        yield* first.publish(organizationId, projectId, "room", lines("Gloire à Dieu"), "none");
         expect(yield* Queue.take(received)).toBe("Gloire à Dieu");
 
         // Et en sens inverse, avec un bouton d'urgence.
-        yield* second.publish(organizationId, projectId, "room", lines("Alléluia"), "black", null);
+        yield* second.publish(organizationId, projectId, "room", lines("Alléluia"), "black");
         expect(yield* Queue.take(received)).toBe("Alléluia");
         expect((yield* first.current(organizationId, projectId, "room")).cover).toBe("black");
       }),
@@ -77,7 +77,6 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
           "stream",
           lines("Première"),
           "none",
-          null,
         );
         const next = yield* second.publish(
           organizationId,
@@ -85,7 +84,6 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("SqlLiveFrames (Postgres)", () =
           "stream",
           lines("Seconde"),
           "none",
-          null,
         );
         expect(next.version).toBe(published.version + 1);
       }),

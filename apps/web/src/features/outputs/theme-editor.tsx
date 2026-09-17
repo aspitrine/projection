@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { type Output, defaultThemeFor } from "@projection/outputs/domain";
-import { SlideTheme } from "@projection/presentation/domain";
+import { SlideTheme, type ThemeLogo } from "@projection/presentation/domain";
 import { Button } from "@projection/ui/components/button";
 import { Input } from "@projection/ui/components/input";
 import { Label } from "@projection/ui/components/label";
@@ -43,6 +43,15 @@ const weights: ReadonlyArray<{ readonly value: number; readonly label: () => str
   { value: 700, label: m.theme_weight_bold },
 ];
 
+type LogoKind = "organization" | ThemeLogo["_tag"];
+
+/** Logo du thème à partir des champs du formulaire ; `undefined` tant qu'il est incomplet. */
+const logoFrom = (kind: LogoKind, text: string, mediaId: string): ThemeLogo | null | undefined => {
+  if (kind === "organization") return null;
+  if (kind === "Text") return text.trim() === "" ? undefined : { _tag: "Text", text: text.trim() };
+  return mediaId === "" ? undefined : { _tag: "Image", mediaId };
+};
+
 /** Un sélecteur de couleur ne comprend que `#rrggbb` ; « transparent » reste au clavier. */
 const hexOrNull = (value: string) => (/^#[0-9a-f]{6}$/i.test(value) ? value : null);
 
@@ -70,9 +79,17 @@ export function ThemeEditor({ output }: { output: Output }) {
   const save = useAtomSet(setOutputThemeAtom, { mode: "promiseExit" });
   const [theme, setTheme] = useState<SlideTheme>(output.theme ?? defaultThemeFor(output.type));
   const [pending, setPending] = useState(false);
+  // Le logo se saisit à part : un texte vide ne forme pas encore un thème valide.
+  const [logoKind, setLogoKind] = useState<LogoKind>(theme.logo?._tag ?? "organization");
+  const [logoText, setLogoText] = useState(theme.logo?._tag === "Text" ? theme.logo.text : "");
+  const [logoMediaId, setLogoMediaId] = useState(
+    theme.logo?._tag === "Image" ? theme.logo.mediaId : "",
+  );
+  const logo = logoFrom(logoKind, logoText, logoMediaId);
 
   const library = useAtomValue(mediaListAtom);
   const backgroundChoices = library._tag === "Success" ? library.value : [];
+  const logoChoices = backgroundChoices.filter((asset) => asset.kind === "image");
 
   const set = <K extends keyof SlideTheme>(name: K, value: SlideTheme[K]) =>
     setTheme((current) => new SlideTheme({ ...current, [name]: value }));
@@ -85,7 +102,11 @@ export function ThemeEditor({ output }: { output: Output }) {
     });
     setPending(false);
     if (Exit.isSuccess(exit)) {
-      setTheme(next ?? defaultThemeFor(output.type));
+      const saved = next ?? defaultThemeFor(output.type);
+      setTheme(saved);
+      setLogoKind(saved.logo?._tag ?? "organization");
+      setLogoText(saved.logo?._tag === "Text" ? saved.logo.text : "");
+      setLogoMediaId(saved.logo?._tag === "Image" ? saved.logo.mediaId : "");
       toast.success(next === null ? m.theme_reset_done() : m.theme_saved());
     } else {
       toast.error(m.outputs_action_error());
@@ -241,6 +262,53 @@ export function ThemeEditor({ output }: { output: Output }) {
           </div>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor={`${fieldId}-logo`}>{m.theme_logo()}</Label>
+            <select
+              id={`${fieldId}-logo`}
+              className={selectClassName}
+              value={logoKind}
+              onChange={(event) => setLogoKind(event.target.value as LogoKind)}
+            >
+              <option value="organization">{m.theme_logo_organization()}</option>
+              <option value="Text">{m.theme_logo_text()}</option>
+              <option value="Image">{m.theme_logo_image()}</option>
+            </select>
+            <p className="text-muted-foreground text-xs">{m.theme_logo_hint()}</p>
+          </div>
+          {logoKind === "Text" && (
+            <div className="space-y-1">
+              <Label htmlFor={`${fieldId}-logo-text`}>{m.theme_logo_text_label()}</Label>
+              <Input
+                id={`${fieldId}-logo-text`}
+                maxLength={120}
+                placeholder={m.theme_logo_text_placeholder()}
+                value={logoText}
+                onChange={(event) => setLogoText(event.target.value)}
+              />
+            </div>
+          )}
+          {logoKind === "Image" && (
+            <div className="space-y-1">
+              <Label htmlFor={`${fieldId}-logo-image`}>{m.theme_logo_image_label()}</Label>
+              <select
+                id={`${fieldId}-logo-image`}
+                className={selectClassName}
+                value={logoMediaId}
+                onChange={(event) => setLogoMediaId(event.target.value)}
+              >
+                <option value="">{m.theme_logo_image_none()}</option>
+                {logoChoices.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-wrap gap-3 text-sm">
           <label className="flex items-center gap-1.5">
             <input
@@ -271,7 +339,11 @@ export function ThemeEditor({ output }: { output: Output }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" disabled={pending} onClick={() => apply(theme)}>
+          <Button
+            size="sm"
+            disabled={pending || logo === undefined}
+            onClick={() => logo !== undefined && apply(new SlideTheme({ ...theme, logo }))}
+          >
             {m.theme_save()}
           </Button>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => apply(null)}>

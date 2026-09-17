@@ -2,7 +2,6 @@ import {
   type Cover,
   Frame,
   type FrameContent,
-  type StageInfo,
   type Track,
   initialFrame,
 } from "@projection/presentation/domain";
@@ -19,11 +18,7 @@ export class LiveFrames extends Context.Service<
   LiveFrames,
   {
     /** Image courante puis chaque changement. */
-    watch(
-      organizationId: OrganizationId,
-      projectId: ProjectId,
-      track: Track,
-    ): Stream.Stream<Frame>;
+    watch(organizationId: OrganizationId, projectId: ProjectId, track: Track): Stream.Stream<Frame>;
     current(
       organizationId: OrganizationId,
       projectId: ProjectId,
@@ -36,8 +31,6 @@ export class LiveFrames extends Context.Service<
       track: Track,
       content: FrameContent,
       cover: Cover,
-      /** Infos du retour scène (piste Salle), ou `null`. */
-      stage: StageInfo | null,
     ): Effect.Effect<Frame>;
     /** Affiche un contenu sur toutes les pistes, bouton d'urgence inchangé (test d'affichage). */
     show(
@@ -70,7 +63,7 @@ export class LiveFrames extends Context.Service<
         organizationId: OrganizationId,
         projectId: ProjectId,
         track: Track,
-        transition: (frame: Frame) => Pick<Frame, "cover" | "content" | "stage">,
+        transition: (frame: Frame) => Pick<Frame, "cover" | "content">,
       ) =>
         Effect.gen(function* () {
           const ref = yield* refFor(organizationId, projectId, track);
@@ -89,8 +82,8 @@ export class LiveFrames extends Context.Service<
           ),
         current: (organizationId, projectId, track) =>
           Effect.flatMap(refFor(organizationId, projectId, track), SubscriptionRef.get),
-        publish: (organizationId, projectId, track, content, cover, stage) =>
-          update(organizationId, projectId, track, () => ({ cover, content, stage })).pipe(
+        publish: (organizationId, projectId, track, content, cover) =>
+          update(organizationId, projectId, track, () => ({ cover, content })).pipe(
             Effect.withSpan("LiveFrames.publish"),
           ),
         show: (organizationId, projectId, content) =>
@@ -100,7 +93,6 @@ export class LiveFrames extends Context.Service<
               update(organizationId, projectId, track, (frame) => ({
                 cover: frame.cover,
                 content,
-                stage: frame.stage,
               })),
             { discard: true },
           ).pipe(Effect.withSpan("LiveFrames.show")),

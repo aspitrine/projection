@@ -8,10 +8,8 @@ import {
 } from "@projection/shared-kernel";
 import {
   type Cover,
-  type StageTimer,
   type Track,
   type VideoPlayback,
-  idleTimer,
   idleVideo,
 } from "@projection/presentation/domain";
 import { Clock, Context, Effect, Layer, Option, Semaphore, Stream, SubscriptionRef } from "effect";
@@ -42,12 +40,10 @@ import {
   previousCursor,
   previousStreamCursor,
   reconcileStream,
-  stageInfoAt,
   streamFrameContent,
   streamPositions,
   withPlayback,
 } from "../domain/Navigation";
-import { pauseTimer, resetTimer, setDuration, startTimer } from "../domain/Timer";
 import { pauseVideo, playVideo, restartVideo, seekVideo, withVideoDuration } from "../domain/Video";
 import { LiveFrames } from "./LiveFrames";
 import { DeckSource, LiveSessionRepository, SongEditing } from "./ports";
@@ -61,7 +57,6 @@ interface Draft {
   readonly streamLinked: boolean;
   readonly streamCursor: StreamCursor | null;
   readonly streamOverride: StreamOverride | null;
-  readonly timer: StageTimer;
   /** Édition de paroles à signaler aux autres régies (non persistée). */
   readonly lastEdit: LiveEdit | null;
   /** Lecture vidéo en cours (non persistée). */
@@ -93,7 +88,6 @@ const idleDraft = (streamLinked: boolean, roomCover: Cover, streamCover: Cover):
   streamLinked,
   streamCursor: null,
   streamOverride: null,
-  timer: idleTimer,
   lastEdit: null,
   video: idleVideo,
 });
@@ -141,11 +135,6 @@ export class LiveSessions extends Context.Service<
     seekVideo(positionMs: number): Command<NoLiveProject>;
     /** Durée du fichier, mesurée par la régie et partagée avec les écrans. */
     setVideoDuration(durationMs: number): Command<NoLiveProject>;
-    /** Minuteur du retour scène : durée, démarrage, pause, remise à zéro. */
-    setTimer(durationMs: number): Command;
-    readonly startTimer: Command;
-    readonly pauseTimer: Command;
-    readonly resetTimer: Command;
     /** Relit le projet (éléments ajoutés, réordonnés, retirés) en gardant les positions. */
     readonly refresh: Command;
     readonly stop: Command;
@@ -166,11 +155,10 @@ export class LiveSessions extends Context.Service<
           snapshot.session;
         const projectId = snapshot.session.projectId ?? previousProjectId;
         if (projectId === null) return Effect.void;
-        const stage = stageInfoAt(snapshot.deck, cursor, snapshot.session.timer);
         const roomContent = withPlayback(contentAt(snapshot.deck, cursor), snapshot.video);
         return Effect.all(
           [
-            frames.publish(organizationId, projectId, "room", roomContent, roomCover, stage),
+            frames.publish(organizationId, projectId, "room", roomContent, roomCover),
             frames.publish(
               organizationId,
               projectId,
@@ -180,7 +168,6 @@ export class LiveSessions extends Context.Service<
                 snapshot.video,
               ),
               streamCover,
-              null,
             ),
           ],
           { discard: true },
@@ -205,7 +192,6 @@ export class LiveSessions extends Context.Service<
           | "streamOverride"
           | "roomCover"
           | "streamCover"
-          | "timer"
         >,
       ): Draft =>
         Option.match(deck, {
@@ -221,7 +207,6 @@ export class LiveSessions extends Context.Service<
               streamLinked: from.streamLinked,
               streamCursor: reconcileStream(resolved, cursor, from.streamCursor, from.streamLinked),
               streamOverride: from.streamOverride,
-              timer: from.timer,
               lastEdit: null,
               video: idleVideo,
             };
@@ -247,7 +232,6 @@ export class LiveSessions extends Context.Service<
             streamLinked: draft.streamLinked,
             streamCursor: draft.streamCursor,
             streamOverride: draft.streamOverride,
-            timer: draft.timer,
             video: draft.video,
             version,
             updatedAt,
@@ -382,7 +366,6 @@ export class LiveSessions extends Context.Service<
         streamLinked: current.session.streamLinked,
         streamCursor: current.session.streamCursor,
         streamOverride: current.session.streamOverride,
-        timer: current.session.timer,
         lastEdit: null,
         video: current.video,
       });
@@ -425,7 +408,7 @@ export class LiveSessions extends Context.Service<
           command((current) =>
             decks.resolve(projectId).pipe(
               Effect.map((deck): Draft => {
-                const { streamLinked, roomCover, streamCover, timer } = current.session;
+                const { streamLinked, roomCover, streamCover } = current.session;
                 const cursor = firstCursor(deck);
                 return {
                   deck,
@@ -438,7 +421,6 @@ export class LiveSessions extends Context.Service<
                     ? followRoom(cursor)
                     : (streamPositions(deck)[0] ?? null),
                   streamOverride: null,
-                  timer,
                   lastEdit: null,
                   video: idleVideo,
                 };
@@ -582,29 +564,6 @@ export class LiveSessions extends Context.Service<
               video: withVideoDuration(current.video, durationMs),
             }),
           ).pipe(Effect.withSpan("LiveSessions.setVideoDuration")),
-
-        setTimer: (durationMs) =>
-          command((current) =>
-            Effect.succeed({ ...keep(current), timer: setDuration(durationMs) }),
-          ).pipe(Effect.withSpan("LiveSessions.setTimer")),
-
-        startTimer: command((current) =>
-          Effect.map(Clock.currentTimeMillis, (now) => ({
-            ...keep(current),
-            timer: startTimer(current.session.timer, now),
-          })),
-        ).pipe(Effect.withSpan("LiveSessions.startTimer")),
-
-        pauseTimer: command((current) =>
-          Effect.map(Clock.currentTimeMillis, (now) => ({
-            ...keep(current),
-            timer: pauseTimer(current.session.timer, now),
-          })),
-        ).pipe(Effect.withSpan("LiveSessions.pauseTimer")),
-
-        resetTimer: command((current) =>
-          Effect.succeed({ ...keep(current), timer: resetTimer(current.session.timer) }),
-        ).pipe(Effect.withSpan("LiveSessions.resetTimer")),
 
         refresh: command((current) => {
           const { projectId } = current.session;

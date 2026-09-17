@@ -43,6 +43,11 @@ export const outputsMigrations = {
       yield* sql`DROP INDEX output_organization_idx`;
       yield* sql`CREATE INDEX output_project_idx ON output (organization_id, project_id)`;
     }),
+    "0006_remove_stage_outputs": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // Le retour scène est retiré ; un projet sans sortie en retrouve une à l'ouverture.
+      yield* sql`DELETE FROM output WHERE type = 'stage'`;
+    }),
     "0002_create_output_splitting": Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`

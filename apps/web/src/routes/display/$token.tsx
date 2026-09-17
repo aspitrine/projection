@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import { displayAtom } from "@/features/display/atoms";
 import { FadingFrame } from "@/features/display/fading-frame";
-import { StageScreen } from "@/features/display/stage-view";
 import { m } from "@/paraglide/messages";
 
 /** Écran de sortie public : aucune session, accès par token. */
@@ -65,26 +64,22 @@ function DisplayScreen() {
   return (
     <div
       // L'image occupe tout l'écran, quel que soit son format : rien n'est rendu en dehors.
-      className={type === "stage" ? "h-screen w-screen" : "h-screen w-screen cursor-none"}
+      className="h-screen w-screen cursor-none"
       onDoubleClick={toggleFullscreen}
       data-testid="display-screen"
       data-version={frame.version}
       data-output-type={type}
       data-cover={frame.cover}
     >
-      {type === "stage" ? (
-        <StageScreen frame={frame} branding={branding} theme={theme} />
-      ) : (
-        <FadingFrame
-          frame={frame}
-          type={type}
-          branding={branding}
-          theme={theme}
-          background={background}
-          sound
-          fill
-        />
-      )}
+      <FadingFrame
+        frame={frame}
+        type={type}
+        branding={branding}
+        theme={theme}
+        background={background}
+        sound
+        fill
+      />
       {hintVisible && type === "room" && (
         <p className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/40">
           {m.display_fullscreen_hint()}

@@ -91,5 +91,11 @@ export const liveMigrations = {
         ADD PRIMARY KEY (organization_id, project_id, track)
       `;
     }),
+    "0009_drop_stage_timer": Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      // Le retour scène est retiré : son minuteur n'a plus d'usage.
+      yield* sql`ALTER TABLE live_session DROP COLUMN stage_timer`;
+      yield* sql`UPDATE live_frame SET frame = frame - 'stage'`;
+    }),
   },
 };

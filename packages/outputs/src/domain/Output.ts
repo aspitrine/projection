@@ -2,6 +2,7 @@ import {
   Frame,
   SlideTheme,
   Splitting,
+  type ThemeLogo,
   type Track,
   roomSplitting,
   streamSplitting,
@@ -9,11 +10,11 @@ import {
 import { OrganizationId, OutputId, ProjectId } from "@projection/shared-kernel";
 import { Effect, Schema } from "effect";
 
-/** Types de sortie : projecteur, retour scène, stream (lower third transparent). */
-export const OutputType = Schema.Literals(["room", "stage", "stream"]);
+/** Types de sortie : projecteur de la salle, stream (lower third transparent). */
+export const OutputType = Schema.Literals(["room", "stream"]);
 export type OutputType = typeof OutputType.Type;
 
-/** Piste qui alimente une sortie : la salle pilote salle et retour, le stream a sa piste. */
+/** Piste qui alimente une sortie : chaque type de sortie a sa piste. */
 export const trackOf = (type: OutputType): Track => (type === "stream" ? "stream" : "room");
 
 export const OutputName = Schema.String.check(
@@ -64,6 +65,22 @@ export const Branding = Schema.Struct({
   logoUrl: Schema.NullOr(Schema.String),
 });
 export type Branding = typeof Branding.Type;
+
+/**
+ * Identité affichée par le bouton « Logo » d'une sortie : le texte ou l'image choisis dans
+ * son thème, sinon celle de l'organisation (image introuvable comprise).
+ */
+export const brandingFor = (
+  organization: Branding,
+  logo: ThemeLogo | null | undefined,
+  image: SlideBackground | null,
+): Branding => {
+  if (logo?._tag === "Text") return { name: logo.text, logoUrl: null };
+  if (logo?._tag === "Image" && image !== null && !image.video) {
+    return { name: "", logoUrl: image.url };
+  }
+  return organization;
+};
 
 /** Fond de diapo résolu : URL signée du média et nature du fichier. */
 export const SlideBackground = Schema.Struct({
