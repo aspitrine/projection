@@ -34,6 +34,26 @@ import { Effect, Layer } from "effect";
 /** Diapo de salle et ses parties pour la piste Stream (sous-découpage). */
 const toDeckSlide = (streamRules: SplitRules, sectioned: boolean) => (slide: Slide) => {
   const content: FrameContent = { _tag: "Lines", lines: slide.lines, caption: slide.label };
+  return deckSlide(slide, sectioned, content, streamRules);
+};
+
+/** Verset : la référence est affichée à part sur les écrans, pas en libellé de section. */
+const toScriptureSlide = (streamRules: SplitRules) => (slide: Slide) => {
+  const content: FrameContent = {
+    _tag: "Lines",
+    lines: slide.lines,
+    caption: null,
+    ...(slide.label === null ? {} : { reference: slide.label }),
+  };
+  return deckSlide(slide, false, content, streamRules);
+};
+
+const deckSlide = (
+  slide: Slide,
+  sectioned: boolean,
+  content: FrameContent,
+  streamRules: SplitRules,
+) => {
   return new DeckSlide({
     content,
     label: slide.parts > 1 ? `${slide.label ?? ""} (${slide.part}/${slide.parts})` : slide.label,
@@ -128,7 +148,7 @@ export const DeckSourceLive = Layer.effect(
                   blocks,
                   scriptureSplitRules(splitting.room.scriptureMaxCharacters),
                 ).map(
-                  toDeckSlide(scriptureSplitRules(splitting.stream.scriptureMaxCharacters), false),
+                  toScriptureSlide(scriptureSplitRules(splitting.stream.scriptureMaxCharacters)),
                 ),
               });
             }),

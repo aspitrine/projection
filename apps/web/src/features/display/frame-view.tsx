@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { m } from "../../paraglide/messages";
 
-import { SlideRenderer } from "../presentation/slide-renderer";
+import { SlideRenderer, slideSize } from "../presentation/slide-renderer";
 import { defaultThemeFor } from "@projection/outputs/domain";
 
 import { contentToSlide } from "./frame";
@@ -76,6 +76,7 @@ export function FrameView({
           className={className}
           theme={theme}
           slide={contentToSlide(content)}
+          referencePlacement={type === "stream" ? "below" : "bottom"}
           data-cover="none"
         />
       );
@@ -128,7 +129,7 @@ function LogoSlide({
           />
         )}
         {(logo === null || stream) && branding.name !== "" && (
-          <span data-slot="logo-name" style={{ fontSize: stream ? "4cqh" : "9cqh" }}>
+          <span data-slot="logo-name" style={{ fontSize: slideSize(stream ? 4 : 9) }}>
             {branding.name}
           </span>
         )}

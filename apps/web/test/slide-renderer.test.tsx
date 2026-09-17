@@ -63,6 +63,28 @@ describe("SlideRenderer", () => {
     expect(box?.style.justifyContent).toBe("flex-start");
   });
 
+  it("pose la référence d'un verset tout en bas, hors du bloc de texte", () => {
+    const { container } = render(
+      <SlideRenderer slide={{ kind: "lines", lines: ["Car Dieu…"], reference: "Jean 3.16" }} />,
+    );
+    const reference = container.querySelector('[data-slot="slide-reference"]');
+    expect(reference?.textContent).toBe("Jean 3.16");
+    expect(
+      container.querySelector('[data-slot="slide-content"]')?.contains(reference ?? null),
+    ).toBe(false);
+  });
+
+  it("place la référence juste sous le texte pour le stream", () => {
+    const { container } = render(
+      <SlideRenderer
+        slide={{ kind: "lines", lines: ["Car Dieu…"], reference: "Jean 3.16" }}
+        referencePlacement="below"
+      />,
+    );
+    const content = container.querySelector('[data-slot="slide-content"]');
+    expect(content?.lastElementChild?.textContent).toBe("Jean 3.16");
+  });
+
   it("encadre une citation et détache son attribution", () => {
     const { container } = render(
       <SlideRenderer

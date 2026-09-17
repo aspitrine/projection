@@ -29,6 +29,7 @@ export function FadingFrame({
   theme,
   background = null,
   sound,
+  fill = false,
 }: {
   frame: Frame;
   type: OutputType;
@@ -37,6 +38,8 @@ export function FadingFrame({
   /** Fond du thème : rendu une fois sous les images, pour qu'une vidéo ne reparte pas à zéro. */
   background?: SlideBackground | null;
   sound?: boolean;
+  /** Vrai : l'image remplit son conteneur quel que soit son format (écran de sortie). */
+  fill?: boolean;
 }) {
   const [previous, setPrevious] = useState<Frame | null>(null);
   const shownKey = useRef(contentKey(frame));
@@ -60,12 +63,13 @@ export function FadingFrame({
   // L'écran noir masque tout, fond compris ; les autres couvertures le laissent voir.
   const media = frame.cover === "black" ? null : background;
   // Le fond étant derrière, les images se dessinent par-dessus sans couleur opaque.
+  const layerClassName = fill ? "aspect-auto h-full" : undefined;
   const layerTheme =
     media === null ? theme : new SlideTheme({ ...theme, background: "transparent" });
 
   return (
     // Le bloc garde le format 16:9 même sans fond : les images, absolues, s'y superposent.
-    <div className="relative aspect-video w-full">
+    <div className={fill ? "relative size-full" : "relative aspect-video w-full"}>
       {media !== null && (
         <div className="absolute inset-0 overflow-hidden" aria-hidden>
           {media.video ? (
@@ -103,6 +107,7 @@ export function FadingFrame({
             type={type}
             branding={branding}
             theme={layerTheme}
+            className={layerClassName}
           />
         </div>
       )}
@@ -122,6 +127,7 @@ export function FadingFrame({
           branding={branding}
           theme={layerTheme}
           sound={sound}
+          className={layerClassName}
         />
       </div>
     </div>

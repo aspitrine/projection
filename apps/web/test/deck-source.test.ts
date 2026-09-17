@@ -186,6 +186,13 @@ describe("DeckSourceLive", () => {
       expect(scripture).toMatchObject({ kind: "Scripture", title: "Jean 3.16-17 (LSG)" });
       // Un verset par diapo.
       expect(scripture?.slides.map((slide) => slide.label)).toEqual(["Jean 3.16", "Jean 3.17"]);
+      // La référence est portée à part : les écrans l'affichent en plus petit sous le texte.
+      expect(scripture?.slides[0]?.content).toEqual({
+        _tag: "Lines",
+        lines: ["Car Dieu a tant aimé le monde."],
+        caption: null,
+        reference: "Jean 3.16",
+      });
 
       expect(textItem?.slides[0]?.content).toEqual({
         _tag: "Rich",

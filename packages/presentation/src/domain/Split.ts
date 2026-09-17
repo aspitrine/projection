@@ -168,7 +168,5 @@ export const subSplit = (content: FrameContent, rules: SplitRules): ReadonlyArra
     [new ContentBlock({ key: "slide", label: content.caption, lines: content.lines })],
     rules,
   );
-  return parts.length <= 1
-    ? [content]
-    : parts.map((part) => ({ _tag: "Lines", lines: part.lines, caption: content.caption }));
+  return parts.length <= 1 ? [content] : parts.map((part) => ({ ...content, lines: part.lines }));
 };

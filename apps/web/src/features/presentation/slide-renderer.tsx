@@ -18,6 +18,8 @@ export type RenderableSlide =
       readonly kind: "lines";
       readonly lines: ReadonlyArray<string>;
       readonly caption?: string | null;
+      /** Référence (verset) : plus petite que le texte, placée selon `referencePlacement`. */
+      readonly reference?: string | null;
     }
   | {
       readonly kind: "rich";
@@ -33,6 +35,15 @@ export type RenderableSlide =
     }
   | { readonly kind: "blank" };
 
+/**
+ * Taille exprimée en % de la hauteur d'une diapo 16:9 tenant dans le cadre. Sur un écran
+ * d'un autre format (fenêtre en portrait), le texte garde la même taille au lieu de grossir.
+ */
+export const slideSize = (percent: number) => `min(${percent}cqh, ${(percent * 9) / 16}cqw)`;
+
+/** Marge sous une référence posée en bas de la diapo, en % de la hauteur. */
+const BOTTOM_REFERENCE_MARGIN_PERCENT = 1.5;
+
 const justify = { top: "flex-start", center: "center", bottom: "flex-end" } as const;
 
 /**
@@ -44,11 +55,14 @@ export function SlideRenderer({
   slide,
   theme: outputTheme = defaultTheme,
   background = null,
+  referencePlacement = "bottom",
   className,
   style,
   ...props
 }: ComponentProps<"div"> & {
   slide: RenderableSlide;
+  /** `bottom` : tout en bas de la diapo (salle, retour) ; `below` : juste sous le texte (stream). */
+  referencePlacement?: "bottom" | "below";
   theme?: SlideTheme;
   /** Fond du thème, déjà résolu en URL ; le voile vient de `theme.backgroundDim`. */
   background?: SlideBackground | null;
@@ -57,16 +71,21 @@ export function SlideRenderer({
   const theme =
     slide.kind === "rich" ? layoutTheme(slide.layout ?? "free", outputTheme) : outputTheme;
   const box = useRef<HTMLDivElement>(null);
+  const area = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
+  const reference = slide.kind === "lines" ? (slide.reference ?? null) : null;
 
   useLayoutEffect(() => {
     const boxElement = box.current;
+    const areaElement = area.current;
     const contentElement = content.current;
-    if (boxElement === null || contentElement === null) return;
+    if (boxElement === null || areaElement === null || contentElement === null) return;
 
     const fit = () => {
       const apply = (size: number) => {
-        contentElement.style.fontSize = `${size}cqh`;
+        contentElement.style.fontSize = slideSize(size);
+        // La référence posée en bas suit la taille du texte, en plus petit.
+        boxElement.style.setProperty("--slide-font-size", slideSize(size));
       };
       const size = fitFontSize({
         min: theme.minFontSize,
@@ -74,8 +93,8 @@ export function SlideRenderer({
         fits: (candidate) => {
           apply(candidate);
           return (
-            contentElement.scrollHeight <= boxElement.clientHeight + 1 &&
-            contentElement.scrollWidth <= boxElement.clientWidth + 1
+            contentElement.scrollHeight <= areaElement.clientHeight + 1 &&
+            contentElement.scrollWidth <= areaElement.clientWidth + 1
           );
         },
       });
@@ -154,35 +173,67 @@ export function SlideRenderer({
           className="absolute flex flex-col"
           style={{
             inset: `${theme.paddingPercent}%`,
-            justifyContent: justify[theme.verticalAlign],
+            // Référence en bas : quasiment collée au bord de l'écran, sans la marge du thème.
+            ...(reference !== null &&
+              referencePlacement === "bottom" && { bottom: `${BOTTOM_REFERENCE_MARGIN_PERCENT}%` }),
             textAlign: theme.textAlign,
           }}
         >
           <div
-            ref={content}
-            data-slot="slide-content"
-            style={{
-              fontSize: `${theme.maxFontSize}cqh`,
-              textShadow: theme.textShadow ? "0 0.06em 0.25em rgb(0 0 0 / 0.6)" : undefined,
-              ...(theme.textBackground !== null && {
-                background: theme.textBackground,
-                padding: "0.35em 0.7em",
-              }),
-            }}
+            ref={area}
+            className="flex min-h-0 flex-1 flex-col"
+            style={{ justifyContent: justify[theme.verticalAlign], textAlign: theme.textAlign }}
           >
-            {slide.kind === "lines" ? (
-              slide.lines.map((line, index) => <p key={index}>{line}</p>)
-            ) : slide.kind === "rich" ? (
-              <RichTextView blocks={slide.blocks} layout={slide.layout} />
-            ) : null}
+            <div
+              ref={content}
+              data-slot="slide-content"
+              style={{
+                fontSize: slideSize(theme.maxFontSize),
+                textShadow: theme.textShadow ? "0 0.06em 0.25em rgb(0 0 0 / 0.6)" : undefined,
+                ...(theme.textBackground !== null && {
+                  background: theme.textBackground,
+                  padding: "0.35em 0.7em",
+                }),
+              }}
+            >
+              {slide.kind === "lines" ? (
+                slide.lines.map((line, index) => <p key={index}>{line}</p>)
+              ) : slide.kind === "rich" ? (
+                <RichTextView blocks={slide.blocks} layout={slide.layout} />
+              ) : null}
+              {reference !== null && referencePlacement === "below" && (
+                <p data-slot="slide-reference" style={{ fontSize: "0.45em", marginTop: "0.3em" }}>
+                  {reference}
+                </p>
+              )}
+            </div>
           </div>
+          {reference !== null && referencePlacement === "bottom" && (
+            <p
+              data-slot="slide-reference"
+              className="shrink-0"
+              style={{
+                fontSize: "calc(var(--slide-font-size) * 0.45)",
+                marginTop: "0.3em",
+                textShadow: theme.textShadow ? "0 0.06em 0.25em rgb(0 0 0 / 0.6)" : undefined,
+              }}
+            >
+              {reference}
+            </p>
+          )}
         </div>
       )}
       {theme.showCaption && caption && (
         <div
           data-slot="slide-caption"
           className="absolute truncate opacity-50"
-          style={{ left: "2%", right: "2%", bottom: "1.5%", fontSize: "3cqh", fontWeight: 400 }}
+          style={{
+            left: "2%",
+            right: "2%",
+            bottom: "1.5%",
+            fontSize: slideSize(3),
+            fontWeight: 400,
+          }}
         >
           {caption}
         </div>

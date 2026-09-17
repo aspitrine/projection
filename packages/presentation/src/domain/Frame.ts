@@ -37,6 +37,8 @@ export const FrameContent = Schema.Union([
   Schema.TaggedStruct("Lines", {
     lines: Schema.Array(Schema.String),
     caption: Schema.NullOr(Schema.String),
+    /** Référence biblique affichée sur tous les écrans, en plus petit que le texte. */
+    reference: Schema.optionalKey(Schema.String),
   }),
   /** Texte enrichi léger (source), analysé par l'écran. */
   Schema.TaggedStruct("Rich", {

@@ -64,9 +64,8 @@ function DisplayScreen() {
 
   return (
     <div
-      className={
-        type === "stage" ? "h-screen w-screen" : "w-[min(100vw,calc(100vh*16/9))] cursor-none"
-      }
+      // L'image occupe tout l'écran, quel que soit son format : rien n'est rendu en dehors.
+      className={type === "stage" ? "h-screen w-screen" : "h-screen w-screen cursor-none"}
       onDoubleClick={toggleFullscreen}
       data-testid="display-screen"
       data-version={frame.version}
@@ -83,6 +82,7 @@ function DisplayScreen() {
           theme={theme}
           background={background}
           sound
+          fill
         />
       )}
       {hintVisible && type === "room" && (

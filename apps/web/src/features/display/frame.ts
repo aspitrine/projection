@@ -7,7 +7,12 @@ import type { RenderableSlide } from "../presentation/slide-renderer";
 export const contentToSlide = (content: FrameContent): RenderableSlide => {
   switch (content._tag) {
     case "Lines":
-      return { kind: "lines", lines: content.lines, caption: content.caption };
+      return {
+        kind: "lines",
+        lines: content.lines,
+        caption: content.caption,
+        reference: content.reference ?? null,
+      };
     case "Rich":
       return {
         kind: "rich",
